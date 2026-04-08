@@ -28,7 +28,7 @@
   5. On app start, no Magicline UI is ever visible before the branded cover hands off; the transition is a single visual step from splash to hidden-cash-register, never a flash of raw Magicline chrome.
 **Plans**: 6 plans
 - [x] 01-01-PLAN.md — Project bootstrap (package.json, deps, electron-log, brand assets, directory skeleton)
-- [ ] 01-02-PLAN.md — Host window + host.html + preload + branded splash layer (SHELL-01, SHELL-06)
+- [x] 01-02-PLAN.md — Host window + host.html + preload + branded splash layer (SHELL-01, SHELL-06)
 - [ ] 01-03-PLAN.md — Keyboard lockdown + single-instance lock + runtime auto-start + globalShortcut (SHELL-02, SHELL-03 runtime, SHELL-04)
 - [ ] 01-04-PLAN.md — electron-builder NSIS config + installer.nsh Startup folder shortcut (SHELL-03 install-time)
 - [ ] 01-05-PLAN.md — OS hardening runbook (PowerShell + .reg scripts, breakout checklist, rollback) (SHELL-05)

@@ -2,14 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
+current_plan: 3
 status: executing
-last_updated: "2026-04-08T17:48:03.347Z"
+last_updated: "2026-04-08T17:52:25.355Z"
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 6
-  completed_plans: 1
-  percent: 17
+  completed_plans: 2
+  percent: 33
 ---
 
 # Project State: Bee Strong POS Kiosk
@@ -26,10 +27,10 @@ progress:
 
 - **Milestone:** v1
 - **Phase:** 01 (locked-down-shell-os-hardening)
-- **Current Plan:** 2
+- **Current Plan:** 3
 - **Total Plans in Phase:** 6
-- **Status:** Executing Phase 01
-- **Progress:** [██░░░░░░░░] 17%
+- **Status:** Ready to execute
+- **Progress:** [███░░░░░░░] 33%
 - **Last completed:** Plan 01-01 (Electron project bootstrap) at 2026-04-08T17:47:05Z — commits 8c8d9de, f349917
 
 ## Performance Metrics
@@ -42,6 +43,7 @@ progress:
 | Phase | Plan | Duration | Tasks | Files | Completed |
 |-------|------|----------|-------|-------|-----------|
 | 01    | 01   | ~5 min   | 2     | 11    | 2026-04-08 |
+| Phase 01 P02 | ~3 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -51,6 +53,8 @@ See PROJECT.md "Key Decisions" table for the full list. Roadmap-level decisions:
 
 - Collapsed to 5 phases per coarse granularity (research suggested 6); NFC + idle + reset combined into one phase because they share the main-process idle-timer / badge-arbiter state.
 - Phase ordering strictly follows the research dependency chain: OS hardening → embed → auth-login → idle/reset → admin/update/branding.
+- [Phase 01]: main.js split with ORCHESTRATION marker so plan 03 can replace only the bottom orchestration block while keeping createMainWindow intact
+- [Phase 01]: preload.js exposes only callback-shaped APIs (onHideSplash/onShowSplash) — never raw ipcRenderer (T-02-01)
 
 ### Open TODOs (surfaced during planning)
 
