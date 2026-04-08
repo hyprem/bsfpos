@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self';">
+  <title>Bee Strong POS</title>
+  <link rel="stylesheet" href="host.css">
+</head>
+<body>
+
+  <!--
+    Z-index ladder (per 01-UI-SPEC.md):
+      0   — #magicline-mount — Phase 2 BrowserView attach point (empty in Phase 1)
+      100 — #splash — Phase 1 branded splash cover (visible on boot)
+      200 — Phase 4 idle overlay (sibling added later)
+      300 — Phase 5 error/updating covers (sibling added later)
+      400 — Phase 3/5 credentials + admin PIN modal (sibling added later)
+
+    Rules:
+    - host.html never navigates away. Layers are toggled via `display` from host.js.
+    - Splash is initially display:flex (visible) with no mechanism to dismiss it
+      in Phase 1 — dismiss fires only on IPC `splash:hide` from main (Phase 2+).
+  -->
+
+  <div id="magicline-mount" class="bsk-layer bsk-layer--base"></div>
+
+  <div id="splash" class="bsk-layer bsk-layer--splash">
+    <img src="assets/logo-dark.png" class="bsk-logo" alt="Bee Strong Fitness" width="220">
+    <div class="bsk-loading-bar" role="status" aria-label="Wird geladen"></div>
+    <p class="bsk-status-text">BITTE WARTEN&hellip;</p>
+  </div>
+
+  <script src="host.js"></script>
+</body>
+</html>
