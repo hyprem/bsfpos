@@ -13,7 +13,7 @@ Requirements for initial release. Each maps to roadmap phases via the Traceabili
 - [ ] **SHELL-02**: A single-instance lock prevents multiple copies of the app from running simultaneously
 - [x] **SHELL-03**: The app auto-starts on Windows boot/login via `app.setLoginItemSettings` (or equivalent NSIS installer config)
 - [ ] **SHELL-04**: Standard keyboard escape combos (Alt+F4, Alt+Tab, Win key, F11, Esc, Ctrl+W) are intercepted and suppressed via `before-input-event` on the host window
-- [ ] **SHELL-05**: A dedicated Windows user account is configured with Assigned Access + GPO + registry hardening to block Windows 11 Pro kiosk breakout vectors (edge swipes, taskbar, Action Center, Ctrl+Alt+Del menu options) — documented runbook for fresh-device setup
+- [x] **SHELL-05**: A dedicated Windows user account is configured with Assigned Access + GPO + registry hardening to block Windows 11 Pro kiosk breakout vectors (edge swipes, taskbar, Action Center, Ctrl+Alt+Del menu options) — documented runbook for fresh-device setup
 - [x] **SHELL-06**: On app start, a Bee Strong-branded full-screen splash/cover is visible until the Magicline cash register page is loaded and confirmed hidden (no flash of unhidden Magicline UI)
 
 ### Magicline Embed & Injection
@@ -116,7 +116,7 @@ Which phases cover which requirements. Filled in during roadmap creation.
 | SHELL-02 | Phase 1 | Pending |
 | SHELL-03 | Phase 1 | Complete |
 | SHELL-04 | Phase 1 | Pending |
-| SHELL-05 | Phase 1 | Pending |
+| SHELL-05 | Phase 1 | Complete |
 | SHELL-06 | Phase 1 | Complete |
 | EMBED-01 | Phase 2 | Pending |
 | EMBED-02 | Phase 2 | Pending |

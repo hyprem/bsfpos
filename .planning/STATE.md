@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_plan: 3
+current_plan: 4
 status: executing
-last_updated: "2026-04-08T17:55:45.439Z"
+last_updated: "2026-04-08T18:02:08.059Z"
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 6
-  completed_plans: 3
-  percent: 50
+  completed_plans: 4
+  percent: 67
 ---
 
 # Project State: Bee Strong POS Kiosk
@@ -27,10 +27,10 @@ progress:
 
 - **Milestone:** v1
 - **Phase:** 01 (locked-down-shell-os-hardening)
-- **Current Plan:** 3
+- **Current Plan:** 4
 - **Total Plans in Phase:** 6
 - **Status:** Ready to execute
-- **Progress:** [█████░░░░░] 50%
+- **Progress:** [███████░░░] 67%
 - **Last completed:** Plan 01-04 (electron-builder NSIS installer + Startup shortcut) at 2026-04-08T19:56:00Z — commit 4b357f5
 
 ## Performance Metrics
@@ -45,6 +45,7 @@ progress:
 | 01    | 01   | ~5 min   | 2     | 11    | 2026-04-08 |
 | Phase 01 P02 | ~3 min | 2 tasks | 5 files |
 | Phase 01 P04 | ~3 min | 1 tasks | 2 files |
+| Phase 01 P05 | ~4 min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -56,6 +57,8 @@ See PROJECT.md "Key Decisions" table for the full list. Roadmap-level decisions:
 - Phase ordering strictly follows the research dependency chain: OS hardening → embed → auth-login → idle/reset → admin/update/branding.
 - [Phase 01]: main.js split with ORCHESTRATION marker so plan 03 can replace only the bottom orchestration block while keeping createMainWindow intact
 - [Phase 01]: preload.js exposes only callback-shaped APIs (onHideSplash/onShowSplash) — never raw ipcRenderer (T-02-01)
+- [Phase 01]: D-14 realized: Win11 Pro uses HKU per-user Winlogon Shell override (hive-load pattern) via 04-gpo-hardening.ps1 — Shell Launcher v2 and Assigned Access ruled out for this SKU
+- [Phase 01]: D-15 realized: AutoAdminLogon plaintext DefaultPassword accepted tradeoff — mitigated by standard user account, BitLocker, separate admin account, and physical gym location
 
 ### Open TODOs (surfaced during planning)
 
