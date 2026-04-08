@@ -32,7 +32,7 @@
 - [x] 01-03-PLAN.md — Keyboard lockdown + single-instance lock + runtime auto-start + globalShortcut (SHELL-02, SHELL-03 runtime, SHELL-04)
 - [x] 01-04-PLAN.md — electron-builder NSIS config + installer.nsh Startup folder shortcut (SHELL-03 install-time)
 - [x] 01-05-PLAN.md — OS hardening runbook (PowerShell + .reg scripts, breakout checklist, rollback) (SHELL-05)
-- [ ] 01-06-PLAN.md — Phase 1 acceptance verification + human visual checkpoint
+- [x] 01-06-PLAN.md — Phase 1 acceptance verification + human visual checkpoint
 **UI hint**: yes
 
 ### Phase 2: Magicline Embed & Injection Layer
