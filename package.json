@@ -20,5 +20,39 @@
     "electron": "~41.1.1",
     "electron-builder": "~26.8.1",
     "cross-env": "~7.0.3"
+  },
+  "build": {
+    "appId": "com.beestrongfitness.pos",
+    "productName": "Bee Strong POS",
+    "copyright": "Copyright © 2026 Bee Strong Fitness",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "package.json",
+      "!**/*.md",
+      "!**/.gitkeep"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": false,
+      "runAfterFinish": false,
+      "deleteAppDataOnUninstall": false,
+      "include": "build/installer.nsh"
+    }
   }
 }
