@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 current_plan: 3
 status: executing
-last_updated: "2026-04-08T17:52:25.355Z"
+last_updated: "2026-04-08T17:55:45.439Z"
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 6
-  completed_plans: 2
-  percent: 33
+  completed_plans: 3
+  percent: 50
 ---
 
 # Project State: Bee Strong POS Kiosk
@@ -30,20 +30,21 @@ progress:
 - **Current Plan:** 3
 - **Total Plans in Phase:** 6
 - **Status:** Ready to execute
-- **Progress:** [███░░░░░░░] 33%
-- **Last completed:** Plan 01-01 (Electron project bootstrap) at 2026-04-08T17:47:05Z — commits 8c8d9de, f349917
+- **Progress:** [█████░░░░░] 50%
+- **Last completed:** Plan 01-04 (electron-builder NSIS installer + Startup shortcut) at 2026-04-08T19:56:00Z — commit 4b357f5
 
 ## Performance Metrics
 
 - Phases complete: 0 / 5
-- Plans complete: 1 / 6 (phase 01)
+- Plans complete: 3 / 6 (phase 01)
 - Requirements mapped: 42 / 42
-- Requirements validated: 1 / 42 (SHELL-01)
+- Requirements validated: 3 / 42 (SHELL-01, SHELL-06, SHELL-03)
 
 | Phase | Plan | Duration | Tasks | Files | Completed |
 |-------|------|----------|-------|-------|-----------|
 | 01    | 01   | ~5 min   | 2     | 11    | 2026-04-08 |
 | Phase 01 P02 | ~3 min | 2 tasks | 5 files |
+| Phase 01 P04 | ~3 min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -72,16 +73,16 @@ None.
 
 ### Last session summary
 
-- Completed plan 01-01 (Electron project bootstrap): pinned deps, CommonJS package.json, electron-log logger, brand assets staged, npm install verified.
-- Commits: 8c8d9de (Task 1 - skeleton), f349917 (Task 2 - logger + assets).
+- Completed plan 01-04 (electron-builder NSIS installer + Startup shortcut): added `build` block to package.json with per-user NSIS target, created build/installer.nsh with customInstall/customUnInstall macros managing $SMSTARTUP shortcut. Verified via `npx electron-builder --win --dir` producing dist/win-unpacked/Bee Strong POS.exe.
+- Commit: 4b357f5 (Task 1 — feat(01-04)).
 
 ### Next session entry point
 
-Continue Phase 01 with plan 01-02 (Electron main process + host window). Plans 01-02, 01-03, 01-04, 01-05 are unblocked and can run in parallel on the now-stable project skeleton.
+Continue Phase 01 with plan 01-03 (keyboard lockdown / ORCHESTRATION block replacement). Plan 05 (OS hardening runbook) also remains unblocked. Together plans 03+04 deliver SHELL-03 (D-04 belt-and-suspenders auto-start).
 
 ### Stopped At
 
-Completed 01-01-PLAN.md at 2026-04-08T17:47:05Z
+Completed 01-04-PLAN.md at 2026-04-08T19:56:00Z
 
 ---
 *State initialized: 2026-04-08*

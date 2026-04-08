@@ -30,7 +30,7 @@
 - [x] 01-01-PLAN.md — Project bootstrap (package.json, deps, electron-log, brand assets, directory skeleton)
 - [x] 01-02-PLAN.md — Host window + host.html + preload + branded splash layer (SHELL-01, SHELL-06)
 - [ ] 01-03-PLAN.md — Keyboard lockdown + single-instance lock + runtime auto-start + globalShortcut (SHELL-02, SHELL-03 runtime, SHELL-04)
-- [ ] 01-04-PLAN.md — electron-builder NSIS config + installer.nsh Startup folder shortcut (SHELL-03 install-time)
+- [x] 01-04-PLAN.md — electron-builder NSIS config + installer.nsh Startup folder shortcut (SHELL-03 install-time)
 - [ ] 01-05-PLAN.md — OS hardening runbook (PowerShell + .reg scripts, breakout checklist, rollback) (SHELL-05)
 - [ ] 01-06-PLAN.md — Phase 1 acceptance verification + human visual checkpoint
 **UI hint**: yes
