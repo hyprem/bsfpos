@@ -10,9 +10,9 @@ Requirements for initial release. Each maps to roadmap phases via the Traceabili
 ### Kiosk Shell & OS Lockdown
 
 - [x] **SHELL-01**: The app launches fullscreen in Electron kiosk mode with no window chrome, menu bar, address bar, or system tray visibility
-- [ ] **SHELL-02**: A single-instance lock prevents multiple copies of the app from running simultaneously
+- [x] **SHELL-02**: A single-instance lock prevents multiple copies of the app from running simultaneously
 - [x] **SHELL-03**: The app auto-starts on Windows boot/login via `app.setLoginItemSettings` (or equivalent NSIS installer config)
-- [ ] **SHELL-04**: Standard keyboard escape combos (Alt+F4, Alt+Tab, Win key, F11, Esc, Ctrl+W) are intercepted and suppressed via `before-input-event` on the host window
+- [x] **SHELL-04**: Standard keyboard escape combos (Alt+F4, Alt+Tab, Win key, F11, Esc, Ctrl+W) are intercepted and suppressed via `before-input-event` on the host window
 - [x] **SHELL-05**: A dedicated Windows user account is configured with Assigned Access + GPO + registry hardening to block Windows 11 Pro kiosk breakout vectors (edge swipes, taskbar, Action Center, Ctrl+Alt+Del menu options) — documented runbook for fresh-device setup
 - [x] **SHELL-06**: On app start, a Bee Strong-branded full-screen splash/cover is visible until the Magicline cash register page is loaded and confirmed hidden (no flash of unhidden Magicline UI)
 
@@ -113,9 +113,9 @@ Which phases cover which requirements. Filled in during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | SHELL-01 | Phase 1 | Complete |
-| SHELL-02 | Phase 1 | Pending |
+| SHELL-02 | Phase 1 | Complete |
 | SHELL-03 | Phase 1 | Complete |
-| SHELL-04 | Phase 1 | Pending |
+| SHELL-04 | Phase 1 | Complete |
 | SHELL-05 | Phase 1 | Complete |
 | SHELL-06 | Phase 1 | Complete |
 | EMBED-01 | Phase 2 | Pending |
