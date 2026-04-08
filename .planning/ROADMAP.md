@@ -26,7 +26,13 @@
   3. Edge swipes, Action Center, and the Ctrl+Alt+Del menu options are either disabled or reduced to only "Sign out" per the documented Assigned Access + GPO runbook, verifiable against a kiosk-breakout checklist on the live device.
   4. Launching the app a second time (e.g. via the Startup shortcut racing with a manual launch) does not produce two windows — the second attempt is silently discarded.
   5. On app start, no Magicline UI is ever visible before the branded cover hands off; the transition is a single visual step from splash to hidden-cash-register, never a flash of raw Magicline chrome.
-**Plans**: TBD
+**Plans**: 6 plans
+- [ ] 01-01-PLAN.md — Project bootstrap (package.json, deps, electron-log, brand assets, directory skeleton)
+- [ ] 01-02-PLAN.md — Host window + host.html + preload + branded splash layer (SHELL-01, SHELL-06)
+- [ ] 01-03-PLAN.md — Keyboard lockdown + single-instance lock + runtime auto-start + globalShortcut (SHELL-02, SHELL-03 runtime, SHELL-04)
+- [ ] 01-04-PLAN.md — electron-builder NSIS config + installer.nsh Startup folder shortcut (SHELL-03 install-time)
+- [ ] 01-05-PLAN.md — OS hardening runbook (PowerShell + .reg scripts, breakout checklist, rollback) (SHELL-05)
+- [ ] 01-06-PLAN.md — Phase 1 acceptance verification + human visual checkpoint
 **UI hint**: yes
 
 ### Phase 2: Magicline Embed & Injection Layer
@@ -84,7 +90,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Locked-Down Shell & OS Hardening | 0/0 | Not started | - |
+| 1. Locked-Down Shell & OS Hardening | 0/6 | Not started | - |
 | 2. Magicline Embed & Injection Layer | 0/0 | Not started | - |
 | 3. Credentials & Auto-Login State Machine | 0/0 | Not started | - |
 | 4. NFC Input, Idle & Session Lifecycle | 0/0 | Not started | - |
