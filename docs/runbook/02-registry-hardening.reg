@@ -1,0 +1,54 @@
+Windows Registry Editor Version 5.00
+
+; docs/runbook/02-registry-hardening.reg
+; Bee Strong POS Kiosk — OS-level escape-vector hardening.
+; Apply as Administrator via: reg import 02-registry-hardening.reg
+; Must be re-applied after Windows feature updates (D-14 pitfall).
+
+; --- Disable edge swipes (Action Center, Task View from left edge) --------
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\EdgeUI]
+"AllowEdgeSwipe"=dword:00000000
+"DisableCharmsHint"=dword:00000001
+"DisableTLcorner"=dword:00000001
+"DisableTRcorner"=dword:00000001
+
+; --- Disable Win-key combos globally (Win+R, Win+D, Win+Tab, Win+L) -------
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer]
+"NoWinKeys"=dword:00000001
+"NoRun"=dword:00000001
+"NoClose"=dword:00000001
+"NoDesktop"=dword:00000001
+"NoTrayContextMenu"=dword:00000001
+"NoViewContextMenu"=dword:00000001
+"NoStartMenuMorePrograms"=dword:00000001
+"NoSetTaskbar"=dword:00000001
+
+; --- Disable Ctrl+Alt+Del menu items --------------------------------------
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Policies\System]
+"DisableTaskMgr"=dword:00000001
+"DisableLockWorkstation"=dword:00000001
+"DisableChangePassword"=dword:00000001
+"NoLogoff"=dword:00000001
+
+; --- Hide Action Center / disable notifications / hide system icons -------
+[HKEY_CURRENT_USER\Software\Policies\Microsoft\Windows\Explorer]
+"NoNotificationCenter"=dword:00000001
+"DisableNotificationCenter"=dword:00000001
+"HideSCAHealth"=dword:00000001
+"HideSCAVolume"=dword:00000001
+"HideSCANetwork"=dword:00000001
+
+; --- Disable Windows Ink workspace ----------------------------------------
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\WindowsInkWorkspace]
+"AllowWindowsInkWorkspace"=dword:00000000
+
+; --- Disable Cortana / Search box on taskbar ------------------------------
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Windows Search]
+"AllowCortana"=dword:00000000
+"DisableWebSearch"=dword:00000001
+"ConnectedSearchUseWeb"=dword:00000000
+
+; --- Disable Game Bar (Win+G) ---------------------------------------------
+[HKEY_CURRENT_USER\Software\Microsoft\GameBar]
+"AllowAutoGameMode"=dword:00000000
+"UseNexusForGameBarEnabled"=dword:00000000

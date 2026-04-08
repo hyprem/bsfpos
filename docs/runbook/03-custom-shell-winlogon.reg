@@ -1,0 +1,36 @@
+Windows Registry Editor Version 5.00
+
+; docs/runbook/03-custom-shell-winlogon.reg
+; Bee Strong POS Kiosk — Per-user custom shell for the kiosk account.
+;
+; Replaces explorer.exe with the Bee Strong POS executable for the 'bsfkiosk'
+; local user ONLY. The admin maintenance account still gets explorer.exe.
+;
+; D-14: Windows 11 Pro does not support Shell Launcher v2 or Assigned Access
+; for Win32 apps. This HKLM Winlogon Shell per-user override is the supported
+; fallback path.
+;
+; BEFORE IMPORTING:
+;   1. Install the Bee Strong POS app via the NSIS installer to its default
+;      per-user location: %LocalAppData%\Programs\Bee Strong POS\Bee Strong POS.exe
+;   2. Confirm the exe path matches the Shell value below. If the kiosk user's
+;      %LocalAppData% differs (it will — user profiles are distinct), adjust
+;      the path or install the app while logged in as the kiosk user.
+;
+; WARNING: Windows feature updates are known to reset this key. Re-import
+; after every major Windows update (see README.md §Post-Windows-Update
+; recovery).
+
+; Per-user HKLM Winlogon override (SpecialAccounts UserList pattern is NOT
+; needed because we are NOT using Assigned Access — this is a custom shell
+; registry replacement).
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList]
+"bsfkiosk"=dword:00000001
+
+; The per-user Shell override. On Windows 11 Pro, the recommended pattern is
+; to set this under the user's HKU hive after first login, OR via a Group
+; Policy startup script. For simplicity the runbook PowerShell script
+; 04-gpo-hardening.ps1 will apply the actual per-user Shell key under
+; HKU\<SID>\Software\Microsoft\Windows NT\CurrentVersion\Winlogon once the
+; kiosk user's SID is known. This .reg file only toggles the SpecialAccounts
+; UserList flag so the kiosk account is hidden from the Windows login picker.
