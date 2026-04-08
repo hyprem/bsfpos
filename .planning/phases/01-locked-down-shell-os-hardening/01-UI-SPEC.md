@@ -85,16 +85,16 @@ lifetime of the app — not all used in Phase 1 splash, but locked here so
 Phase 4 (idle overlay) and Phase 5 (PIN modal, error screen) inherit without
 re-negotiation.
 
-| Role    | Size  | Weight          | Line Height | Phase 1 Usage              |
-|---------|-------|-----------------|-------------|----------------------------|
-| Display | 32px  | 800 (extrabold) | 1.1         | Reserved (Phase 5 headings)|
-| Heading | 24px  | 700 (bold)      | 1.2         | Reserved (Phase 4/5)        |
-| Body    | 16px  | 400 (regular)   | 1.5         | Loading indicator label     |
-| Label   | 14px  | 600 (semibold)  | 1.3         | Reserved (button labels)    |
+**Token set: exactly 2 weights — 400 (regular) and 700 (bold).**
+Segoe UI's bold rendering on Windows is athletically sufficient for both
+heading and display use.
 
-**Only two weights ship in Phase 1:** 400 (regular) for the loading text,
-700 (bold) as a fallback for any status label. All other weights are declared
-as tokens now so later phases do not introduce weight drift.
+| Role    | Size  | Weight      | Line Height | Phase 1 Usage               |
+|---------|-------|-------------|-------------|-----------------------------|
+| Display | 32px  | 700 (bold)  | 1.1         | Reserved (Phase 5 headings) |
+| Heading | 24px  | 700 (bold)  | 1.2         | Reserved (Phase 4/5)        |
+| Body    | 16px  | 400 (regular)| 1.5        | Loading indicator label     |
+| Label   | 14px  | 700 (bold)  | 1.3         | Reserved (button labels)    |
 
 Letter-spacing: 0.05em on the loading label (all-caps "LADEN…" or "VERBINDE…")
 to improve legibility at small sizes on a touchscreen viewed from standing distance.
@@ -397,12 +397,12 @@ window dimensions — the fluid CSS layout will adapt.
 ```
 src/
   host/
-    host.html          ← Permanent overlay container (Phase 1 ships splash only)
-    host.css           ← Tokens + splash styles + layer z-index conventions
-    host.js            ← IPC handler stubs (hide-splash stub wired in Phase 2)
+    host.html          <- Permanent overlay container (Phase 1 ships splash only)
+    host.css           <- Tokens + splash styles + layer z-index conventions
+    host.js            <- IPC handler stubs (hide-splash stub wired in Phase 2)
     assets/
-      logo-dark.png    ← Copy of "3 BSF_vertical_for dark BG.png" from repo root
-      logo-light.png   ← Copy of "1 BSF_vertical.png" from repo root (future use)
+      logo-dark.png    <- Copy of "3 BSF_vertical_for dark BG.png" from repo root
+      logo-light.png   <- Copy of "1 BSF_vertical.png" from repo root (future use)
 ```
 
 Do not reference the brand PNGs from the repo root path in production HTML —
