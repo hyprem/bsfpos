@@ -112,54 +112,54 @@ Which phases cover which requirements. Filled in during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SHELL-01 | — | Pending |
-| SHELL-02 | — | Pending |
-| SHELL-03 | — | Pending |
-| SHELL-04 | — | Pending |
-| SHELL-05 | — | Pending |
-| SHELL-06 | — | Pending |
-| EMBED-01 | — | Pending |
-| EMBED-02 | — | Pending |
-| EMBED-03 | — | Pending |
-| EMBED-04 | — | Pending |
-| EMBED-05 | — | Pending |
-| EMBED-06 | — | Pending |
-| AUTH-01 | — | Pending |
-| AUTH-02 | — | Pending |
-| AUTH-03 | — | Pending |
-| AUTH-04 | — | Pending |
-| AUTH-05 | — | Pending |
-| AUTH-06 | — | Pending |
-| NFC-01 | — | Pending |
-| NFC-02 | — | Pending |
-| NFC-03 | — | Pending |
-| NFC-04 | — | Pending |
-| NFC-05 | — | Pending |
-| NFC-06 | — | Pending |
-| IDLE-01 | — | Pending |
-| IDLE-02 | — | Pending |
-| IDLE-03 | — | Pending |
-| IDLE-04 | — | Pending |
-| IDLE-05 | — | Pending |
-| IDLE-06 | — | Pending |
-| IDLE-07 | — | Pending |
-| ADMIN-01 | — | Pending |
-| ADMIN-02 | — | Pending |
-| ADMIN-03 | — | Pending |
-| ADMIN-04 | — | Pending |
-| ADMIN-05 | — | Pending |
-| ADMIN-06 | — | Pending |
-| ADMIN-07 | — | Pending |
-| ADMIN-08 | — | Pending |
-| BRAND-01 | — | Pending |
-| BRAND-02 | — | Pending |
-| BRAND-03 | — | Pending |
+| SHELL-01 | Phase 1 | Pending |
+| SHELL-02 | Phase 1 | Pending |
+| SHELL-03 | Phase 1 | Pending |
+| SHELL-04 | Phase 1 | Pending |
+| SHELL-05 | Phase 1 | Pending |
+| SHELL-06 | Phase 1 | Pending |
+| EMBED-01 | Phase 2 | Pending |
+| EMBED-02 | Phase 2 | Pending |
+| EMBED-03 | Phase 2 | Pending |
+| EMBED-04 | Phase 2 | Pending |
+| EMBED-05 | Phase 2 | Pending |
+| EMBED-06 | Phase 2 | Pending |
+| AUTH-01 | Phase 3 | Pending |
+| AUTH-02 | Phase 3 | Pending |
+| AUTH-03 | Phase 3 | Pending |
+| AUTH-04 | Phase 3 | Pending |
+| AUTH-05 | Phase 3 | Pending |
+| AUTH-06 | Phase 3 | Pending |
+| NFC-01 | Phase 4 | Pending |
+| NFC-02 | Phase 4 | Pending |
+| NFC-03 | Phase 4 | Pending |
+| NFC-04 | Phase 4 | Pending |
+| NFC-05 | Phase 4 | Pending |
+| NFC-06 | Phase 4 | Pending |
+| IDLE-01 | Phase 4 | Pending |
+| IDLE-02 | Phase 4 | Pending |
+| IDLE-03 | Phase 4 | Pending |
+| IDLE-04 | Phase 4 | Pending |
+| IDLE-05 | Phase 4 | Pending |
+| IDLE-06 | Phase 4 | Pending |
+| IDLE-07 | Phase 4 | Pending |
+| ADMIN-01 | Phase 5 | Pending |
+| ADMIN-02 | Phase 5 | Pending |
+| ADMIN-03 | Phase 5 | Pending |
+| ADMIN-04 | Phase 5 | Pending |
+| ADMIN-05 | Phase 5 | Pending |
+| ADMIN-06 | Phase 5 | Pending |
+| ADMIN-07 | Phase 5 | Pending |
+| ADMIN-08 | Phase 5 | Pending |
+| BRAND-01 | Phase 5 | Pending |
+| BRAND-02 | Phase 5 | Pending |
+| BRAND-03 | Phase 5 | Pending |
 
 **Coverage:**
 - v1 requirements: 42 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 42 — will be filled by roadmapper
+- Mapped to phases: 42 (100%)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-08*
-*Last updated: 2026-04-08 after initial definition*
+*Last updated: 2026-04-08 after roadmap creation (traceability filled)*
