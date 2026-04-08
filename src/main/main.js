@@ -5,9 +5,10 @@
 // lock, and globalShortcut registrations are added by plan 03 (REPLACES the
 // ORCHESTRATION block below — do NOT move createMainWindow).
 
-const { app, BrowserWindow, Menu, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, globalShortcut } = require('electron');
 const path = require('path');
 const log = require('./logger');
+const { attachLockdown } = require('./keyboardLockdown');
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -70,12 +71,84 @@ function createMainWindow() {
 module.exports = { createMainWindow, isDev };
 
 // --- ORCHESTRATION (plan 03 REPLACES everything below this line) -----------
+//
+// Order matters (per RESEARCH.md §Initialization order in main.js):
+//   1. requestSingleInstanceLock() — FIRST executable call after requires.
+//      If false → app.quit() + process.exit(0), no second-instance handler.
+//   2. app.whenReady():
+//      a. Menu.setApplicationMenu(null) — already done inside createMainWindow.
+//      b. setLoginItemSettings (D-04 layer 1) — prod only.
+//      c. globalShortcut.register no-ops (D-11) — prod only, catches OS chords
+//         during startup race before mainWindow has focus.
+//      d. createMainWindow() — builds the BrowserWindow + ipcMain stub.
+//      e. attachLockdown(mainWindow.webContents) — D-09/D-10.
+//   3. will-quit → globalShortcut.unregisterAll().
+//   4. window-all-closed → app.quit() (kiosk: no macOS dock pattern).
+
+// D-05: Single-instance lock. MUST be the first executable call after requires.
+// No second-instance handler — kiosk mode guarantees the first window is topmost.
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  log.warn('second instance detected — exiting silently (D-05)');
+  app.quit();
+  process.exit(0);
+}
 
 app.whenReady().then(() => {
-  log.info('app ready — creating main window (plan 02 orchestration stub)');
+  log.info('app ready (isDev=' + isDev + ')');
+
+  // D-04 layer 1: runtime self-heal auto-start.
+  // Writes HKCU\Software\Microsoft\Windows\CurrentVersion\Run\Bee Strong POS
+  // pointing at the current exe. Gated behind !isDev per PITFALLS.md pitfall 2
+  // (avoid registering node.exe/electron.exe from node_modules in dev).
+  if (!isDev) {
+    try {
+      app.setLoginItemSettings({
+        openAtLogin: true,
+        openAsHidden: false,
+        name: 'Bee Strong POS',
+        path: process.execPath,
+        args: [],
+      });
+      log.info('setLoginItemSettings: HKCU Run entry asserted for ' + process.execPath);
+    } catch (err) {
+      log.error('setLoginItemSettings failed', err);
+    }
+  }
+
+  // D-11: Defense-in-depth globalShortcut no-ops. Catches OS chords during
+  // the ~50-500ms startup race before before-input-event is wired.
+  if (!isDev) {
+    const chords = ['Alt+F4', 'F11', 'Escape'];
+    for (const chord of chords) {
+      const ok = globalShortcut.register(chord, () => {
+        // no-op — we only want to prevent the default OS handler
+      });
+      if (!ok) {
+        log.warn('globalShortcut.register(' + chord + ') returned false (already taken?)');
+      } else {
+        log.info('globalShortcut registered: ' + chord);
+      }
+    }
+  }
+
+  // Build the window.
   createMainWindow();
+
+  // D-09/D-10: attach keyboard lockdown to the host webContents.
+  // Phase 2 will additionally attach to the Magicline BrowserView webContents
+  // via the same attachLockdown export — see Pitfall 1 in RESEARCH.md.
+  if (mainWindow) {
+    attachLockdown(mainWindow.webContents);
+  }
+});
+
+app.on('will-quit', () => {
+  log.info('will-quit — unregistering global shortcuts');
+  globalShortcut.unregisterAll();
 });
 
 app.on('window-all-closed', () => {
+  log.info('window-all-closed — quitting');
   app.quit();
 });
