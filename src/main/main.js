@@ -5,12 +5,14 @@
 // lock, and globalShortcut registrations are added by plan 03 (REPLACES the
 // ORCHESTRATION block below — do NOT move createMainWindow).
 
-const { app, BrowserWindow, Menu, globalShortcut } = require('electron');
+const { app, BrowserWindow, Menu, globalShortcut, ipcMain, safeStorage } = require('electron');
 const path = require('path');
+const child_process = require('child_process');
 const log = require('./logger');
 const { attachLockdown } = require('./keyboardLockdown');
 const Store = require('electron-store').default;
 const { createMagiclineView, destroyMagiclineView } = require('./magiclineView');
+const authFlow = require('./authFlow');
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -143,8 +145,80 @@ app.whenReady().then(() => {
   if (mainWindow) {
     try {
       const store = new Store({ name: 'config' });
-      createMagiclineView(mainWindow, store);
+      const magiclineView = createMagiclineView(mainWindow, store);
       log.info('phase2.magicline-view.created');
+
+      // --- Phase 3 auth-flow wiring ------------------------------------
+      // Per research Pitfall #2: safeStorage.isEncryptionAvailable() must
+      // be called AFTER at least one BrowserWindow exists. createMainWindow
+      // ran before this point, so this is satisfied.
+      try {
+        authFlow.start({
+          mainWindow: mainWindow,
+          magiclineWebContents: magiclineView.webContents,
+          store: store,
+          safeStorage: safeStorage,
+        });
+        log.info('phase3.authFlow.started');
+      } catch (err) {
+        log.error('phase3.authFlow.start failed: ' + (err && err.message));
+      }
+
+      // --- Phase 3 IPC handlers ----------------------------------------
+      ipcMain.handle('submit-credentials', async (_e, payload) => {
+        try {
+          return authFlow.handleCredentialsSubmit(payload);
+        } catch (err) {
+          log.error('ipc.submit-credentials failed: ' + (err && err.message));
+          return { ok: false, error: String(err && err.message) };
+        }
+      });
+
+      ipcMain.handle('verify-pin', async (_e, payload) => {
+        try {
+          const pin = (payload && typeof payload.pin === 'string') ? payload.pin : '';
+          return authFlow.handlePinAttempt(pin);
+        } catch (err) {
+          log.error('ipc.verify-pin failed: ' + (err && err.message));
+          return { ok: false };
+        }
+      });
+
+      ipcMain.handle('request-pin-recovery', async () => {
+        try {
+          authFlow.handlePinRecoveryRequested();
+          return { ok: true };
+        } catch (err) {
+          log.error('ipc.request-pin-recovery failed: ' + (err && err.message));
+          return { ok: false };
+        }
+      });
+
+      // --- Phase 3 launch-touch-keyboard (TabTip manual fallback) ------
+      // Research §Windows TabTip Verdict: TabTip auto-invoke is unreliable
+      // under Assigned Access. The credentials overlay has explicit
+      // "Tastatur" buttons next to each text field that invoke this handler
+      // as a manual fallback. On the real kiosk, the path is
+      // "C:\Program Files\Common Files\microsoft shared\ink\TabTip.exe"
+      // — see Wave 0 verification file for the verdict.
+      ipcMain.handle('launch-touch-keyboard', async () => {
+        if (process.platform !== 'win32') {
+          log.info('ipc.launch-touch-keyboard: no-op on non-win32');
+          return { ok: false, error: 'not-windows' };
+        }
+        return await new Promise((resolve) => {
+          const cmd = '"C:\\\\Program Files\\\\Common Files\\\\microsoft shared\\\\ink\\\\TabTip.exe"';
+          child_process.exec(cmd, (err) => {
+            if (err) {
+              log.warn('ipc.launch-touch-keyboard exec failed: ' + (err && err.message));
+              resolve({ ok: false, error: String(err && err.message) });
+            } else {
+              log.info('ipc.launch-touch-keyboard: tabtip launched');
+              resolve({ ok: true });
+            }
+          });
+        });
+      });
 
       // WR-03: tear down module-scoped magiclineView state on window close so
       // Phase 4 auto-recovery (window recreation on crash/hang) starts from a
