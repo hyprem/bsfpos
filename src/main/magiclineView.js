@@ -107,6 +107,13 @@ function createMagiclineView(mainWindow, store) {
       sandbox:          true,
       nodeIntegration:  false,
       devTools:         isDev,
+      // Chromium throttles rAF / timers to near-zero in hidden or zero-bounds
+      // browsing contexts. Phase 2 keeps the Magicline view at {0,0,0,0}
+      // until cash-register-ready fires, which means fillAndSubmitLogin's
+      // rAF-debounced click never runs on the login page (the view never
+      // becomes visible pre-login). Disable throttling so the injected
+      // auto-login script runs at normal speed behind the splash.
+      backgroundThrottling: false,
       // NO preload — D-15. Magicline is untrusted; all privileged ops go
       // through the host preload → ipcMain, never the child view.
     }
@@ -241,6 +248,10 @@ function handleInjectEvent(evt, mainWindow) {
   if (!evt || typeof evt !== 'object') return;
   const type = String(evt.type || '');
   if (!KNOWN_EVENT_TYPES.has(type)) {
+    if (type.indexOf('diag-') === 0) {
+      log.info('magicline.inject.' + type + ': ' + JSON.stringify(evt.payload || {}));
+      return;
+    }
     log.warn('magicline.inject.unknown-event-type: ' + type);
     return;
   }

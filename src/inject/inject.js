@@ -200,33 +200,37 @@
   // Research §Login Click Semantics explains why plain .click() is enough
   // (React synthetic event delegation catches it).
   window.__bskiosk_fillAndSubmitLogin = function (user, pass) {
+    emit('diag-fill-start', { u: !!user, p: !!pass });
     try {
       var u = document.querySelector('[data-role="username"]');
       var p = document.querySelector('[data-role="password"]');
       var b = document.querySelector('[data-role="login-button"]');
+      emit('diag-fill-selectors', { u: !!u, p: !!p, b: !!b, hasSetMui: typeof window.__bskiosk_setMuiValue });
       if (!u || !p || !b) {
-        // Selectors missing — let the watchdog in authFlow catch it.
-        // selfCheck() running via detectReady/detectLogin will have
-        // already reported the drift via the STABLE entries in
-        // fragile-selectors.js.
         return false;
       }
       window.__bskiosk_setMuiValue(u, user);
       window.__bskiosk_setMuiValue(p, pass);
-      // Single rAF lets MUI's controlled-input state settle before the click.
-      window.requestAnimationFrame(function () {
+      emit('diag-fill-values-set', {});
+      // A short setTimeout (not rAF) lets MUI's controlled-input state settle
+      // before the click. rAF is throttled to near-zero in hidden/zero-bounds
+      // browsing contexts, but setTimeout is not — relevant because Phase 2
+      // keeps this view at {0,0,0,0} until cash-register-ready.
+      setTimeout(function () {
         try {
           b.click();
+          emit('diag-fill-clicked', {});
           // Reset the login-emit dedupe so a failed login (which re-renders
           // the form at the same hash) CAN fire a second login-detected.
-          // Research §Login Failure Detection explains why this is necessary
-          // for the two-path failure signal to work.
-          lastLoginEmitForHash = null;
+          lastLoginEmitAt = 0;
           emit('login-submitted', { url: location.hash });
-        } catch (e) { /* watchdog will catch */ }
-      });
+        } catch (e) {
+          emit('diag-fill-click-threw', { msg: String(e && e.message) });
+        }
+      }, 16);
       return true;
     } catch (e) {
+      emit('diag-fill-outer-threw', { msg: String(e && e.message) });
       return false;
     }
   };
