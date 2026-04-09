@@ -29,6 +29,14 @@ const DRIFT_MESSAGE     = 'Kasse vorübergehend nicht verfügbar — Bitte wende
 
 // --- Load inject files at require-time (read-only, bundled) -----------------
 const INJECT_CSS = fs.readFileSync(path.join(__dirname, '..', 'inject', 'inject.css'),           'utf8');
+// Visibility-hidden wrapper: Magicline view must be at full bounds for
+// Chromium to run layout/JS normally (a {0,0,0,0} view throttles everything
+// and breaks the injected auto-login script). But at full bounds it covers
+// the host UI (splash, credentials overlay, PIN modal). Injecting
+// `visibility: hidden` makes the view paint nothing while still running at
+// normal speed — the host UI shows through any composited-transparent area.
+// Removed on cash-register-ready so the real cash register becomes visible.
+const HIDE_UNTIL_READY_CSS = 'html, body { visibility: hidden !important; background: transparent !important; }';
 const FRAGILE_JS = fs.readFileSync(path.join(__dirname, '..', 'inject', 'fragile-selectors.js'), 'utf8');
 const INJECT_JS  = fs.readFileSync(path.join(__dirname, '..', 'inject', 'inject.js'),            'utf8');
 // Concat order: fragile first so FRAGILE_SELECTORS + STABLE_SELECTORS are in
@@ -52,6 +60,7 @@ let resizeHandler = null;
 // (see handleInjectEvent). Drift keeps it hidden so the #magicline-error host
 // overlay can show over the splash without Magicline leaking through.
 let revealed      = false;
+let hideCssKey    = null; // handle for removeInsertedCSS on reveal
 
 // Whitelist of event types we accept from the untrusted Magicline main world.
 // A compromised Magicline could plant fake events; the worst outcome is a
@@ -107,17 +116,18 @@ function createMagiclineView(mainWindow, store) {
       sandbox:          true,
       nodeIntegration:  false,
       devTools:         isDev,
-      // Chromium throttles rAF / timers to near-zero in hidden or zero-bounds
-      // browsing contexts. Phase 2 keeps the Magicline view at {0,0,0,0}
-      // until cash-register-ready fires, which means fillAndSubmitLogin's
-      // rAF-debounced click never runs on the login page (the view never
-      // becomes visible pre-login). Disable throttling so the injected
-      // auto-login script runs at normal speed behind the splash.
       backgroundThrottling: false,
+      transparent:      true,
       // NO preload — D-15. Magicline is untrusted; all privileged ops go
       // through the host preload → ipcMain, never the child view.
     }
   });
+  // Set the view's own background to transparent so that when the injected
+  // HIDE_UNTIL_READY_CSS makes body invisible, the host UI behind composites
+  // through instead of the default white fill.
+  try {
+    magiclineView.setBackgroundColor('#00000000');
+  } catch (e) { /* pre-Electron-41 WebContentsView may not support */ }
 
   // D-01: attach as child of the host window's contentView (NOT the
   // deprecated legacy embedded-view APIs removed in Electron 41).
@@ -137,20 +147,13 @@ function createMagiclineView(mainWindow, store) {
   // script. Off-screen positioning (negative x) is also clipped to zero
   // effective bounds, so that doesn't help either.
   //
-  // Visual hiding is handled by the Phase 1 splash, which is rendered by
-  // the host BrowserWindow's main webContents and is composited BELOW this
-  // child WebContentsView — meaning the splash WOULD be hidden by a
-  // full-bounds Magicline view. Trade-off: during the auto-login window
-  // (~1-2 seconds), the user briefly sees Magicline's login page instead
-  // of the splash. This is acceptable because:
-  //   (a) it's brief (<2s on cached creds)
-  //   (b) the alternative (broken auto-login) is worse
-  //   (c) the "login form flash" can be suppressed later by a proper
-  //       overlay WebContentsView — tracked as a follow-up issue.
+  // Visual hiding is handled by HIDE_UNTIL_READY_CSS (injected in
+  // wireInjection) + transparent view background, so the host UI composites
+  // through during the auto-login window. On cash-register-ready we remove
+  // the hide CSS so the real cash register becomes visible.
   try {
     const { width: dw, height: dh } = mainWindow.getContentBounds();
     magiclineView.setBounds({ x: 0, y: 0, width: dw, height: dh });
-    revealed = true;
   } catch (e) {
     log.warn('magicline.view.init-bounds failed: ' + (e && e.message));
   }
@@ -222,6 +225,9 @@ function wireInjection(wc) {
     if (!isMainFrame) return;
     try {
       await wc.insertCSS(INJECT_CSS);
+      if (!revealed && !hideCssKey) {
+        hideCssKey = await wc.insertCSS(HIDE_UNTIL_READY_CSS);
+      }
     } catch (err) {
       log.warn('magicline.insertCSS.did-start-navigation failed: ' + (err && err.message));
     }
@@ -230,6 +236,9 @@ function wireInjection(wc) {
   wc.on('dom-ready', async () => {
     try {
       await wc.insertCSS(INJECT_CSS);
+      if (!revealed && !hideCssKey) {
+        hideCssKey = await wc.insertCSS(HIDE_UNTIL_READY_CSS);
+      }
       await wc.executeJavaScript(INJECT_BUNDLE, true);
       log.info('magicline.injected: dom-ready');
     } catch (err) {
@@ -240,6 +249,9 @@ function wireInjection(wc) {
   wc.on('did-navigate-in-page', async (_e, url) => {
     try {
       await wc.insertCSS(INJECT_CSS);
+      if (!revealed && !hideCssKey) {
+        hideCssKey = await wc.insertCSS(HIDE_UNTIL_READY_CSS);
+      }
       await wc.executeJavaScript(INJECT_BUNDLE, true);
       log.info('magicline.injected: did-navigate-in-page url=' + url);
     } catch (err) {
@@ -311,12 +323,17 @@ function handleInjectEvent(evt, mainWindow) {
     } catch (e) {
       log.error('magicline.authFlow.notify.cash-register-ready failed: ' + (e && e.message));
     }
-    // Reveal the Magicline child view first (paints Magicline at full bounds),
-    // THEN tell the host to hide the splash. Order matters — sizing up before
-    // splash-hide ensures the cash register is on-screen the instant the splash
-    // fades, with no black-flash gap.
+    // Reveal: the view is already at full bounds from creation (required
+    // for Chromium to run JS normally — see `Size the view to its FULL
+    // logical bounds from creation` comment above). Remove the
+    // HIDE_UNTIL_READY_CSS so Magicline becomes visible, then tell the host
+    // to hide the splash.
     try {
       revealed = true;
+      if (hideCssKey) {
+        magiclineView.webContents.removeInsertedCSS(hideCssKey).catch(() => {});
+        hideCssKey = null;
+      }
       sizeChildView(mainWindow);
     } catch (e) {
       log.error('magicline.view.reveal failed: ' + (e && e.message));
@@ -379,6 +396,7 @@ function destroyMagiclineView(mainWindow) {
   readyFired    = false;
   driftActive   = false;
   revealed      = false;
+  hideCssKey    = null;
   log.info('magicline.view.destroyed');
 }
 
