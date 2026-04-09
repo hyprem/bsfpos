@@ -36,6 +36,7 @@
   if (window.__bskiosk_injected__) {
     try { if (window.__bskiosk_hideDynamic) window.__bskiosk_hideDynamic(); } catch (e) {}
     try { if (window.__bskiosk_detectReady) window.__bskiosk_detectReady(); } catch (e) {}
+    try { if (window.__bskiosk_detectLogin) window.__bskiosk_detectLogin(); } catch (e) {}  // Phase 3
     return;
   }
   window.__bskiosk_injected__ = true;
@@ -160,6 +161,74 @@
   }
   window.__bskiosk_detectReady = detectReady;
 
+  // --- Login page detection (Phase 3, D-04) -------------------------------
+  // Mirror of detectReady but inverted: emit 'login-detected' when
+  //   (a) location.hash is NOT a cash-register hash, AND
+  //   (b) [data-role="username"] is live in the DOM.
+  //
+  // Dedupe by hash STRING (not a sticky boolean) so a re-route from
+  // cash-register back to login — e.g. after a server-side session expiry
+  // routed via did-navigate-in-page — will fire a fresh detection.
+  // Research §Idempotency on Re-Injection documents why a boolean trap
+  // would miss this case.
+  var lastLoginEmitForHash = null;
+  function detectLogin() {
+    try {
+      if (!location.hash) return;
+      // Negative gate: do NOT fire on cash-register hashes
+      if (/^#\/cash-register(\/|$|\?)/i.test(location.hash)) return;
+      // Positive gate: username field present
+      var u = document.querySelector('[data-role="username"]');
+      if (!u) return;
+      // Dedupe by hash — re-emits on hash change (not on re-injection at the same hash)
+      if (lastLoginEmitForHash === location.hash) return;
+      lastLoginEmitForHash = location.hash;
+      emit('login-detected', { url: location.hash });
+    } catch (e) { /* swallow */ }
+  }
+  window.__bskiosk_detectLogin = detectLogin;
+
+  // --- Main-process-invoked login submit (Phase 3, D-04) ------------------
+  // Called by authFlow.js via executeJavaScript with credentials
+  // interpolated through JSON.stringify. Credentials are NEVER persisted
+  // in page-world scope — they arrive as arguments and are used once.
+  //
+  // Flow: query 3 selectors → setMuiValue user → setMuiValue pass → rAF
+  //     → click login button → emit 'login-submitted'.
+  // Research §Login Click Semantics explains why plain .click() is enough
+  // (React synthetic event delegation catches it).
+  window.__bskiosk_fillAndSubmitLogin = function (user, pass) {
+    try {
+      var u = document.querySelector('[data-role="username"]');
+      var p = document.querySelector('[data-role="password"]');
+      var b = document.querySelector('[data-role="login-button"]');
+      if (!u || !p || !b) {
+        // Selectors missing — let the watchdog in authFlow catch it.
+        // selfCheck() running via detectReady/detectLogin will have
+        // already reported the drift via the STABLE entries in
+        // fragile-selectors.js.
+        return false;
+      }
+      window.__bskiosk_setMuiValue(u, user);
+      window.__bskiosk_setMuiValue(p, pass);
+      // Single rAF lets MUI's controlled-input state settle before the click.
+      window.requestAnimationFrame(function () {
+        try {
+          b.click();
+          // Reset the login-emit dedupe so a failed login (which re-renders
+          // the form at the same hash) CAN fire a second login-detected.
+          // Research §Login Failure Detection explains why this is necessary
+          // for the two-path failure signal to work.
+          lastLoginEmitForHash = null;
+          emit('login-submitted', { url: location.hash });
+        } catch (e) { /* watchdog will catch */ }
+      });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+
   // --- Scoped, rAF-debounced MutationObserver (Pattern 3) ------------------
   // Scope to the closest stable parent of cart area — prefer <main>, fall back
   // to document.body. rAF coalesces storms of React re-renders into one
@@ -198,4 +267,5 @@
   // page and selector matches are trustworthy. See UAT gap G-04.
   hideDynamicElements();
   detectReady();
+  detectLogin();  // Phase 3: fire login-detected immediately if the page is already at /#/login
 })();
