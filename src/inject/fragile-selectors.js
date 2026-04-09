@@ -30,11 +30,18 @@ var FRAGILE_SELECTORS = [
     selector: '.MuiTypography-h5.css-1b1c5ke',
     fallback: null,
     purpose: 'Category h5 heading'
+  },
+  // styled-components hash class (-sc-<hash>-0) — drifts on Magicline
+  // version bumps exactly like MUI css-xxxxx hashes. Keep in FRAGILE.
+  {
+    category: 'fragile',
+    selector: 'nav.SidebarWrapper-sc-bb205641-0',
+    fallback: null,
+    purpose: 'Left sidebar'
   }
 ];
 
 var STABLE_SELECTORS = [
-  { category: 'stable', selector: 'nav.SidebarWrapper-sc-bb205641-0',          purpose: 'Left sidebar' },
   { category: 'stable', selector: '[data-role="topbar"]',                      purpose: 'Topbar' },
   { category: 'stable', selector: '[data-role="global-search-button"]',        purpose: 'Global search button' },
   { category: 'stable', selector: '[data-role="categories"]',                  purpose: 'Category tree' },

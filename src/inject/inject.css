@@ -22,7 +22,6 @@
 
 /* ========== STABLE data-role selectors (rarely edited) ========== */
 
-nav.SidebarWrapper-sc-bb205641-0                 { display: none !important; }
 [data-role="topbar"]                             { display: none !important; }
 [data-role="global-search-button"]               { display: none !important; }
 [data-role="categories"]                         { display: none !important; }
@@ -37,3 +36,4 @@ nav.SidebarWrapper-sc-bb205641-0                 { display: none !important; }
 .MuiBox-root.css-p8umht                          { display: none !important; }  /* Product grid tablet */
 .css-qo4f3u                                      { display: none !important; }  /* Kategorien button */
 .MuiTypography-h5.css-1b1c5ke                    { display: none !important; }  /* Category h5 heading */
+nav.SidebarWrapper-sc-bb205641-0                 { display: none !important; }  /* Left sidebar (styled-components -sc-<hash>-0) */
