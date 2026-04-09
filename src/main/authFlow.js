@@ -414,17 +414,28 @@ async function handleCredentialsSubmit(input) {
     const user = input && input.user;
     const pass = input && input.pass;
     const pin  = input && input.pin;
-    const record = adminPin.buildRecord(pin);            // pure
     const ciphertext = credentialsStore.buildCiphertext( // pure
       deps.safeStorage,
       { user: user, pass: pass }
     );
-    // D-11 atomic single set — both keys in one store.set call.
-    deps.store.set({
-      adminPin: record,
-      credentialsCiphertext: ciphertext,
-    });
-    deps.log.info('auth.credentials-submitted: persisted (atomic)');
+    // Two persist paths:
+    //   - First run (pin provided): D-11 atomic single set with BOTH keys,
+    //     so a crash mid-persist can't leave the store in a half-setup state.
+    //   - Recovery re-entry (no pin): the adminPin already exists in the
+    //     store and must NOT be touched. Update credentialsCiphertext only.
+    //     This path is triggered by CREDENTIALS_UNAVAILABLE → pin-ok →
+    //     NEEDS_CREDENTIALS → credentials-submitted (firstRun=false).
+    if (pin) {
+      const record = adminPin.buildRecord(pin);          // pure
+      deps.store.set({
+        adminPin: record,
+        credentialsCiphertext: ciphertext,
+      });
+      deps.log.info('auth.credentials-submitted: persisted (atomic first-run)');
+    } else {
+      deps.store.set('credentialsCiphertext', ciphertext);
+      deps.log.info('auth.credentials-submitted: persisted (credentials-only re-entry)');
+    }
     notify({ type: 'credentials-submitted' });
     return { ok: true };
   } catch (e) {
