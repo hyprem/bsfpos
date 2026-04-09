@@ -242,12 +242,223 @@ function reduce(state, event, ctx) {
 }
 
 // -----------------------------------------------------------------------------
-// EXECUTOR — to be appended in Task 2 (module-scoped state, webContents glue,
-// credentialsStore / adminPin persistence, IPC handlers). Task 1 is pure
-// reducer only.
+// EXECUTOR (Plan 03-10) — module-scoped state, webContents glue,
+// credentialsStore / adminPin persistence, timer management, IPC handlers.
+// The reducer above is pure; the executor is the impure shell that drives it.
 // -----------------------------------------------------------------------------
+
+const credentialsStore = require('./credentialsStore');
+const adminPin = require('./adminPin');
+
+let currentState = STATES.BOOTING;
+let deps = null; // { webContents, store, safeStorage, mainWindow, log }
+const timers = Object.create(null);
+let hasCreds = false;
+
+function _sendToOverlay(channel, payload) {
+  try {
+    if (deps && deps.mainWindow && deps.mainWindow.webContents
+        && typeof deps.mainWindow.webContents.send === 'function') {
+      if (payload === undefined) {
+        deps.mainWindow.webContents.send(channel);
+      } else {
+        deps.mainWindow.webContents.send(channel, payload);
+      }
+    }
+  } catch (e) {
+    if (deps && deps.log) deps.log.warn('authFlow.send(' + channel + ') failed: ' + (e && e.message));
+  }
+}
+
+function _runSideEffect(effect) {
+  try {
+    switch (effect.kind) {
+      case 'log':
+        deps.log.info('auth.state: ' + currentState + ' reason=' + effect.reason);
+        return;
+      case 'start-timer': {
+        // Defensive: clear any existing timer with the same name first.
+        if (timers[effect.name]) {
+          clearTimeout(timers[effect.name]);
+          delete timers[effect.name];
+        }
+        const name = effect.name;
+        timers[name] = setTimeout(() => {
+          delete timers[name];
+          notify({ type: 'timer-expired', name: name });
+        }, effect.ms);
+        return;
+      }
+      case 'clear-timer':
+        if (timers[effect.name]) {
+          clearTimeout(timers[effect.name]);
+          delete timers[effect.name];
+        }
+        return;
+      case 'fill-and-submit': {
+        const creds = credentialsStore.loadCredentials(deps.store, deps.safeStorage);
+        if (!creds || creds === credentialsStore.DECRYPT_FAILED) {
+          notify({ type: 'decrypt-failed' });
+          return;
+        }
+        // CRITICAL: JSON.stringify BOTH user and pass — never raw concat.
+        // This escapes quotes, backslashes, control chars, and unicode safely.
+        const js = 'window.__bskiosk_fillAndSubmitLogin('
+          + JSON.stringify(creds.user) + ','
+          + JSON.stringify(creds.pass) + ')';
+        try {
+          const p = deps.webContents.executeJavaScript(js);
+          if (p && typeof p.catch === 'function') {
+            p.catch((e) => deps.log.warn('fill-and-submit failed: ' + (e && e.message)));
+          }
+        } catch (e) {
+          deps.log.warn('fill-and-submit threw: ' + (e && e.message));
+        }
+        return;
+      }
+      case 'show-credentials-overlay':
+        _sendToOverlay('show-credentials-overlay', { firstRun: !!effect.firstRun });
+        return;
+      case 'hide-credentials-overlay':
+        _sendToOverlay('hide-credentials-overlay');
+        return;
+      case 'show-pin-modal':
+        _sendToOverlay('show-pin-modal');
+        return;
+      case 'hide-pin-modal':
+        _sendToOverlay('hide-pin-modal');
+        return;
+      case 'show-error':
+        _sendToOverlay('show-magicline-error', { variant: effect.variant });
+        return;
+      case 'clear-credentials':
+        credentialsStore.clearCredentials(deps.store);
+        hasCreds = false;
+        return;
+      case 'rerun-boot': {
+        const loaded = credentialsStore.loadCredentials(deps.store, deps.safeStorage);
+        hasCreds = !!(loaded && loaded !== credentialsStore.DECRYPT_FAILED);
+        notify({ type: 'creds-loaded' });
+        return;
+      }
+      default:
+        deps.log.warn('auth.unknown-side-effect kind=' + effect.kind);
+        return;
+    }
+  } catch (e) {
+    if (deps && deps.log) {
+      deps.log.error('auth.side-effect-handler-threw kind=' + effect.kind + ' err=' + (e && e.message));
+    }
+  }
+}
+
+function notify(event) {
+  if (!deps) {
+    // Pre-start notify is a no-op (defensive).
+    return;
+  }
+  const ctx = { hasCreds: hasCreds };
+  const result = reduce(currentState, event, ctx);
+  if (result.next !== currentState) {
+    deps.log.info('auth.state: ' + currentState + ' -> ' + result.next + ' reason=' + (event.type || 'unknown'));
+  }
+  currentState = result.next;
+  for (const sx of result.sideEffects) {
+    _runSideEffect(sx);
+  }
+}
+
+function start(opts) {
+  if (!opts || !opts.webContents || !opts.store || !opts.safeStorage
+      || !opts.mainWindow || !opts.log) {
+    throw new Error('authFlow.start: missing required dep (webContents, store, safeStorage, mainWindow, log)');
+  }
+  deps = {
+    webContents: opts.webContents,
+    store:       opts.store,
+    safeStorage: opts.safeStorage,
+    mainWindow:  opts.mainWindow,
+    log:         opts.log,
+  };
+  currentState = STATES.BOOTING;
+
+  if (!credentialsStore.isStoreAvailable(deps.safeStorage)) {
+    notify({ type: 'safestorage-unavailable' });
+    return;
+  }
+  const loaded = credentialsStore.loadCredentials(deps.store, deps.safeStorage);
+  if (loaded === credentialsStore.DECRYPT_FAILED) {
+    notify({ type: 'decrypt-failed' });
+    return;
+  }
+  hasCreds = loaded !== null;
+  notify({ type: 'creds-loaded' });
+}
+
+async function handleCredentialsSubmit(input) {
+  try {
+    if (!deps) throw new Error('authFlow.handleCredentialsSubmit: not started');
+    const user = input && input.user;
+    const pass = input && input.pass;
+    const pin  = input && input.pin;
+    const record = adminPin.buildRecord(pin);            // pure
+    const ciphertext = credentialsStore.buildCiphertext( // pure
+      deps.safeStorage,
+      { user: user, pass: pass }
+    );
+    // D-11 atomic single set — both keys in one store.set call.
+    deps.store.set({
+      adminPin: record,
+      credentialsCiphertext: ciphertext,
+    });
+    deps.log.info('auth.credentials-submitted: persisted (atomic)');
+    notify({ type: 'credentials-submitted' });
+    return { ok: true };
+  } catch (e) {
+    if (deps && deps.log) deps.log.error('handleCredentialsSubmit failed: ' + (e && e.message));
+    if (e && e.code === 'safestorage-unavailable') {
+      notify({ type: 'safestorage-unavailable' });
+    }
+    return { ok: false, error: e && e.message };
+  }
+}
+
+function handlePinAttempt(pin) {
+  try {
+    if (!deps) throw new Error('authFlow.handlePinAttempt: not started');
+    if (adminPin.verifyPin(deps.store, pin)) {
+      notify({ type: 'pin-ok' });
+      return { ok: true };
+    }
+    notify({ type: 'pin-bad' });
+    return { ok: false };
+  } catch (e) {
+    if (deps && deps.log) deps.log.error('handlePinAttempt failed: ' + (e && e.message));
+    return { ok: false, error: e && e.message };
+  }
+}
+
+function handlePinRecoveryRequested() {
+  notify({ type: 'pin-recovery-requested' });
+}
 
 exports.reduce = reduce;
 exports.STATES = STATES;
 exports._POST_SUBMIT_WATCHDOG_MS = POST_SUBMIT_WATCHDOG_MS;
 exports._BOOT_WATCHDOG_MS = BOOT_WATCHDOG_MS;
+exports.start = start;
+exports.notify = notify;
+exports.handleCredentialsSubmit = handleCredentialsSubmit;
+exports.handlePinAttempt = handlePinAttempt;
+exports.handlePinRecoveryRequested = handlePinRecoveryRequested;
+exports._runSideEffect = _runSideEffect;
+exports._getCurrentStateForTests = () => currentState;
+exports._resetForTests = () => {
+  currentState = STATES.BOOTING;
+  deps = null;
+  hasCreds = false;
+  for (const k of Object.keys(timers)) {
+    clearTimeout(timers[k]);
+    delete timers[k];
+  }
+};
