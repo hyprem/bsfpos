@@ -155,9 +155,10 @@ app.whenReady().then(() => {
       try {
         authFlow.start({
           mainWindow: mainWindow,
-          magiclineWebContents: magiclineView.webContents,
+          webContents: magiclineView.webContents,
           store: store,
           safeStorage: safeStorage,
+          log: log,
         });
         log.info('phase3.authFlow.started');
       } catch (err) {
