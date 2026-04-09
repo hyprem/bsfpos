@@ -200,37 +200,30 @@
   // Research §Login Click Semantics explains why plain .click() is enough
   // (React synthetic event delegation catches it).
   window.__bskiosk_fillAndSubmitLogin = function (user, pass) {
-    emit('diag-fill-start', { u: !!user, p: !!pass });
     try {
       var u = document.querySelector('[data-role="username"]');
       var p = document.querySelector('[data-role="password"]');
       var b = document.querySelector('[data-role="login-button"]');
-      emit('diag-fill-selectors', { u: !!u, p: !!p, b: !!b, hasSetMui: typeof window.__bskiosk_setMuiValue });
       if (!u || !p || !b) {
         return false;
       }
       window.__bskiosk_setMuiValue(u, user);
       window.__bskiosk_setMuiValue(p, pass);
-      emit('diag-fill-values-set', {});
-      // A short setTimeout (not rAF) lets MUI's controlled-input state settle
-      // before the click. rAF is throttled to near-zero in hidden/zero-bounds
-      // browsing contexts, but setTimeout is not — relevant because Phase 2
-      // keeps this view at {0,0,0,0} until cash-register-ready.
+      // setTimeout (not rAF) lets MUI's controlled-input state settle before
+      // the click. rAF is throttled to near-zero in hidden/zero-bounds
+      // browsing contexts — irrelevant now that the Magicline view ships
+      // with non-zero off-screen bounds, but kept as belt-and-suspenders.
       setTimeout(function () {
         try {
           b.click();
-          emit('diag-fill-clicked', {});
           // Reset the login-emit dedupe so a failed login (which re-renders
           // the form at the same hash) CAN fire a second login-detected.
           lastLoginEmitAt = 0;
           emit('login-submitted', { url: location.hash });
-        } catch (e) {
-          emit('diag-fill-click-threw', { msg: String(e && e.message) });
-        }
+        } catch (e) { /* watchdog will catch */ }
       }, 16);
       return true;
     } catch (e) {
-      emit('diag-fill-outer-threw', { msg: String(e && e.message) });
       return false;
     }
   };

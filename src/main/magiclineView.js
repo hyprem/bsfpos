@@ -129,6 +129,26 @@ function createMagiclineView(mainWindow, store) {
   // runs in the background at zero bounds — it just paints nothing.
   mainWindow.contentView.addChildView(magiclineView);
 
+  // Position the view off-screen at full logical bounds so Chromium runs
+  // layout and JS at normal speed (including rAF and timers), but the view
+  // is not visible to the user until cash-register-ready fires and
+  // sizeChildView() moves it to {0, 0}. See Phase 3 UAT findings: a
+  // {0,0,0,0} view is treated by Chromium as non-rendering and aggressively
+  // throttles layout/JS even with backgroundThrottling: false, which
+  // breaks the injected auto-login script (setTimeout never fires, rAF
+  // never fires, MutationObserver may not tick).
+  try {
+    const { width: dw, height: dh } = mainWindow.getContentBounds();
+    magiclineView.setBounds({
+      x: -dw - 100,       // off-screen left
+      y: 0,
+      width: dw,
+      height: dh,
+    });
+  } catch (e) {
+    log.warn('magicline.view.offscreen-init failed: ' + (e && e.message));
+  }
+
   // Resize handler only takes effect after the view has been revealed.
   // Before reveal, a window resize must not accidentally expand the child view.
   resizeHandler = () => { if (revealed) sizeChildView(mainWindow); };
@@ -248,10 +268,6 @@ function handleInjectEvent(evt, mainWindow) {
   if (!evt || typeof evt !== 'object') return;
   const type = String(evt.type || '');
   if (!KNOWN_EVENT_TYPES.has(type)) {
-    if (type.indexOf('diag-') === 0) {
-      log.info('magicline.inject.' + type + ': ' + JSON.stringify(evt.payload || {}));
-      return;
-    }
     log.warn('magicline.inject.unknown-event-type: ' + type);
     return;
   }
