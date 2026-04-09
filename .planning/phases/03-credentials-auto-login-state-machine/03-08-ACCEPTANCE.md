@@ -1,8 +1,14 @@
 # Phase 3 Acceptance Record
 
-**Date:** _pending UAT_
-**Tester:** _pending UAT_
-**Git commit at verification:** `dd30962` (plan 03-08 autonomous work complete — plaintext audit + integration aggregator)
+**Date:** 2026-04-09
+**Tester:** nico (dev machine, Windows 11 Education)
+**Git commit at verification:** `4cc7d80` (Phase 3 UAT fixes landed)
+
+## Verdict: **PASS** (with non-blocking follow-ups)
+
+All four success criteria and all AUTH-01..AUTH-06 requirements verified on the
+dev machine via `npm start`. Kiosk-only hardware probes remain deferred to Plan
+03-09 (TabTip + scrypt measurement on the physical kiosk CPU).
 
 ---
 
@@ -24,22 +30,22 @@ These gates are green before UAT begins:
 
 ## Roadmap Phase 3 Success Criteria
 
-- [ ] **SC-1:** First-run credentials entry → next cold boot reaches cash register with zero human input
-- [ ] **SC-2:** Plaintext audit passes (no plaintext in `config.json` or logs)
-- [ ] **SC-3:** State transition log sequence observed
-      (`BOOTING → LOGIN_DETECTED → LOGIN_SUBMITTED → CASH_REGISTER_READY`)
-- [ ] **SC-4:** safeStorage-unavailable simulation shows branded error overlay; PIN recovery works end-to-end
+- [x] **SC-1:** First-run credentials entry → next cold boot reaches cash register with zero human input — **verified 14:14 run**, cold boot to cash register in ~2.2s
+- [x] **SC-2:** Plaintext audit passes (no plaintext in `config.json` or logs) — **verified**, `node test/plaintextAudit.js` exits 0 after audit script was fixed to read the correct app name from `package.json` (commit `e9cb44e`). Independent spot-check grep for `password|passwort` shows zero credential leaks (only `hasPassword:true/false` DOM-probe booleans and the literal `"PASSWORT VERGESSEN?"` link text from Magicline HTML). `config.json` contains a `credentialsCiphertext` DPAPI blob only.
+- [x] **SC-3:** State transition log sequence observed
+      (`BOOTING → LOGIN_DETECTED → LOGIN_SUBMITTED → CASH_REGISTER_READY`) — **verified 14:14 and 14:45 runs**, full sequence in ~1.6s
+- [x] **SC-4:** safeStorage-unavailable simulation shows branded error overlay; PIN recovery works end-to-end — **verified 14:27 run**, `decrypt-failed → CREDENTIALS_UNAVAILABLE → pin-ok → NEEDS_CREDENTIALS → credentials-submitted → LOGIN_DETECTED → LOGIN_SUBMITTED → CASH_REGISTER_READY`
 
 ---
 
 ## AUTH-01..AUTH-06 Checklist
 
-- [ ] **AUTH-01:** `node test/plaintextAudit.js` exits 0; no plaintext in `%AppData%/Bee Strong POS/`
-- [ ] **AUTH-02:** Credentials overlay submits; values persisted as `credentialsCiphertext` in `config.json`
-- [ ] **AUTH-03:** Magicline auto-fill observed (log line `login-submitted` event or video of form fill)
-- [ ] **AUTH-04:** Full transition sequence in `main.log`
-- [ ] **AUTH-05:** `CREDENTIALS_UNAVAILABLE → PIN → NEEDS_CREDENTIALS → BOOTING` recovery path observed
-- [ ] **AUTH-06:** `03-07-AUTH06-RUNBOOK.md` exists and covers the DPAPI-rotation runbook (already verified present on disk)
+- [x] **AUTH-01:** `node test/plaintextAudit.js` exits 0; no plaintext in `%AppData%/bee-strong-pos/` (corrected path — Electron uses `name` from `package.json`, not `productName`)
+- [x] **AUTH-02:** Credentials overlay submits; values persisted as `credentialsCiphertext` in `config.json` (DPAPI blob observed)
+- [x] **AUTH-03:** Magicline auto-fill observed — `login-submitted` log line fires ~250ms after `login-detected`, Magicline accepts the submit and transitions to cash register
+- [x] **AUTH-04:** Full transition sequence in `main.log` — see SC-3 verification lines
+- [x] **AUTH-05:** `CREDENTIALS_UNAVAILABLE → PIN → NEEDS_CREDENTIALS → BOOTING` recovery path observed — see SC-4 verification lines
+- [x] **AUTH-06:** `03-07-AUTH06-RUNBOOK.md` exists and covers the DPAPI-rotation runbook
 
 ---
 
@@ -226,27 +232,82 @@ Date: <YYYY-MM-DD>
 
 ---
 
-## Log Excerpt (paste after Test 3)
+## Log Excerpt (Test 3 — success path, 14:14 cold-boot run)
 
 ```
-<pending UAT>
+[2026-04-09 14:14:51.059] auth.state: BOOTING reason=creds-loaded
+[2026-04-09 14:14:52.223] auth.state: BOOTING -> LOGIN_DETECTED reason=login-detected
+[2026-04-09 14:14:52.225] auth.state: LOGIN_DETECTED reason=login-detected
+[2026-04-09 14:14:52.460] auth.state: LOGIN_DETECTED -> LOGIN_SUBMITTED reason=login-submitted
+[2026-04-09 14:14:52.462] auth.state: LOGIN_SUBMITTED reason=submit-fired
+[2026-04-09 14:14:52.466] auth.state: LOGIN_SUBMITTED reason=login-redetected-ignored
+[2026-04-09 14:14:53.204] auth.state: LOGIN_SUBMITTED -> CASH_REGISTER_READY reason=cash-register-ready
+[2026-04-09 14:14:53.206] auth.state: CASH_REGISTER_READY reason=cash-register-ready
+```
+
+Total cold-boot-to-cash-register time: **2.2 seconds**.
+
+## Log Excerpt (Test 5 — safeStorage failure + recovery, 14:27 run)
+
+```
+[2026-04-09 14:27:11.354] auth.state: BOOTING -> CREDENTIALS_UNAVAILABLE reason=decrypt-failed
+[2026-04-09 14:27:11.356] auth.state: CREDENTIALS_UNAVAILABLE reason=decrypt-failed
+[2026-04-09 14:27:17.666] auth.state: CREDENTIALS_UNAVAILABLE -> NEEDS_CREDENTIALS reason=pin-ok
+[2026-04-09 14:27:22.544] auth.state: NEEDS_CREDENTIALS -> BOOTING reason=credentials-submitted
+[2026-04-09 14:27:22.572] auth.state: BOOTING -> LOGIN_DETECTED reason=login-detected
+[2026-04-09 14:27:22.831] auth.state: LOGIN_DETECTED -> LOGIN_SUBMITTED reason=login-submitted
+[2026-04-09 14:27:23.848] auth.state: LOGIN_SUBMITTED -> CASH_REGISTER_READY reason=cash-register-ready
 ```
 
 ---
 
-## Results (pending UAT)
+## Results
 
 ```
-<pending UAT>
+SC-1 (first-run → next cold boot = cash register, zero input): yes — 2.2s total
+SC-2 (plaintext audit exit 0): yes — "OK — zero plaintext leaks detected. AUTH-01 assertion passes."
+SC-3 (transition log sequence): yes — see 14:14 log excerpt above
+SC-4 (safeStorage fail → error overlay → PIN recovery works): yes — see 14:27 log excerpt above
+
+Anomalies / deviations from expected flow:
+- Eight distinct bugs were surfaced and fixed during UAT (see "Bugs found" below). All fixes
+  are committed to master as individual atomic commits.
+- Plan 03-05's `login-failed` inject-layer watcher was never implemented — the D-21 watchdog
+  fallback (post-submit-watchdog) correctly catches failures but the text-match primary
+  signal is absent. Treated as a deliverable gap, not a blocker, per D-21 Option A design
+  (watchdog is the canonical fallback path anyway because reCAPTCHA suppresses text errors).
+- Test 6 (real kiosk under Assigned Access) deferred to Plan 03-09.
+
+Verdict: PASS
+Tester: nico
+Date: 2026-04-09
 ```
 
 ---
 
-## Verdict
+## Bugs Found and Fixed During UAT
 
-**PENDING UAT** — awaiting manual verification on Windows dev machine.
-Orchestrator will re-enter this plan with the UAT results and mark PASS / FAIL + sign-off.
+| Commit    | File(s)               | Fix |
+|-----------|-----------------------|-----|
+| `4dd4119` | `main.js`             | Plan 03-07 wired `authFlow.start` with wrong deps key (`magiclineWebContents` instead of `webContents`) and missing `log` dep; `start()` threw silently and the credentials overlay never appeared. |
+| `0964592` | `main.js`             | `authFlow.start()` fired `show-credentials-overlay` IPC before the host renderer finished loading — IPC dropped silently. Deferred `start()` until `did-finish-load`. |
+| `f3c4ec8` | `inject.js`           | MutationObserver's rAF callback called only `detectReady()`, not `detectLogin()` — login form was rendered asynchronously by React but never detected. |
+| `896445c` | `inject.js`           | `detectLogin` used a URL negative gate (`bail if hash matches #/cash-register`), but Magicline keeps the URL at `#/cash-register` while rendering the login form. Switched to DOM-presence signal with a 1-second time dedup. |
+| `78b33cb` | `authFlow.js`         | `rerun-boot` passively waited for a fresh `login-detected` event that never came (Magicline DOM was stable by the time the user submitted credentials). Proactive `executeJavaScript('window.__bskiosk_detectLogin()')` after `creds-loaded`. |
+| `b4fd2da` | `magiclineView.js`, `inject.js` | Initial attempt: `backgroundThrottling:false` + swap `rAF` for `setTimeout(16)` in `fillAndSubmitLogin`. Partial fix — swap works, throttling flag alone does not. |
+| `4cc7d80` | `magiclineView.js`    | **Final fix for the zero-bounds issue.** Chromium throttles layout/JS to ~zero when a `WebContentsView` has `{0,0,0,0}` bounds, even with `backgroundThrottling:false`. Off-screen positioning is clipped the same way. Solution: full bounds from creation + `transparent: true` + `setBackgroundColor('#00000000')` + injected `html, body { visibility: hidden !important; background: transparent }` CSS (removed on `cash-register-ready` via `removeInsertedCSS`). Magicline runs at full speed while the host UI composites through. |
+| `e9cb44e` | `test/plaintextAudit.js` | Hardcoded `APP_NAME = 'Bee Strong POS'` (spaces) but Electron uses `package.json` `name` (`bee-strong-pos`, lowercase) for the userData directory. Audit was trivially passing by scanning a nonexistent directory — **false green**. Now reads `name` from `package.json`. |
+| `e94ae33` | `authFlow.js`         | `handleCredentialsSubmit` unconditionally called `adminPin.buildRecord(pin)` which threw on the PIN recovery re-entry path (user has already proved PIN possession in the recovery modal and doesn't re-enter it). Two-path persist: atomic dual-set on first run, `credentialsCiphertext`-only update on re-entry. |
+
+## Non-blocking Follow-ups (Phase 4+ backlog)
+
+1. **`login-failed` inject-layer watcher** — not implemented in Plan 03-05. Not blocking (watchdog fallback works), but adds 8-second latency to the failure detection path when reCAPTCHA is not shown.
+2. **SelfCheck false-positive drift warnings** for login-only selectors (`[data-role="password"]`) on `cash-register-ready`. Plan 02's `selfCheck` needs page-conditional selector handling.
+3. **First-run overlay shows PIN fields even when adminPin already exists in the store.** The reducer emits `show-credentials-overlay firstRun=true` whenever `hasCreds=false`, which re-prompts for PIN setup on creds-replacement cycles. Should distinguish "first-ever run" from "creds cleared, PIN still valid".
+4. **Phase 2 "view at zero bounds" assumption** remains documented in code comments that are now out of sync with the CSS-visibility fix. Should be tidied up when the next Phase 2 touches happen.
 
 ## Sign-off
 
-_pending_
+**PASS — 2026-04-09, nico**
+
+Phase 3 is functionally complete on the dev machine. Kiosk hardware verification (Plan 03-09 — TabTip + scrypt measurement under Assigned Access) remains the only outstanding item before Phase 3 can be fully closed, and is unblocked on physical kiosk access.
