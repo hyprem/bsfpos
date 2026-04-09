@@ -162,27 +162,29 @@
   window.__bskiosk_detectReady = detectReady;
 
   // --- Login page detection (Phase 3, D-04) -------------------------------
-  // Mirror of detectReady but inverted: emit 'login-detected' when
-  //   (a) location.hash is NOT a cash-register hash, AND
-  //   (b) [data-role="username"] is live in the DOM.
+  // Emit 'login-detected' when [data-role="username"] is live in the DOM.
   //
-  // Dedupe by hash STRING (not a sticky boolean) so a re-route from
-  // cash-register back to login — e.g. after a server-side session expiry
-  // routed via did-navigate-in-page — will fire a fresh detection.
-  // Research §Idempotency on Re-Injection documents why a boolean trap
-  // would miss this case.
-  var lastLoginEmitForHash = null;
+  // NOTE: the original plan used location.hash as a negative gate (bail if
+  // hash matches #/cash-register). UAT Test 1 proved that Magicline keeps
+  // the URL at #/cash-register even when rendering the login form for an
+  // unauthenticated session, so the URL gate silently blocked all detection.
+  // DOM presence is the only trustworthy signal — product-search
+  // (detectReady) and username (detectLogin) are mutually exclusive in
+  // practice since Magicline never shows both simultaneously.
+  //
+  // Dedupe by time (1s window) instead of hash so that the rerun-boot
+  // side-effect path (CREDENTIALS_UNAVAILABLE → PIN → NEEDS_CREDENTIALS
+  // → BOOTING → rerun-boot) gets a fresh login-detected even when the URL
+  // hash is unchanged.
+  var lastLoginEmitAt = 0;
+  var LOGIN_DEDUP_MS = 1000;
   function detectLogin() {
     try {
-      if (!location.hash) return;
-      // Negative gate: do NOT fire on cash-register hashes
-      if (/^#\/cash-register(\/|$|\?)/i.test(location.hash)) return;
-      // Positive gate: username field present
       var u = document.querySelector('[data-role="username"]');
       if (!u) return;
-      // Dedupe by hash — re-emits on hash change (not on re-injection at the same hash)
-      if (lastLoginEmitForHash === location.hash) return;
-      lastLoginEmitForHash = location.hash;
+      var now = Date.now();
+      if (now - lastLoginEmitAt < LOGIN_DEDUP_MS) return;
+      lastLoginEmitAt = now;
       emit('login-detected', { url: location.hash });
     } catch (e) { /* swallow */ }
   }
