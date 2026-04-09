@@ -1,0 +1,39 @@
+/*
+ * src/inject/inject.css
+ * ------------------------------------------------------------------
+ * Magicline hide layer. Loaded as a raw string by magiclineView.js
+ * and passed to webContents.insertCSS on did-start-navigation,
+ * dom-ready, and did-navigate-in-page.
+ *
+ * STABLE section   — [data-role=...] selectors. Rarely edited.
+ * FRAGILE section  — MUI css-xxxxx hash selectors. Drift-prone.
+ *
+ * When Magicline ships a class rename, edit the FRAGILE section of
+ * this file AND the matching entry in fragile-selectors.js (they are
+ * kept in sync on purpose — insertCSS needs CSS, self-check needs JS).
+ *
+ * EMBED-06 NOTE: [data-role="customer-search"] is set to display:none
+ * on the CONTAINER only. The inner <input> remains in the DOM and is
+ * queryable via document.querySelector('[data-role="customer-search"] input').
+ * Phase 4 NFC injection depends on this. Do NOT change to visibility:hidden
+ * and do NOT add an !important rule to the inner input that would strip it.
+ * ------------------------------------------------------------------
+ */
+
+/* ========== STABLE data-role selectors (rarely edited) ========== */
+
+nav.SidebarWrapper-sc-bb205641-0                 { display: none !important; }
+[data-role="topbar"]                             { display: none !important; }
+[data-role="global-search-button"]               { display: none !important; }
+[data-role="categories"]                         { display: none !important; }
+[data-role="customer-search"]                    { display: none !important; }
+[data-role="toolbar"] [data-role="icon-button"]  { display: none !important; }
+.LayoutContainer-sc-5eddc1f5-0                   { margin-left: 0 !important; }
+
+/* ========== FRAGILE (MUI css-xxxxx — DUPLICATES fragile-selectors.js) ========== */
+/* Keep these selectors IN SYNC with src/inject/fragile-selectors.js.             */
+/* When Magicline renames a class, update BOTH files in the same patch.           */
+
+.MuiBox-root.css-p8umht                          { display: none !important; }  /* Product grid tablet */
+.css-qo4f3u                                      { display: none !important; }  /* Kategorien button */
+.MuiTypography-h5.css-1b1c5ke                    { display: none !important; }  /* Category h5 heading */
