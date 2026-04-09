@@ -30,10 +30,11 @@
 
   // --- Idempotency guard (Pattern 3) ---------------------------------------
   // On re-injection via did-navigate-in-page, skip listener/observer setup
-  // and just re-run the dynamic hide pass, self-check, and ready detection.
+  // and just re-run the dynamic hide pass + ready detection. selfCheck is
+  // NOT called here — it runs from inside detectReady() after ready emits,
+  // so all drift checks happen on a proven-hydrated page. See UAT gap G-04.
   if (window.__bskiosk_injected__) {
     try { if (window.__bskiosk_hideDynamic) window.__bskiosk_hideDynamic(); } catch (e) {}
-    try { if (window.__bskiosk_selfCheck)   window.__bskiosk_selfCheck();   } catch (e) {}
     try { if (window.__bskiosk_detectReady) window.__bskiosk_detectReady(); } catch (e) {}
     return;
   }
