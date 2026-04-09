@@ -339,6 +339,19 @@ function _runSideEffect(effect) {
         const loaded = credentialsStore.loadCredentials(deps.store, deps.safeStorage);
         hasCreds = !!(loaded && loaded !== credentialsStore.DECRYPT_FAILED);
         notify({ type: 'creds-loaded' });
+        // Proactively re-poke detectLogin in the page. Magicline's login form
+        // may already be rendered (eager child-view load during Phase 2), in
+        // which case the MutationObserver won't fire again and login-detected
+        // won't re-trigger on its own. Calling detectLogin directly forces a
+        // fresh DOM check. Safe because detectLogin is idempotent and dedups.
+        try {
+          deps.webContents.executeJavaScript(
+            'try { window.__bskiosk_detectLogin && window.__bskiosk_detectLogin(); } catch(e) {}',
+            true
+          ).catch((e) => deps.log.warn('rerun-boot detectLogin poke failed: ' + (e && e.message)));
+        } catch (e) {
+          deps.log.warn('rerun-boot detectLogin poke threw: ' + (e && e.message));
+        }
         return;
       }
       default:
