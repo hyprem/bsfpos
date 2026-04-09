@@ -129,24 +129,30 @@ function createMagiclineView(mainWindow, store) {
   // runs in the background at zero bounds — it just paints nothing.
   mainWindow.contentView.addChildView(magiclineView);
 
-  // Position the view off-screen at full logical bounds so Chromium runs
-  // layout and JS at normal speed (including rAF and timers), but the view
-  // is not visible to the user until cash-register-ready fires and
-  // sizeChildView() moves it to {0, 0}. See Phase 3 UAT findings: a
-  // {0,0,0,0} view is treated by Chromium as non-rendering and aggressively
-  // throttles layout/JS even with backgroundThrottling: false, which
-  // breaks the injected auto-login script (setTimeout never fires, rAF
-  // never fires, MutationObserver may not tick).
+  // Size the view to its FULL logical bounds from creation so Chromium runs
+  // layout and JS at normal speed (rAF, setTimeout, MutationObserver). See
+  // Phase 3 UAT findings: a {0,0,0,0} view is treated by Chromium as
+  // non-rendering and aggressively throttles layout/JS even with
+  // backgroundThrottling: false, which breaks the injected auto-login
+  // script. Off-screen positioning (negative x) is also clipped to zero
+  // effective bounds, so that doesn't help either.
+  //
+  // Visual hiding is handled by the Phase 1 splash, which is rendered by
+  // the host BrowserWindow's main webContents and is composited BELOW this
+  // child WebContentsView — meaning the splash WOULD be hidden by a
+  // full-bounds Magicline view. Trade-off: during the auto-login window
+  // (~1-2 seconds), the user briefly sees Magicline's login page instead
+  // of the splash. This is acceptable because:
+  //   (a) it's brief (<2s on cached creds)
+  //   (b) the alternative (broken auto-login) is worse
+  //   (c) the "login form flash" can be suppressed later by a proper
+  //       overlay WebContentsView — tracked as a follow-up issue.
   try {
     const { width: dw, height: dh } = mainWindow.getContentBounds();
-    magiclineView.setBounds({
-      x: -dw - 100,       // off-screen left
-      y: 0,
-      width: dw,
-      height: dh,
-    });
+    magiclineView.setBounds({ x: 0, y: 0, width: dw, height: dh });
+    revealed = true;
   } catch (e) {
-    log.warn('magicline.view.offscreen-init failed: ' + (e && e.message));
+    log.warn('magicline.view.init-bounds failed: ' + (e && e.message));
   }
 
   // Resize handler only takes effect after the view has been revealed.
