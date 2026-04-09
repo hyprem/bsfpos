@@ -5,7 +5,7 @@
 // lock, and globalShortcut registrations are added by plan 03 (REPLACES the
 // ORCHESTRATION block below — do NOT move createMainWindow).
 
-const { app, BrowserWindow, Menu, ipcMain, globalShortcut } = require('electron');
+const { app, BrowserWindow, Menu, globalShortcut } = require('electron');
 const path = require('path');
 const log = require('./logger');
 const { attachLockdown } = require('./keyboardLockdown');
@@ -56,16 +56,6 @@ function createMainWindow() {
   });
 
   mainWindow.loadFile(path.join(__dirname, '..', 'host', 'host.html'));
-
-  // D-03: ipcMain stub for splash lift. Phase 2 fires this from the injection layer.
-  // In Phase 1 this handler never fires — splash stays visible forever on a fresh
-  // device, which is the correct Phase 1 end state per D-06.
-  ipcMain.on('cash-register-ready', () => {
-    log.info('cash-register-ready IPC received — lifting splash');
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('splash:hide');
-    }
-  });
 
   return mainWindow;
 }
