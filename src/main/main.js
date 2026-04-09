@@ -152,17 +152,30 @@ app.whenReady().then(() => {
       // Per research Pitfall #2: safeStorage.isEncryptionAvailable() must
       // be called AFTER at least one BrowserWindow exists. createMainWindow
       // ran before this point, so this is satisfied.
-      try {
-        authFlow.start({
-          mainWindow: mainWindow,
-          webContents: magiclineView.webContents,
-          store: store,
-          safeStorage: safeStorage,
-          log: log,
-        });
-        log.info('phase3.authFlow.started');
-      } catch (err) {
-        log.error('phase3.authFlow.start failed: ' + (err && err.message));
+      //
+      // Timing: start() emits show-credentials-overlay IPC synchronously on
+      // first run. The host renderer's ipcRenderer.on subscribers are only
+      // attached once host.js has loaded, which happens at/after 'did-finish-load'.
+      // Firing start() before the renderer is ready drops the IPC silently.
+      // Defer start() until the host webContents has finished loading.
+      const startAuthFlow = () => {
+        try {
+          authFlow.start({
+            mainWindow: mainWindow,
+            webContents: magiclineView.webContents,
+            store: store,
+            safeStorage: safeStorage,
+            log: log,
+          });
+          log.info('phase3.authFlow.started');
+        } catch (err) {
+          log.error('phase3.authFlow.start failed: ' + (err && err.message));
+        }
+      };
+      if (mainWindow.webContents.isLoading()) {
+        mainWindow.webContents.once('did-finish-load', startAuthFlow);
+      } else {
+        startAuthFlow();
       }
 
       // --- Phase 3 IPC handlers ----------------------------------------
