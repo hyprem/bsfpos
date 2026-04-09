@@ -47,6 +47,11 @@ let drainTimer    = null;
 let readyFired    = false;
 let driftActive   = false;
 let resizeHandler = null;
+// Child view starts HIDDEN (zero bounds) so the Phase 1 splash stays visible
+// underneath. The view is flipped to full bounds ONLY on cash-register-ready
+// (see handleInjectEvent). Drift keeps it hidden so the #magicline-error host
+// overlay can show over the splash without Magicline leaking through.
+let revealed      = false;
 
 // Whitelist of event types we accept from the untrusted Magicline main world.
 // A compromised Magicline could plant fake events; the worst outcome is a
@@ -107,10 +112,17 @@ function createMagiclineView(mainWindow, store) {
 
   // D-01: attach as child of the host window's contentView (NOT the
   // deprecated legacy embedded-view APIs removed in Electron 41).
+  //
+  // IMPORTANT: do NOT call sizeChildView here — WebContentsView is GPU-composited
+  // on top of the host BrowserWindow's webContents, so a full-bounds child view
+  // would cover the Phase 1 splash. Keep bounds at the default {0,0,0,0} until
+  // cash-register-ready fires (handleInjectEvent). Magicline still loads and
+  // runs in the background at zero bounds — it just paints nothing.
   mainWindow.contentView.addChildView(magiclineView);
-  sizeChildView(mainWindow);
 
-  resizeHandler = () => sizeChildView(mainWindow);
+  // Resize handler only takes effect after the view has been revealed.
+  // Before reveal, a window resize must not accidentally expand the child view.
+  resizeHandler = () => { if (revealed) sizeChildView(mainWindow); };
   mainWindow.on('resize', resizeHandler);
 
   // D-02: reuse Phase 1 lockdown on the child view's webContents.
@@ -257,6 +269,16 @@ function handleInjectEvent(evt, mainWindow) {
     if (readyFired) return;
     readyFired = true;
     log.info('magicline.cash-register-ready: url=' + String(payload.url || ''));
+    // Reveal the Magicline child view first (paints Magicline at full bounds),
+    // THEN tell the host to hide the splash. Order matters — sizing up before
+    // splash-hide ensures the cash register is on-screen the instant the splash
+    // fades, with no black-flash gap.
+    try {
+      revealed = true;
+      sizeChildView(mainWindow);
+    } catch (e) {
+      log.error('magicline.view.reveal failed: ' + (e && e.message));
+    }
     try {
       mainWindow.webContents.send('splash:hide');
     } catch (e) {
@@ -299,6 +321,7 @@ function destroyMagiclineView(mainWindow) {
   magiclineView = null;
   readyFired    = false;
   driftActive   = false;
+  revealed      = false;
   log.info('magicline.view.destroyed');
 }
 
