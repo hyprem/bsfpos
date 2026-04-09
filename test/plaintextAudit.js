@@ -24,7 +24,14 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-const APP_NAME = 'Bee Strong POS';
+// Electron derives the userData directory from package.json's `name` field
+// (NOT `productName`, which is cosmetic). Read it to stay in sync with the
+// running app — hardcoding 'Bee Strong POS' silently scanned a nonexistent
+// directory and produced false-green results. Surfaced during Plan 03-08 UAT.
+const PKG = JSON.parse(
+  fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8')
+);
+const APP_NAME = PKG.name;
 
 function userDataDir() {
   if (process.platform === 'win32') {
