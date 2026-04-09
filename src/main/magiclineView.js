@@ -349,9 +349,20 @@ function destroyMagiclineView(mainWindow) {
   log.info('magicline.view.destroyed');
 }
 
+// Defensive accessor for main.js Plan 03-07 wiring. Returns the child view's
+// webContents (the thing Phase 3 authFlow interpolates into) or null if the
+// view has not been created yet / was torn down. Callers may equivalently
+// read `.webContents` off the instance returned by createMagiclineView — this
+// accessor is for cases where module-scoped lookup is cleaner than threading
+// the instance through a closure.
+function getMagiclineWebContents() {
+  return magiclineView ? magiclineView.webContents : null;
+}
+
 module.exports = {
   createMagiclineView,
   destroyMagiclineView,
+  getMagiclineWebContents,
   // Exported for tests / diagnostics only — do NOT call from main.js:
   _computeDefaultZoom: computeDefaultZoom,
   _DRIFT_MESSAGE: DRIFT_MESSAGE,
