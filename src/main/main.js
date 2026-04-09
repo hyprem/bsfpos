@@ -10,7 +10,7 @@ const path = require('path');
 const log = require('./logger');
 const { attachLockdown } = require('./keyboardLockdown');
 const Store = require('electron-store').default;
-const { createMagiclineView } = require('./magiclineView');
+const { createMagiclineView, destroyMagiclineView } = require('./magiclineView');
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -145,6 +145,20 @@ app.whenReady().then(() => {
       const store = new Store({ name: 'config' });
       createMagiclineView(mainWindow, store);
       log.info('phase2.magicline-view.created');
+
+      // WR-03: tear down module-scoped magiclineView state on window close so
+      // Phase 4 auto-recovery (window recreation on crash/hang) starts from a
+      // clean slate. Without this, drainTimer keeps firing against a destroyed
+      // webContents, resizeHandler leaks closures against the dead window, and
+      // readyFired/driftActive persist — preventing the recovered kiosk from
+      // ever lifting its splash again.
+      mainWindow.once('closed', () => {
+        try {
+          destroyMagiclineView(mainWindow);
+        } catch (e) {
+          log.warn('phase2.magicline-view.destroy failed: ' + (e && e.message));
+        }
+      });
     } catch (err) {
       log.error('phase2.magicline-view.create failed: ' + (err && err.message));
     }

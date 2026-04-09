@@ -46,6 +46,7 @@ let magiclineView = null;
 let drainTimer    = null;
 let readyFired    = false;
 let driftActive   = false;
+let resizeHandler = null;
 
 // Whitelist of event types we accept from the untrusted Magicline main world.
 // A compromised Magicline could plant fake events; the worst outcome is a
@@ -109,7 +110,7 @@ function createMagiclineView(mainWindow, store) {
   mainWindow.contentView.addChildView(magiclineView);
   sizeChildView(mainWindow);
 
-  const resizeHandler = () => sizeChildView(mainWindow);
+  resizeHandler = () => sizeChildView(mainWindow);
   mainWindow.on('resize', resizeHandler);
 
   // D-02: reuse Phase 1 lockdown on the child view's webContents.
@@ -275,8 +276,35 @@ function handleInjectEvent(evt, mainWindow) {
   }
 }
 
+// WR-03: teardown path. Clears all module-scoped state so a subsequent
+// createMagiclineView() call after window recreation builds a fresh instance
+// instead of hitting the "already created" early-return. Also unhooks the
+// resize listener so the dead mainWindow can be GC'd.
+//
+// Intended to be called from mainWindow.once('closed', ...) inside
+// createMagiclineView. Safe to call if state is already cleared.
+function destroyMagiclineView(mainWindow) {
+  if (drainTimer) {
+    clearInterval(drainTimer);
+    drainTimer = null;
+  }
+  if (mainWindow && resizeHandler) {
+    try {
+      mainWindow.removeListener('resize', resizeHandler);
+    } catch (e) {
+      // mainWindow may already be destroyed — safe to ignore.
+    }
+  }
+  resizeHandler = null;
+  magiclineView = null;
+  readyFired    = false;
+  driftActive   = false;
+  log.info('magicline.view.destroyed');
+}
+
 module.exports = {
   createMagiclineView,
+  destroyMagiclineView,
   // Exported for tests / diagnostics only — do NOT call from main.js:
   _computeDefaultZoom: computeDefaultZoom,
   _DRIFT_MESSAGE: DRIFT_MESSAGE,
