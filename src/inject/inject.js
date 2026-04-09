@@ -242,6 +242,7 @@
       pending = false;
       hideDynamicElements();
       detectReady();
+      detectLogin();
     });
   }
 
