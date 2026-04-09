@@ -140,7 +140,12 @@
   function detectReady() {
     if (readyEmitted) return;
     try {
-      if (!location.hash || !/#\/cash-register/.test(location.hash)) return;
+      // Case-insensitive + anchored: real Magicline hash is '#/cash-Register'
+      // (capital R) on this deployment, so the old /#\/cash-register/ regex
+      // silently failed the ready-gate. Anchoring (^) + end-of-path clause
+      // prevents false positives on '#/cash-register-settings' etc. Covers
+      // code-review IN-01 and UAT gap G-03.
+      if (!location.hash || !/^#\/cash-register(\/|$|\?)/i.test(location.hash)) return;
       var el = document.querySelector('[data-role="product-search"] input');
       if (!el) return;
       readyEmitted = true;
