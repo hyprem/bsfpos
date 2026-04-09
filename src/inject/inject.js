@@ -150,6 +150,11 @@
       if (!el) return;
       readyEmitted = true;
       emit('cash-register-ready', { url: location.hash });
+      // Run self-check NOW (not at boot) — product-search input proves the
+      // cash register page has hydrated enough for all other selectors to
+      // exist. Running selfCheck at dom-ready causes false-positive drift
+      // events because React hasn't rendered yet. See UAT gap G-04.
+      selfCheck();
     } catch (e) { /* swallow */ }
   }
   window.__bskiosk_detectReady = detectReady;
@@ -187,7 +192,9 @@
   }
 
   // --- Initial pass --------------------------------------------------------
+  // selfCheck() is NOT called here — it runs inside detectReady() after the
+  // cash-register-ready signal fires, by which time React has hydrated the
+  // page and selector matches are trustworthy. See UAT gap G-04.
   hideDynamicElements();
-  selfCheck();
   detectReady();
 })();
