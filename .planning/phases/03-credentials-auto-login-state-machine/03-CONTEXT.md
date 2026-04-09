@@ -105,6 +105,33 @@ Scope ends at: cash-register-ready fires (Phase 2 already owns that detection). 
 
 - **D-20:** `authFlow` must be **idempotent under re-injection**. Phase 2 re-runs `executeJavaScript(INJECT_BUNDLE)` on every `dom-ready` and `did-navigate-in-page`; `detectLogin` emits `login-detected` once per page load guarded by a module-level flag reset on each page's initial execution (not on the idempotency guard re-entry). authFlow's own retry counter is scoped to a single login attempt cycle, not the lifetime of the process.
 
+### Magicline reCAPTCHA constraint (discovered Wave 0)
+
+- **D-21:** Magicline serves a Google reCAPTCHA v2 "I'm not a robot" checkbox after **the very first failed login attempt**. Discovered by Probe B in plan 03-01 — not anticipated by 03-RESEARCH. The exact error banner text is: *"Benutzername oder Passwort sind nicht korrekt oder es gab zuvor einen fehlerhaften Login-Versuch. Überprüfe bitte die Eingabe und bestätige zusätzlich die 'Ich bin kein Roboter'-Checkbox."* reCAPTCHA v2 is purpose-built to defeat scripted clicks — no injection workaround exists. This has three binding implications for Phase 3 design:
+
+  1. **No auto-retry.** `authFlow` MUST NOT have any retry-on-failure branch, not even a single retry. D-20's phrase "retry counter scoped to a single login attempt cycle" is hereby reduced to: there is no retry at all. Any login failure transitions straight to `CREDENTIALS_UNAVAILABLE`, the cached ciphertext is cleared, and the branded error overlay asks for admin PIN. This is **Option A** selected on 2026-04-09.
+
+  2. **Primary failure signal is text-match, not just watchdog.** Because the error banner includes a deterministic German substring, the fastest reliable failure signal is a MutationObserver on that substring. The watchdog (6-8 s) stays as a fallback in case Magicline rewords the banner during a future update.
+     - Primary: observe for substring `'Benutzername oder Passwort sind nicht korrekt'` in the document text
+     - Fallback: watchdog timer armed at `fillAndSubmitLogin`, disarmed on `CASH_REGISTER_READY`
+     - Either signal emits `login-failed`, which the state machine handles identically
+     - The substring lives in `src/inject/fragile-selectors.js` as `LOGIN_ERROR_SUBSTRING` so Magicline drift is easy to fix.
+
+  3. **Admin-mediated recovery is the ONLY recovery path.** When the kiosk hits a login failure (DPAPI rotation, Magicline-side password change, injection-level drift), the child `WebContentsView` will already be showing the reCAPTCHA box from Magicline's response to our failed submit. The recovery UX is:
+     - Clear `credentialsCiphertext`
+     - Transition `authFlow` to `CREDENTIALS_UNAVAILABLE`
+     - Host renders the `credentials-unavailable` variant of the error overlay with "PIN eingeben"
+     - Admin enters PIN → credentials overlay opens
+     - While the credentials overlay is up, the child Magicline view still has reCAPTCHA showing underneath; when the admin hits "Speichern & Anmelden", the credentials overlay TEMPORARILY hides (without clearing its form state) and passes focus to the child view so the admin can tap "I'm not a robot" → the overlay returns → the admin clicks submit again.
+     - Alternative (simpler MVP): on first admin attempt after PIN unlock, authFlow issues the injected submit WITHOUT re-showing the overlay's "submitting..." state until the admin has physically tapped reCAPTCHA in the child view. Plan 03-06 picks the exact UX.
+
+  Follow-ups this creates:
+  - `src/inject/fragile-selectors.js` gains `LOGIN_ERROR_SUBSTRING` (plan 03-05)
+  - `src/inject/inject.js` emits a new `login-failed` signal from a text-match MutationObserver (plan 03-05)
+  - `authFlow.js` removes any retry logic (plan 03-04, below)
+  - `host.js` credentials overlay gains a "yield to child view for reCAPTCHA" affordance (plan 03-06)
+  - `03-08-ACCEPTANCE.md` Test 5 walks through the reCAPTCHA tap during PIN recovery
+
 ### Claude's Discretion
 
 - Exact wording on the `LOGIN_FAILED` message variant (match Bee Strong brand tone, German, match Phase 2's drift-message style).
