@@ -46,5 +46,9 @@ var STABLE_SELECTORS = [
   { category: 'stable', selector: '[data-role="global-search-button"]',        purpose: 'Global search button' },
   { category: 'stable', selector: '[data-role="categories"]',                  purpose: 'Category tree' },
   { category: 'stable', selector: '[data-role="customer-search"]',             purpose: 'Customer search container' },
-  { category: 'stable', selector: '[data-role="toolbar"] [data-role="icon-button"]', purpose: 'Toolbar three-dot icon button' }
+  { category: 'stable', selector: '[data-role="toolbar"] [data-role="icon-button"]', purpose: 'Toolbar three-dot icon button' },
+  // Phase 3 — login page selectors (D-05)
+  { category: 'stable', selector: '[data-role="username"]',     purpose: 'Login: username field' },
+  { category: 'stable', selector: '[data-role="password"]',     purpose: 'Login: password field' },
+  { category: 'stable', selector: '[data-role="login-button"]', purpose: 'Login: submit button' }
 ];

@@ -61,7 +61,9 @@ const KNOWN_EVENT_TYPES = new Set([
   'drift',
   'cash-register-ready',
   'observer-scope-fallback',
-  'observer-attach-failed'
+  'observer-attach-failed',
+  'login-detected',     // Phase 3 (D-03)
+  'login-submitted'     // Phase 3 (D-03)
 ]);
 
 function computeDefaultZoom() {
@@ -269,6 +271,13 @@ function handleInjectEvent(evt, mainWindow) {
     if (readyFired) return;
     readyFired = true;
     log.info('magicline.cash-register-ready: url=' + String(payload.url || ''));
+    // Phase 3: forward to authFlow state machine (cookie-session skip-login
+    // path or LOGIN_SUBMITTED terminal success).
+    try {
+      require('./authFlow').notify({ type: 'cash-register-ready', payload: payload });
+    } catch (e) {
+      log.error('magicline.authFlow.notify.cash-register-ready failed: ' + (e && e.message));
+    }
     // Reveal the Magicline child view first (paints Magicline at full bounds),
     // THEN tell the host to hide the splash. Order matters — sizing up before
     // splash-hide ensures the cash register is on-screen the instant the splash
@@ -294,6 +303,21 @@ function handleInjectEvent(evt, mainWindow) {
 
   if (type === 'observer-attach-failed') {
     log.error('magicline.observer.attach-failed: ' + JSON.stringify(payload));
+    return;
+  }
+
+  // Phase 3 delegation: authFlow.start(...) is called from main.js Plan 07
+  // AFTER createMagiclineView returns, so require('./authFlow') here is safe
+  // — authFlow is loaded by the time the first drain event arrives.
+  if (type === 'login-detected' || type === 'login-submitted') {
+    // Phase 3: forward to authFlow state machine. authFlow decides what to
+    // do based on its current state (reduce is a pure switch).
+    log.info('magicline.' + type + ': url=' + String(payload.url || ''));
+    try {
+      require('./authFlow').notify({ type: type, payload: payload });
+    } catch (e) {
+      log.error('magicline.authFlow.notify.' + type + ' failed: ' + (e && e.message));
+    }
     return;
   }
 }
