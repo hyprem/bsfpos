@@ -8,4 +8,6 @@ contextBridge.exposeInMainWorld('kiosk', {
   isDev: process.env.NODE_ENV === 'development',
   onHideSplash: (cb) => ipcRenderer.on('splash:hide', () => cb()),
   onShowSplash: (cb) => ipcRenderer.on('splash:show', () => cb()),
+  onShowMagiclineError: (cb) => ipcRenderer.on('show-magicline-error', (_e, payload) => cb(payload)),
+  onHideMagiclineError: (cb) => ipcRenderer.on('hide-magicline-error', () => cb()),
 });
