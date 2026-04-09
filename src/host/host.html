@@ -14,7 +14,7 @@
       0   — #magicline-mount — Phase 2 BrowserView attach point (empty in Phase 1)
       100 — #splash — Phase 1 branded splash cover (visible on boot)
       200 — Phase 4 idle overlay (sibling added later)
-      300 — Phase 5 error/updating covers (sibling added later)
+      300 — #magicline-error (Phase 2 D-06/D-07) + Phase 5 error/updating covers
       400 — Phase 3/5 credentials + admin PIN modal (sibling added later)
 
     Rules:
@@ -29,6 +29,12 @@
     <img src="assets/logo-dark.png" class="bsk-logo" alt="Bee Strong Fitness" width="220">
     <div class="bsk-loading-bar" role="status" aria-label="Wird geladen"></div>
     <p class="bsk-status-text">BITTE WARTEN&hellip;</p>
+  </div>
+
+  <div id="magicline-error" class="bsk-layer bsk-layer--magicline-error" style="display:none;" aria-hidden="true" role="alert">
+    <img src="assets/logo-dark.png" class="bsk-logo" alt="Bee Strong Fitness" width="220">
+    <h1 class="bsk-error-title">Kasse vorübergehend nicht verfügbar</h1>
+    <p class="bsk-error-subtext">Bitte wenden Sie sich an das Studio-Personal</p>
   </div>
 
   <script src="host.js"></script>

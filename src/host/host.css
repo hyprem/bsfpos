@@ -84,3 +84,31 @@ body:not([data-dev="true"]) { cursor: none; }
   letter-spacing: 0.05em;
   text-transform: none; /* content is already uppercase in HTML */
 }
+
+/* --- Magicline error overlay (Phase 2 D-06/D-07) ------------------------- */
+
+.bsk-layer--magicline-error {
+  z-index: 300;
+  background: #1A1A1A;
+  pointer-events: auto;  /* blocks touches to Magicline underneath — members cannot interact with a drifted page */
+}
+
+.bsk-error-title {
+  font-size: 28px;
+  font-weight: 600;
+  color: #F5C518;
+  margin: 24px 0 8px 0;
+  text-align: center;
+  padding: 0 32px;
+  letter-spacing: 0;
+  line-height: 1.25;
+}
+
+.bsk-error-subtext {
+  font-size: 16px;
+  color: #9CA3AF;
+  text-align: center;
+  padding: 0 32px;
+  margin: 0;
+  line-height: 1.4;
+}
