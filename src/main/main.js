@@ -9,6 +9,8 @@ const { app, BrowserWindow, Menu, ipcMain, globalShortcut } = require('electron'
 const path = require('path');
 const log = require('./logger');
 const { attachLockdown } = require('./keyboardLockdown');
+const Store = require('electron-store').default;
+const { createMagiclineView } = require('./magiclineView');
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -140,6 +142,22 @@ app.whenReady().then(() => {
   // via the same attachLockdown export — see Pitfall 1 in RESEARCH.md.
   if (mainWindow) {
     attachLockdown(mainWindow.webContents);
+  }
+
+  // --- Phase 2: Magicline child view + injection pipeline ---------------
+  // createMagiclineView attaches a WebContentsView child to mainWindow, loads
+  // the Magicline cash-register URL under the persist:magicline partition,
+  // wires insertCSS/executeJavaScript injection on every nav, and drives the
+  // splash:hide / show-magicline-error IPC channels via a 250ms main-world
+  // drain poll. See src/main/magiclineView.js for the full lifecycle.
+  if (mainWindow) {
+    try {
+      const store = new Store({ name: 'config' });
+      createMagiclineView(mainWindow, store);
+      log.info('phase2.magicline-view.created');
+    } catch (err) {
+      log.error('phase2.magicline-view.create failed: ' + (err && err.message));
+    }
   }
 });
 
