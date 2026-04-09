@@ -11,16 +11,15 @@
 
   <!--
     Z-index ladder (per 01-UI-SPEC.md):
-      0   — #magicline-mount — Phase 2 BrowserView attach point (empty in Phase 1)
-      100 — #splash — Phase 1 branded splash cover (visible on boot)
+      0   — #magicline-mount — Phase 2 BrowserView attach point
+      100 — #splash — Phase 1 branded splash cover
       200 — Phase 4 idle overlay (sibling added later)
       300 — #magicline-error (Phase 2 D-06/D-07) + Phase 5 error/updating covers
-      400 — Phase 3/5 credentials + admin PIN modal (sibling added later)
+      400 — #credentials-overlay + #pin-modal (Phase 3) + Phase 5 admin PIN
 
     Rules:
     - host.html never navigates away. Layers are toggled via `display` from host.js.
-    - Splash is initially display:flex (visible) with no mechanism to dismiss it
-      in Phase 1 — dismiss fires only on IPC `splash:hide` from main (Phase 2+).
+    - Strict CSP: no inline scripts, no inline event handlers — all wiring in host.js.
   -->
 
   <div id="magicline-mount" class="bsk-layer bsk-layer--base"></div>
@@ -35,6 +34,78 @@
     <img src="assets/logo-dark.png" class="bsk-logo" alt="Bee Strong Fitness" width="220">
     <h1 class="bsk-error-title">Kasse vorübergehend nicht verfügbar</h1>
     <p class="bsk-error-subtext">Bitte wenden Sie sich an das Studio-Personal</p>
+    <!-- Phase 3: PIN eingeben button — visible only for credentials-unavailable / login-failed variants -->
+    <button type="button" id="error-pin-button" class="bsk-btn bsk-btn--primary" style="display:none;">
+      PIN eingeben
+    </button>
+  </div>
+
+  <!-- Phase 3: Credentials overlay (layer 400) -->
+  <div id="credentials-overlay" class="bsk-layer bsk-layer--credentials" style="display:none;" aria-hidden="true" role="dialog" aria-label="Anmeldedaten eingeben">
+    <div class="bsk-card">
+      <img src="assets/logo-dark.png" class="bsk-logo" alt="Bee Strong Fitness" width="160">
+      <h1 class="bsk-card-title">Kiosk einrichten</h1>
+
+      <!-- First-run only — PIN setup fields (D-11, D-15). Hidden in re-entry mode. -->
+      <div id="creds-firstrun-fields" style="display:none;">
+        <label class="bsk-field">
+          <span class="bsk-field-label">Admin-PIN (4&ndash;6 Ziffern)</span>
+          <input type="password" id="creds-pin" class="bsk-input" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="6" autocomplete="off">
+        </label>
+        <label class="bsk-field">
+          <span class="bsk-field-label">PIN wiederholen</span>
+          <input type="password" id="creds-pin2" class="bsk-input" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="6" autocomplete="off">
+        </label>
+        <p id="creds-pin-error" class="bsk-field-error" style="display:none;">PINs stimmen nicht &uuml;berein</p>
+      </div>
+
+      <!-- Credentials fields (both modes) -->
+      <label class="bsk-field">
+        <span class="bsk-field-label">Magicline Benutzername</span>
+        <div class="bsk-input-row">
+          <input type="text" id="creds-user" class="bsk-input" autocomplete="off" autocapitalize="none" spellcheck="false">
+          <button type="button" class="bsk-btn bsk-btn--kbd" data-kbd-for="creds-user" aria-label="Tastatur einblenden">Tastatur</button>
+        </div>
+      </label>
+      <label class="bsk-field">
+        <span class="bsk-field-label">Magicline Passwort</span>
+        <div class="bsk-input-row">
+          <input type="password" id="creds-pass" class="bsk-input" autocomplete="off">
+          <button type="button" class="bsk-btn bsk-btn--kbd" data-kbd-for="creds-pass" aria-label="Tastatur einblenden">Tastatur</button>
+          <button type="button" class="bsk-btn bsk-btn--toggle" id="creds-pass-toggle" aria-label="Passwort anzeigen/verbergen">Zeigen</button>
+        </div>
+      </label>
+
+      <p id="creds-inline-error" class="bsk-field-error" style="display:none;"></p>
+
+      <button type="button" id="creds-submit" class="bsk-btn bsk-btn--primary" disabled>
+        Speichern &amp; Anmelden
+      </button>
+    </div>
+  </div>
+
+  <!-- Phase 3: PIN modal with custom 3x4 numeric keypad (layer 400). -->
+  <!-- Research §PIN Modal Numeric Input UX: zero TabTip dependency. -->
+  <div id="pin-modal" class="bsk-layer bsk-layer--pin" style="display:none;" aria-hidden="true" role="dialog" aria-label="Admin-PIN eingeben">
+    <div class="bsk-card bsk-card--pin">
+      <h2 class="bsk-card-title">Admin-PIN</h2>
+      <p class="bsk-pin-display" id="pin-display" aria-live="polite">&middot;&middot;&middot;&middot;</p>
+      <p id="pin-modal-error" class="bsk-field-error" style="display:none;">Falscher PIN</p>
+      <div class="bsk-keypad">
+        <button type="button" class="bsk-keypad-btn" data-key="1">1</button>
+        <button type="button" class="bsk-keypad-btn" data-key="2">2</button>
+        <button type="button" class="bsk-keypad-btn" data-key="3">3</button>
+        <button type="button" class="bsk-keypad-btn" data-key="4">4</button>
+        <button type="button" class="bsk-keypad-btn" data-key="5">5</button>
+        <button type="button" class="bsk-keypad-btn" data-key="6">6</button>
+        <button type="button" class="bsk-keypad-btn" data-key="7">7</button>
+        <button type="button" class="bsk-keypad-btn" data-key="8">8</button>
+        <button type="button" class="bsk-keypad-btn" data-key="9">9</button>
+        <button type="button" class="bsk-keypad-btn bsk-keypad-btn--back" data-key="back" aria-label="Eine Ziffer l&ouml;schen">&larr;</button>
+        <button type="button" class="bsk-keypad-btn" data-key="0">0</button>
+        <button type="button" class="bsk-keypad-btn bsk-keypad-btn--ok" data-key="ok" aria-label="Best&auml;tigen">&#10003;</button>
+      </div>
+    </div>
   </div>
 
   <script src="host.js"></script>
