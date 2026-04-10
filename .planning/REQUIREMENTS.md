@@ -58,8 +58,8 @@ Requirements for initial release. Each maps to roadmap phases via the Traceabili
 - [ ] **ADMIN-01**: A hidden hotkey combination (default `Ctrl+Shift+F12`) is captured via both `globalShortcut` and `before-input-event` and opens a PIN prompt
 - [ ] **ADMIN-02**: On correct PIN entry, the app drops kiosk mode and reveals an admin menu: exit to Windows, re-enter Magicline credentials, reload app, view logs, trigger update check
 - [ ] **ADMIN-03**: The PIN is hashed at rest (not plaintext); after 5 incorrect attempts in 60 s, the PIN prompt is rate-limited for 5 minutes
-- [ ] **ADMIN-04**: All significant runtime events (startup, crash, login success/failure, idle reset, badge scan with hashed/prefix badge only, sale completion click, update check, update applied, errors) are written to rotating local log files via `electron-log` under `%AppData%/Bee Strong POS/logs/`
-- [ ] **ADMIN-05**: Logs rotate by size (max 1 MB per file, max 5 files) and never include full badge numbers, passwords, or Magicline session tokens
+- [x] **ADMIN-04**: All significant runtime events (startup, crash, login success/failure, idle reset, badge scan with hashed/prefix badge only, sale completion click, update check, update applied, errors) are written to rotating local log files via `electron-log` under `%AppData%/Bee Strong POS/logs/`
+- [x] **ADMIN-05**: Logs rotate by size (max 1 MB per file, max 5 files) and never include full badge numbers, passwords, or Magicline session tokens
 - [ ] **ADMIN-06**: The app auto-updates via `electron-updater` against a private GitHub Releases feed using a fine-grained PAT with only `contents:read` scope, stored via `safeStorage`
 - [ ] **ADMIN-07**: Update installation is gated behind a safe window — `quitAndInstall` is only called when the app is idle (no active member transaction, just after an idle reset, or during a 03:00–05:00 maintenance window); never mid-transaction
 - [ ] **ADMIN-08**: During update download/install the user sees a branded "Updating, please wait" cover; on update failure the app falls back to the previous version and logs the failure
@@ -146,8 +146,8 @@ Which phases cover which requirements. Filled in during roadmap creation.
 | ADMIN-01 | Phase 5 | Pending |
 | ADMIN-02 | Phase 5 | Pending |
 | ADMIN-03 | Phase 5 | Pending |
-| ADMIN-04 | Phase 5 | Pending |
-| ADMIN-05 | Phase 5 | Pending |
+| ADMIN-04 | Phase 5 | Complete |
+| ADMIN-05 | Phase 5 | Complete |
 | ADMIN-06 | Phase 5 | Pending |
 | ADMIN-07 | Phase 5 | Pending |
 | ADMIN-08 | Phase 5 | Pending |

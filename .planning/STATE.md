@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-last_updated: "2026-04-10T10:02:20.642Z"
+status: executing
+last_updated: "2026-04-10T11:26:38.001Z"
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 26
-  completed_plans: 26
-  percent: 100
+  total_plans: 32
+  completed_plans: 27
+  percent: 84
 ---
 
 # Project State: Bee Strong POS Kiosk
@@ -20,12 +20,12 @@ progress:
 
 **Core value:** A gym member can walk up, scan their badge, have a product scanned (or self-selected), pay, and walk away — without staff interaction and without being able to break out of the locked Magicline cash register page.
 
-**Current focus:** Phase 05 — admin-exit-logging-auto-update-branded-polish (ready to discuss/plan)
+**Current focus:** Phase 05 — admin-exit-logging-auto-update-branded-polish
 
 ## Current Position
 
-Phase: 5
-Plan: Not started
+Phase: 05 (admin-exit-logging-auto-update-branded-polish) — EXECUTING
+Plan: 2 of 6
 
 - **Milestone:** v1.0
 - **Phase 01** (locked-down-shell-os-hardening): ✓ COMPLETE (6/6 plans; visual debt in next-visit batch)
@@ -33,8 +33,8 @@ Plan: Not started
 - **Phase 03** (credentials-auto-login-state-machine): ✓ COMPLETE (10/10 plans; TabTip soft re-check in next-visit batch)
 - **Phase 04** (nfc-input-idle-session-lifecycle): ✓ COMPLETE (5/5 plans; 13 physical rows deferred to next-visit batch)
 - **Phase 05** (admin-exit-logging-auto-update-branded-polish): not started
-- **Status:** Ready to plan
-- **Progress:** [██████████] 100% (of planned phases 1–4; Phase 5 still TBD)
+- **Status:** Ready to execute
+- **Progress:** [████████░░] 84%
 - **Last completed:** Plan 04-05 (verification + 100-cycle harness + deferred physical batch) at 2026-04-10 — commits 39e6d71, 3d26418, 29f1961, 6c77432, e2d193c, 22ddf9f
 
 ## Performance Metrics
@@ -56,6 +56,8 @@ See PROJECT.md "Key Decisions" table for the full list. Roadmap-level highlights
 - **Phase 03:** Credentials encrypted via Electron `safeStorage` (DPAPI); authFlow is a pure reducer + executor split with atomic persist (D-11); reCAPTCHA on failed login forces recovery via admin PIN + manual re-entry; D-17 TabTip verified manual-button strategy on proxy box (03-09 2026-04-10).
 - [Phase 04]: 04-03: wire-up plan adds start-idle-timer side-effect from CASH_REGISTER_READY reducer (both branches) — idleTimer arms automatically regardless of cookie-session vs login path
 - [Phase 04]: 04-05: deferred-close posture — automated 102/102 green (including 100-cycle sessionReset harness as IDLE-04 literal acceptance); all 13 physical human-verification rows consolidated into the Phase 1 next-visit batch because kiosk hardware + Deka reader were unavailable on close date. Does NOT block Phase 5.
+- [Phase 05]: Flipped electron-log pin tilde->caret to align with CLAUDE.md rule (05-01)
+- [Phase 05]: log.audit uses field-name allowlist redactor, not value scanning (D-25, 05-01)
 
 ### Open TODOs (surfaced during planning)
 
