@@ -16,13 +16,13 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const path = require('node:path');
+const Module = require('node:module');
 
 // --- Inject a fake ./sessionReset BEFORE requiring idleTimer ----------------
-// Use an absolute path matching what require('./sessionReset') inside
-// src/main/idleTimer.js resolves to at call time. Phase 4 Plan 04-02 will
-// create the real src/main/sessionReset.js; for Plan 04-01 we inject a fake
-// directly into require.cache so the lazy require inside expired() resolves
-// to our stub and never touches disk.
+// Phase 4 Plan 04-02 will create the real src/main/sessionReset.js; for Plan
+// 04-01 we patch Module._resolveFilename + require.cache so the lazy
+// require('./sessionReset') inside idleTimer.expired() resolves to our stub
+// without touching disk.
 const fakeSessionResetPath = path.resolve(__dirname, '..', 'src', 'main', 'sessionReset.js');
 
 const hardResetCalls = [];
@@ -33,6 +33,17 @@ require.cache[fakeSessionResetPath] = {
   exports: {
     hardReset: (opts) => { hardResetCalls.push(opts); },
   },
+};
+
+const _origResolve = Module._resolveFilename;
+Module._resolveFilename = function patchedResolve(request, parent, ...rest) {
+  if (request === './sessionReset'
+      && parent
+      && parent.filename
+      && parent.filename.endsWith(path.join('src', 'main', 'idleTimer.js'))) {
+    return fakeSessionResetPath;
+  }
+  return _origResolve.call(this, request, parent, ...rest);
 };
 
 const idleTimer = require('../src/main/idleTimer');
