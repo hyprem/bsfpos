@@ -77,7 +77,15 @@ function initUpdater(opts) {
 
   updater.on('update-available', (info) => {
     log.audit('update.check', { result: 'available', version: (info && info.version) || 'unknown' });
-    // Kick off download explicitly since autoDownload=false
+    // WR-05 SURPRISE: every check that lands on an available version triggers
+    // a FULL BINARY DOWNLOAD here. The admin "Updates prüfen" button and the
+    // 6-hour interval check both flow through this handler, so any admin tap
+    // on a kiosk sitting on a new release will start the multi-MB download
+    // immediately. This is intentional — autoDownload=false is set on
+    // electron-updater only so WE control the kick-off — but on a metered or
+    // flaky kiosk connection this cost is NOT obvious from the admin UI copy
+    // ("wird bei nächster Ruhepause installiert"). If that ever becomes a
+    // problem, separate the "check only" code path from this handler.
     updater.downloadUpdate().catch((err) => {
       log.audit('update.failed', { reason: String(err && err.message), phase: 'download' });
       if (typeof opts.onUpdateFailed === 'function') opts.onUpdateFailed(err);
