@@ -131,6 +131,19 @@ test('BOOTING + cash-register-ready -> CASH_REGISTER_READY (cookie-session skip-
   assert.ok(hasSideEffect(r.sideEffects, 'log', { reason: 'cash-register-ready-cookie' }));
 });
 
+test('BOOTING + cash-register-ready emits {kind:"start-idle-timer"} side-effect (Phase 4 D-08)', () => {
+  const r = reduce(STATES.BOOTING, { type: 'cash-register-ready' }, CTX_CREDS);
+  assert.strictEqual(r.next, STATES.CASH_REGISTER_READY);
+  // Phase 4 D-08: idle timer must arm when cash register becomes ready
+  assert.ok(hasSideEffect(r.sideEffects, 'start-idle-timer'),
+    'expected start-idle-timer side-effect on BOOTING→CASH_REGISTER_READY');
+  // Regression guard: existing side effects must still be present
+  assert.ok(hasSideEffect(r.sideEffects, 'log', { reason: 'cash-register-ready-cookie' }),
+    'existing log side-effect regressed');
+  assert.ok(hasSideEffect(r.sideEffects, 'clear-timer', { name: 'boot' }),
+    'existing clear-timer boot side-effect regressed');
+});
+
 test('BOOTING + timer-expired(boot) -> CREDENTIALS_UNAVAILABLE (D-21: was LOGIN_FAILED)', () => {
   const r = reduce(STATES.BOOTING, { type: 'timer-expired', name: 'boot' }, CTX_CREDS);
   assert.strictEqual(r.next, STATES.CREDENTIALS_UNAVAILABLE);
@@ -186,6 +199,34 @@ test('LOGIN_SUBMITTED + cash-register-ready -> CASH_REGISTER_READY', () => {
   assert.strictEqual(r.next, STATES.CASH_REGISTER_READY);
   assert.ok(hasSideEffect(r.sideEffects, 'clear-timer', { name: 'post-submit' }));
   assert.ok(hasSideEffect(r.sideEffects, 'log', { reason: 'cash-register-ready' }));
+});
+
+test('LOGIN_SUBMITTED + cash-register-ready emits {kind:"start-idle-timer"} side-effect (Phase 4 D-08)', () => {
+  const r = reduce(STATES.LOGIN_SUBMITTED, { type: 'cash-register-ready' }, CTX_CREDS);
+  assert.strictEqual(r.next, STATES.CASH_REGISTER_READY);
+  // Phase 4 D-08: idle timer must arm on the post-login path too
+  assert.ok(hasSideEffect(r.sideEffects, 'start-idle-timer'),
+    'expected start-idle-timer side-effect on LOGIN_SUBMITTED→CASH_REGISTER_READY');
+  // Regression guard: existing side effects must still be present
+  assert.ok(hasSideEffect(r.sideEffects, 'log', { reason: 'cash-register-ready' }),
+    'existing log side-effect regressed');
+  assert.ok(hasSideEffect(r.sideEffects, 'clear-timer', { name: 'post-submit' }),
+    'existing clear-timer post-submit side-effect regressed');
+});
+
+test('non-cash-register-ready events do NOT emit start-idle-timer (Phase 4 D-08)', () => {
+  // login-detected from BOOTING
+  const r1 = reduce(STATES.BOOTING, { type: 'login-detected' }, CTX_CREDS);
+  assert.strictEqual(hasSideEffect(r1.sideEffects, 'start-idle-timer'), false);
+  // timer-expired boot from BOOTING
+  const r2 = reduce(STATES.BOOTING, { type: 'timer-expired', name: 'boot' }, CTX_CREDS);
+  assert.strictEqual(hasSideEffect(r2.sideEffects, 'start-idle-timer'), false);
+  // login-submitted from LOGIN_DETECTED
+  const r3 = reduce(STATES.LOGIN_DETECTED, { type: 'login-submitted' }, CTX_CREDS);
+  assert.strictEqual(hasSideEffect(r3.sideEffects, 'start-idle-timer'), false);
+  // login-failed from LOGIN_SUBMITTED
+  const r4 = reduce(STATES.LOGIN_SUBMITTED, { type: 'login-failed' }, CTX_CREDS);
+  assert.strictEqual(hasSideEffect(r4.sideEffects, 'start-idle-timer'), false);
 });
 
 test('LOGIN_SUBMITTED + login-failed -> CREDENTIALS_UNAVAILABLE + clear-credentials', () => {
