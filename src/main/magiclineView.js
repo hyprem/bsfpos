@@ -55,6 +55,11 @@ let drainTimer    = null;
 let readyFired    = false;
 let driftActive   = false;
 let resizeHandler = null;
+// WR-01: module-scoped admin-hotkey callback so the Ctrl+Shift+F12 before-input
+// listener is re-attached automatically on every view recreation (including
+// after sessionReset.hardReset destroys+recreates the child view). main.js
+// registers this once at startup via setAdminHotkeyHandler().
+let adminHotkeyHandler = null;
 // Child view starts HIDDEN (zero bounds) so the Phase 1 splash stays visible
 // underneath. The view is flipped to full bounds ONLY on cash-register-ready
 // (see handleInjectEvent). Drift keeps it hidden so the #magicline-error host
@@ -176,6 +181,26 @@ function createMagiclineView(mainWindow, store) {
   // global-shortcut no-ops are installed before the keydown listener runs.
   const { attachBadgeInput } = require('./badgeInput');
   attachBadgeInput(magiclineView.webContents);
+
+  // WR-01: re-attach Ctrl+Shift+F12 admin hotkey listener to the newly-created
+  // child webContents. This must run on EVERY createMagiclineView invocation
+  // (including after sessionReset.hardReset) because the previous webContents
+  // instance was destroyed and its listeners are gone. Without this re-attach
+  // the admin hotkey silently stops working on the Magicline view after the
+  // first hardReset — leaving only the host-wc fallback and the global
+  // shortcut, either of which can fail (esp. in dev where globalShortcut is
+  // not registered).
+  if (typeof adminHotkeyHandler === 'function') {
+    magiclineView.webContents.on('before-input-event', (_event, input) => {
+      if (input.type !== 'keyDown') return;
+      try {
+        const { canonical: canon } = require('./keyboardLockdown');
+        if (canon(input) === 'Ctrl+Shift+F12') {
+          adminHotkeyHandler();
+        }
+      } catch (_) { /* swallow */ }
+    });
+  }
 
   // D-08 / D-09: zoom factor from electron-store override or runtime default.
   const zoom = store.get('magiclineZoomFactor', computeDefaultZoom());
@@ -517,10 +542,19 @@ function getMagiclineWebContents() {
   return magiclineView ? magiclineView.webContents : null;
 }
 
+// WR-01: main.js calls this once at startup to register the admin hotkey
+// callback. The callback is re-applied inside createMagiclineView so every
+// view recreation (after sessionReset.hardReset) gets a fresh listener on the
+// new webContents instance.
+function setAdminHotkeyHandler(fn) {
+  adminHotkeyHandler = (typeof fn === 'function') ? fn : null;
+}
+
 module.exports = {
   createMagiclineView,
   destroyMagiclineView,
   getMagiclineWebContents,
+  setAdminHotkeyHandler,
   // Exported for tests / diagnostics only — do NOT call from main.js:
   _computeDefaultZoom: computeDefaultZoom,
   _DRIFT_MESSAGE: DRIFT_MESSAGE,

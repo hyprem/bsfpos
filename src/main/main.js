@@ -11,7 +11,7 @@ const child_process = require('child_process');
 const log = require('./logger');
 const { attachLockdown } = require('./keyboardLockdown');
 const Store = require('electron-store').default;
-const { createMagiclineView, destroyMagiclineView } = require('./magiclineView');
+const { createMagiclineView, destroyMagiclineView, setAdminHotkeyHandler } = require('./magiclineView');
 const authFlow = require('./authFlow');
 const adminPin = require('./adminPin');
 const adminPinLockout = require('./adminPinLockout');
@@ -363,17 +363,16 @@ app.whenReady().then(() => {
       // the auth-state poller picks up CASH_REGISTER_READY when it arrives).
       startHealthWatchdog(store);
 
+      // WR-01: register the admin hotkey callback BEFORE createMagiclineView
+      // so the initial view instance picks it up. magiclineView re-applies the
+      // listener on every recreation (post-hardReset), so this single call is
+      // sufficient for the entire app lifetime — without this, the hotkey
+      // silently stops working on the Magicline child view after any
+      // sessionReset.hardReset.
+      setAdminHotkeyHandler(openAdminPinModal);
+
       const magiclineView = createMagiclineView(mainWindow, store);
       log.info('phase2.magicline-view.created');
-
-      // Phase 5 D-08: admin hotkey also captured on Magicline child wc when it has focus
-      magiclineView.webContents.on('before-input-event', (_event, input) => {
-        if (input.type !== 'keyDown') return;
-        const { canonical: canon } = require('./keyboardLockdown');
-        if (canon(input) === 'Ctrl+Shift+F12') {
-          openAdminPinModal();
-        }
-      });
 
       // --- Phase 3 auth-flow wiring ------------------------------------
       // Per research Pitfall #2: safeStorage.isEncryptionAvailable() must
