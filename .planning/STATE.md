@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-04-10T07:30:19.732Z"
+last_updated: "2026-04-10T07:45:04.972Z"
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 26
-  completed_plans: 23
-  percent: 88
+  completed_plans: 24
+  percent: 92
 ---
 
 # Project State: Bee Strong POS Kiosk
@@ -25,17 +25,17 @@ progress:
 ## Current Position
 
 Phase: 04 (nfc-input-idle-session-lifecycle) — EXECUTING
-Plan: 1 of 5
+Plan: 4 of 5
 
 - **Milestone:** v1.0
 - **Phase 01** (locked-down-shell-os-hardening): ✓ COMPLETE (6/6 plans)
 - **Phase 02** (magicline-embed-injection-layer): ✓ COMPLETE (5/5 plans)
 - **Phase 03** (credentials-auto-login-state-machine): ✓ COMPLETE (10/10 plans)
-- **Phase 04** (nfc-input-idle-session-lifecycle): not started
+- **Phase 04** (nfc-input-idle-session-lifecycle): 3/5 plans complete (Wave 1 + Wave 2 main-process half shipped)
 - **Phase 05** (admin-exit-logging-auto-update-branded-polish): not started
 - **Status:** Executing Phase 04
-- **Progress:** [████████████] 21/21 planned plans (60% of milestone by phase count)
-- **Last completed:** Plan 03-09 (Wave 0 real-kiosk probes — TabTip verdict + scrypt benchmark) at 2026-04-10 — commit 059841c
+- **Progress:** [█████████░] 24/26 plans (92%)
+- **Last completed:** Plan 04-03 (main-process wire-up — badgeInput + idleTimer + sessionReset integration) at 2026-04-10 — commit 350af67
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ See PROJECT.md "Key Decisions" table for the full list. Roadmap-level highlights
 - **Phase 01:** main.js split with ORCHESTRATION marker so plan 03 can replace only the bottom orchestration block while keeping createMainWindow intact; preload.js exposes only callback-shaped APIs; D-14 realized as Win11 Pro per-user Winlogon Shell override via 04-gpo-hardening.ps1; D-15 AutoAdminLogon plaintext DefaultPassword accepted tradeoff mitigated by standard user + BitLocker + physical location; attachLockdown + reservedShortcuts exported from src/main/keyboardLockdown.js.
 - **Phase 02:** Fragile MUI selectors isolated to `src/inject/fragile-selectors.js`; stable + fragile selector audit log fires on every boot; drift isolation is single-file-patchable.
 - **Phase 03:** Credentials encrypted via Electron `safeStorage` (DPAPI); authFlow is a pure reducer + executor split with atomic persist (D-11); reCAPTCHA on failed login forces recovery via admin PIN + manual re-entry; D-17 TabTip verified manual-button strategy on proxy box (03-09 2026-04-10).
+- [Phase 04]: 04-03: wire-up plan adds start-idle-timer side-effect from CASH_REGISTER_READY reducer (both branches) — idleTimer arms automatically regardless of cookie-session vs login path
 
 ### Open TODOs (surfaced during planning)
 
