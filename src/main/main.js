@@ -13,6 +13,15 @@ const { attachLockdown } = require('./keyboardLockdown');
 const Store = require('electron-store').default;
 const { createMagiclineView, destroyMagiclineView } = require('./magiclineView');
 const authFlow = require('./authFlow');
+const adminPin = require('./adminPin');
+
+// WR-01: set when `request-reset-loop-recovery` surfaces the PIN modal and
+// cleared only after a successful app.relaunch() — or on process exit. When
+// set, the `verify-pin` invoke handler intercepts PIN entry and routes to
+// adminPin.verifyPin + app.relaunch, bypassing the normal authFlow path
+// (which would land the user in the credentials overlay and leave the
+// reset-loop counter latched until the next Windows logout).
+let resetLoopPending = false;
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -204,6 +213,24 @@ app.whenReady().then(() => {
       ipcMain.handle('verify-pin', async (_e, payload) => {
         try {
           const pin = (payload && typeof payload.pin === 'string') ? payload.pin : '';
+          // WR-01: reset-loop admin recovery interception. When the PIN modal
+          // was surfaced by `request-reset-loop-recovery`, we must bypass the
+          // authFlow state machine — authFlow would transition to
+          // CREDENTIALS_UNAVAILABLE → NEEDS_CREDENTIALS and show the
+          // credentials overlay, which is not what the reset-loop banner
+          // offered. The only valid outcome of a valid PIN here is
+          // app.relaunch() + app.quit(). Verify directly against adminPin.
+          if (resetLoopPending) {
+            if (!adminPin.verifyPin(store, pin)) {
+              log.warn('sessionReset.admin-recovery: bad PIN');
+              return { ok: false };
+            }
+            log.info('sessionReset.admin-recovery: PIN ok — app.relaunch + app.quit');
+            resetLoopPending = false;
+            app.relaunch();
+            app.quit();
+            return { ok: true };
+          }
           return authFlow.handlePinAttempt(pin);
         } catch (err) {
           log.error('ipc.verify-pin failed: ' + (err && err.message));
@@ -250,28 +277,15 @@ app.whenReady().then(() => {
       // context:'reset-loop' is received.
       ipcMain.on('request-reset-loop-recovery', () => {
         log.warn('sessionReset.admin-recovery.requested: surfacing PIN modal');
+        // WR-01: latch the reset-loop pending flag BEFORE sending show-pin-modal
+        // so the next verify-pin invoke is intercepted and routed to
+        // app.relaunch instead of authFlow.
+        resetLoopPending = true;
         try {
           mainWindow.webContents.send('show-pin-modal', { context: 'reset-loop' });
         } catch (err) {
           log.error('ipc.request-reset-loop-recovery send failed: ' + (err && err.message));
         }
-      });
-      // Phase 4 D-19: pin-ok admin-recovery branch. This fires-and-forgets
-      // from the host renderer after the user enters a valid PIN in the
-      // reset-loop recovery flow. The existing Phase 3 PIN flow uses the
-      // 'verify-pin' invoke handler + authFlow state machine and is NOT
-      // touched — those flows live on a different channel. Strict context
-      // check (T-04-17) prevents any other caller from triggering relaunch.
-      ipcMain.on('pin-ok', (_e, payload) => {
-        if (payload && payload.context === 'reset-loop') {
-          log.info('sessionReset.admin-recovery: app.relaunch + app.quit');
-          app.relaunch();
-          app.quit();
-          return;
-        }
-        // Any other context: log and no-op. Phase 3 authFlow pin-ok travels
-        // through 'verify-pin' invoke and does NOT reach this listener.
-        log.warn('ipc.pin-ok: ignored payload without reset-loop context');
       });
 
       ipcMain.handle('launch-touch-keyboard', async () => {
