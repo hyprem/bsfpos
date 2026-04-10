@@ -1,5 +1,5 @@
 ---
-status: issues_found
+status: partially_resolved
 phase: 04-nfc-input-idle-session-lifecycle
 depth: standard
 files_reviewed: 18
@@ -8,12 +8,22 @@ findings:
   warning: 4
   info: 8
   total: 13
+resolved:
+  - CR-01 (fix 37d6adc)
+  - WR-01 (fix 6e2257f)
+  - IN-06 (closed by WR-01 fix — dead listener removed)
+deferred:
+  - WR-02, WR-03, WR-04 (reset-path hardening — defer to decimal cleanup phase if IDLE-05 physical verification fails)
+  - IN-01, IN-02, IN-03, IN-04, IN-05, IN-07, IN-08 (cleanup nits — bundle with next polish phase)
 reviewed_at: 2026-04-10
+fixed_at: 2026-04-10
 ---
 
 # Phase 04 Code Review
 
-**Status:** issues_found — 1 critical, 4 warning, 8 info across 18 files (12 source + 6 tests).
+**Status:** partially_resolved — 2 of the 3 ship-blockers fixed inline (CR-01 + WR-01 + IN-06 closed). Remaining 4 warnings and 7 info items deferred with rationale below.
+
+**Original findings:** 1 critical, 4 warning, 8 info across 18 files (12 source + 6 tests).
 
 Phase 4 wires `badgeInput`, `idleTimer`, and `sessionReset` into a coherent lifecycle with solid automated coverage (102/102 across the Phase 4 suite + 100-cycle harness). The state machines are well-isolated, NFC-03 sentinel-null is correct, and the logging-hygiene contract (badge content never logged) is honored. Two real correctness bugs surfaced in the reset/teardown path.
 
