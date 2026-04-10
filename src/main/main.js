@@ -599,7 +599,10 @@ app.whenReady().then(() => {
           log.warn('admin-menu-action: refused — adminMenuOpen=false (action=' + action + ')');
           return { ok: false, error: 'not-authorised' };
         }
-        log.audit('admin.exit', { action: String(action) });
+        // WR-03: emit admin.action for button taps; admin.exit is reserved
+        // for the actual exit-to-windows path so log parsers can count real
+        // kiosk exits.
+        log.audit('admin.action', { action: String(action) });
         try {
           switch (action) {
             case 'check-updates': {
@@ -642,6 +645,8 @@ app.whenReady().then(() => {
               return { ok: true };
             }
             case 'exit-to-windows': {
+              // WR-03: canonical admin.exit event reserved for actual exit.
+              log.audit('admin.exit', {});
               try { globalShortcut.unregisterAll(); } catch (_) {}
               try { app.setKiosk(false); } catch (_) {}
               adminMenuOpen = false;
