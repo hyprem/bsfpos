@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-04-10T11:49:03.490Z"
+last_updated: "2026-04-10T11:57:03.308Z"
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 32
-  completed_plans: 30
-  percent: 94
+  completed_plans: 31
+  percent: 97
 ---
 
 # Project State: Bee Strong POS Kiosk
@@ -25,7 +25,7 @@ progress:
 ## Current Position
 
 Phase: 05 (admin-exit-logging-auto-update-branded-polish) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 
 - **Milestone:** v1.0
 - **Phase 01** (locked-down-shell-os-hardening): ✓ COMPLETE (6/6 plans; visual debt in next-visit batch)
@@ -34,7 +34,7 @@ Plan: 5 of 6
 - **Phase 04** (nfc-input-idle-session-lifecycle): ✓ COMPLETE (5/5 plans; 13 physical rows deferred to next-visit batch)
 - **Phase 05** (admin-exit-logging-auto-update-branded-polish): IN PROGRESS (3/6 plans — 05-01, 05-02, 05-03 complete)
 - **Status:** Ready to execute
-- **Progress:** [█████████░] 94%
+- **Progress:** [██████████] 97%
 - **Last completed:** Plan 05-03 (update gate + sessionReset onPostReset hook) at 2026-04-10 — commits 0f5ecc8, 34ec3e6, 754f8db
 
 ## Performance Metrics
@@ -61,6 +61,8 @@ See PROJECT.md "Key Decisions" table for the full list. Roadmap-level highlights
 - [Phase 05]: Plan 02: adminPinLockout is a pure wrapper — adminPin.js (Phase 3 D-10) preserved with zero diff
 - [Phase 05]: Plan 03: updateGate.js is pure DI module (no electron import) — Plan 05-04 owns NsisUpdater wiring via injected installFn
 - [Phase 05]: Plan 03: sessionReset.onPostReset uses local succeeded flag inside try to guarantee no fire on throws or short-circuits (T-05-17)
+- [Phase 05]: Plan 05-05: context-aware PIN modal (pinModalContext) routes admin hotkey to verifyAdminPin and reset-loop to legacy verifyPin
+- [Phase 05]: Plan 05-05: update-failed variant uses dual cleanup (10s timeout + once pointerdown), hideMagiclineError clears both
 
 ### Open TODOs (surfaced during planning)
 

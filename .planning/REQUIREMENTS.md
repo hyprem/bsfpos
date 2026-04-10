@@ -66,9 +66,9 @@ Requirements for initial release. Each maps to roadmap phases via the Traceabili
 
 ### Branding & UX
 
-- [ ] **BRAND-01**: The branded host UI (splash, idle overlay, admin PIN modal, error screen, credentials screen, updating cover) uses Bee Strong logo and brand colors
-- [ ] **BRAND-02**: All branded overlay UI is readable and operable on a vertical touchscreen with minimum 44x44 px touch targets and high contrast
-- [ ] **BRAND-03**: The Magicline content area itself is NOT re-themed (colors, fonts unchanged) — only hidden elements are modified
+- [x] **BRAND-01**: The branded host UI (splash, idle overlay, admin PIN modal, error screen, credentials screen, updating cover) uses Bee Strong logo and brand colors
+- [x] **BRAND-02**: All branded overlay UI is readable and operable on a vertical touchscreen with minimum 44x44 px touch targets and high contrast
+- [x] **BRAND-03**: The Magicline content area itself is NOT re-themed (colors, fonts unchanged) — only hidden elements are modified
 
 ## v2 Requirements
 
@@ -151,9 +151,9 @@ Which phases cover which requirements. Filled in during roadmap creation.
 | ADMIN-06 | Phase 5 | Complete |
 | ADMIN-07 | Phase 5 | Complete |
 | ADMIN-08 | Phase 5 | Complete |
-| BRAND-01 | Phase 5 | Pending |
-| BRAND-02 | Phase 5 | Pending |
-| BRAND-03 | Phase 5 | Pending |
+| BRAND-01 | Phase 5 | Complete |
+| BRAND-02 | Phase 5 | Complete |
+| BRAND-03 | Phase 5 | Complete |
 
 **Coverage:**
 - v1 requirements: 42 total
