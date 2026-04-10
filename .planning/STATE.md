@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-04-10T11:30:44.879Z"
+last_updated: "2026-04-10T11:38:15.672Z"
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 32
-  completed_plans: 28
-  percent: 88
+  completed_plans: 29
+  percent: 91
 ---
 
 # Project State: Bee Strong POS Kiosk
@@ -25,17 +25,17 @@ progress:
 ## Current Position
 
 Phase: 05 (admin-exit-logging-auto-update-branded-polish) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 
 - **Milestone:** v1.0
 - **Phase 01** (locked-down-shell-os-hardening): ✓ COMPLETE (6/6 plans; visual debt in next-visit batch)
 - **Phase 02** (magicline-embed-injection-layer): ✓ COMPLETE (5/5 plans)
 - **Phase 03** (credentials-auto-login-state-machine): ✓ COMPLETE (10/10 plans; TabTip soft re-check in next-visit batch)
 - **Phase 04** (nfc-input-idle-session-lifecycle): ✓ COMPLETE (5/5 plans; 13 physical rows deferred to next-visit batch)
-- **Phase 05** (admin-exit-logging-auto-update-branded-polish): not started
-- **Status:** Ready to execute
-- **Progress:** [█████████░] 88%
-- **Last completed:** Plan 04-05 (verification + 100-cycle harness + deferred physical batch) at 2026-04-10 — commits 39e6d71, 3d26418, 29f1961, 6c77432, e2d193c, 22ddf9f
+- **Phase 05** (admin-exit-logging-auto-update-branded-polish): IN PROGRESS (3/6 plans — 05-01, 05-02, 05-03 complete)
+- **Status:** Executing
+- **Progress:** [█████████░] 91%
+- **Last completed:** Plan 05-03 (update gate + sessionReset onPostReset hook) at 2026-04-10 — commits 0f5ecc8, 34ec3e6, 754f8db
 
 ## Performance Metrics
 
@@ -59,6 +59,8 @@ See PROJECT.md "Key Decisions" table for the full list. Roadmap-level highlights
 - [Phase 05]: Flipped electron-log pin tilde->caret to align with CLAUDE.md rule (05-01)
 - [Phase 05]: log.audit uses field-name allowlist redactor, not value scanning (D-25, 05-01)
 - [Phase 05]: Plan 02: adminPinLockout is a pure wrapper — adminPin.js (Phase 3 D-10) preserved with zero diff
+- [Phase 05]: Plan 03: updateGate.js is pure DI module (no electron import) — Plan 05-04 owns NsisUpdater wiring via injected installFn
+- [Phase 05]: Plan 03: sessionReset.onPostReset uses local succeeded flag inside try to guarantee no fire on throws or short-circuits (T-05-17)
 
 ### Open TODOs (surfaced during planning)
 
@@ -84,17 +86,17 @@ None. Phase 04 is unblocked — Phase 03's idempotent auto-login is the dependen
 
 ### Last session summary
 
-- Closed Plan 04-05 (verification + 100-cycle harness + deferred physical batch) on 2026-04-10. Shipped `test/sessionReset.harness.js` (4 cases, case 1 = literal 100-cycle loop as IDLE-04 acceptance), `test/phase4-integration.test.js` (9 cross-module wiring cases), and `04-VERIFICATION.md` (13-row human checklist). Automated suites: Phase 4 cumulative 102/102 green, Phase 3 regression 82/82 green, `node --check` clean on 8 modified src files.
-- Human checkpoint resolved as DEFERRED: kiosk hardware unavailable + Deka reader never physically validated. User chose option 1 (defer all) + 2a (append to existing Phase 1 debt list). Rewrote 04-VERIFICATION.md preamble, appended "Phase 4 — Deferred Physical Verification" subsection to 01-VERIFICATION.md with all 13 checkboxes, log-spot-check lines, and IDLE-05-runs-last ordering constraint. Also folded the 03-09 TabTip manual-button re-check into the same consolidated batch.
-- Commits: 39e6d71, 3d26418, 29f1961 (tasks 1–3) + 6c77432, e2d193c, 22ddf9f (deferred-close finalization).
+- Closed Plan 05-03 (update gate + sessionReset onPostReset hook) on 2026-04-10 across a two-session continuation. Shipped `src/main/updateGate.js` (pure DI safe-window gate; first-of post-reset | 03:00–05:00), extended `src/main/sessionReset.js` (+27 lines: `onPostReset` hook + `succeeded` flag to gate fire-on-success only), and added `test/updateGate.test.js` (8 tests) + `test/sessionReset.postReset.test.js` (4 tests). Full suite 242/242 green, Phase 4 regression clean. ADMIN-07 closed.
+- Commits: 0f5ecc8 (Task 1 sessionReset hook), 34ec3e6 (Task 2 updateGate), 754f8db (Task 3 tests) + docs commit for SUMMARY/STATE/ROADMAP.
+- Continuation: an earlier executor died after Task 2; the continuation executor verified both prior commits via git log, executed only Task 3, and did NOT re-do Tasks 1–2.
 
 ### Next session entry point
 
-Phase 05 (Admin Exit, Logging, Auto-Update & Branded Polish) — not started. Phase has `Plans: TBD` and `UI hint: yes` (admin PIN modal, updating cover, branded polish pass across all overlays). Recommended path: `/gsd-discuss-phase 5` → `/gsd-ui-phase 5` → `/gsd-plan-phase 5`.
+Plan 05-04 (main orchestration) — wire `updateGate.onUpdateDownloaded` to the real `electron-updater` `NsisUpdater` via injected `quitAndInstall` as installFn. Also the hook-up for admin PIN IPC (Plan 05-02's `adminPinLockout`) and the v1.0 admin exit menu is planned here. Run `/gsd-execute-phase 5` to continue.
 
 ### Stopped At
 
-Phase 04 complete (deferred-close) at 2026-04-10. All 5 plans have SUMMARY files. 13 deferred physical verification items parked in the consolidated Phase 1 next-visit batch. Ready to advance to Phase 05.
+Phase 05 in progress — 3/6 plans complete (05-01, 05-02, 05-03). Ready to execute 05-04-main-orchestration-PLAN.md.
 
 ---
 *State initialized: 2026-04-08 · Last refresh: 2026-04-10*
