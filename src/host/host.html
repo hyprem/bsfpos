@@ -10,16 +10,20 @@
 <body>
 
   <!--
-    Z-index ladder (per 01-UI-SPEC.md):
+    Z-index ladder (per 01-UI-SPEC.md + 05-UI-SPEC.md):
       0   — #magicline-mount — Phase 2 BrowserView attach point
       100 — #splash — Phase 1 branded splash cover
-      200 — Phase 4 idle overlay (sibling added later)
-      300 — #magicline-error (Phase 2 D-06/D-07) + Phase 5 error/updating covers
-      400 — #credentials-overlay + #pin-modal (Phase 3) + Phase 5 admin PIN
+      200 — #idle-overlay — Phase 4 idle "Noch da?" overlay
+      300 — #magicline-error (Phase 2/3 variants + Phase 5 bad-release, update-failed)
+      300 — #updating-cover — Phase 5 mutually exclusive with #magicline-error
+      400 — #credentials-overlay + #pin-modal (Phase 3 + Phase 5 admin PIN lockout panel)
+      500 — #admin-menu + #update-config — Phase 5 (mutually exclusive)
 
     Rules:
     - host.html never navigates away. Layers are toggled via `display` from host.js.
     - Strict CSP: no inline scripts, no inline event handlers — all wiring in host.js.
+    - Phase 5: #admin-menu and #update-config share layer 500 (mutually exclusive).
+    - Phase 5: #updating-cover and #magicline-error share layer 300 (mutually exclusive).
   -->
 
   <div id="magicline-mount" class="bsk-layer bsk-layer--base"></div>
@@ -59,6 +63,19 @@
     <button type="button" id="error-pin-button" class="bsk-btn bsk-btn--primary" style="display:none;">
       PIN eingeben
     </button>
+  </div>
+
+  <!-- LAYER 300: Updating cover (Phase 5, sibling of #magicline-error) -->
+  <div id="updating-cover"
+       class="bsk-layer bsk-layer--updating"
+       style="display:none;"
+       aria-hidden="true"
+       role="status"
+       aria-label="Aktualisierung läuft">
+    <img src="assets/logo-dark.png" class="bsk-logo" alt="Bee Strong Fitness" width="220">
+    <div class="bsk-spinner" aria-hidden="true"></div>
+    <h1 class="bsk-updating-heading">Aktualisierung läuft</h1>
+    <p class="bsk-updating-subtext">Bitte warten &mdash; der Kiosk startet gleich neu.</p>
   </div>
 
   <!-- Phase 3: Credentials overlay (layer 400) -->
@@ -126,6 +143,64 @@
         <button type="button" class="bsk-keypad-btn" data-key="0">0</button>
         <button type="button" class="bsk-keypad-btn bsk-keypad-btn--ok" data-key="ok" aria-label="Best&auml;tigen">&#10003;</button>
       </div>
+      <!-- Phase 5 ADMIN-03: PIN lockout panel — replaces keypad view while locked -->
+      <div id="pin-lockout-panel" style="display:none;" aria-live="assertive">
+        <p class="bsk-pin-lockout-msg">Zu viele Versuche &mdash; bitte warten</p>
+        <p id="pin-lockout-countdown" class="bsk-pin-lockout-countdown">05:00</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- LAYER 500: Admin menu (Phase 5 D-01) -->
+  <div id="admin-menu"
+       class="bsk-layer bsk-layer--admin"
+       style="display:none;"
+       aria-hidden="true"
+       role="dialog"
+       aria-label="Admin-Menü">
+    <div class="bsk-card bsk-card--admin">
+      <img src="assets/logo-dark.png" class="bsk-logo" alt="Bee Strong Fitness" width="160">
+      <h2 class="bsk-card-title">Admin-Men&uuml;</h2>
+      <div class="bsk-admin-diagnostics" aria-label="Systemstatus">
+        <div class="bsk-diag-row"><span class="bsk-diag-label">Version</span><span class="bsk-diag-value" id="diag-version">&mdash;</span></div>
+        <div class="bsk-diag-row"><span class="bsk-diag-label">Letztes Update</span><span class="bsk-diag-value" id="diag-last-update">&mdash;</span></div>
+        <div class="bsk-diag-row"><span class="bsk-diag-label">Status</span><span class="bsk-diag-value" id="diag-auth-state">&mdash;</span></div>
+        <div class="bsk-diag-row"><span class="bsk-diag-label">Letzter Reset</span><span class="bsk-diag-value" id="diag-last-reset">&mdash;</span></div>
+        <div class="bsk-diag-row"><span class="bsk-diag-label">Auto-Update</span><span class="bsk-diag-value" id="diag-update-status">&mdash;</span></div>
+      </div>
+      <div class="bsk-admin-btns">
+        <button type="button" class="bsk-btn bsk-btn--admin-action" id="admin-btn-check-updates">Updates pr&uuml;fen</button>
+        <button type="button" class="bsk-btn bsk-btn--admin-action" id="admin-btn-logs">Protokolle anzeigen</button>
+        <button type="button" class="bsk-btn bsk-btn--admin-action" id="admin-btn-reload">Kasse nachladen</button>
+        <button type="button" class="bsk-btn bsk-btn--admin-action" id="admin-btn-credentials">Anmeldedaten &auml;ndern</button>
+        <button type="button" class="bsk-btn bsk-btn--admin-action" id="admin-btn-update-config">Auto-Update einrichten</button>
+        <button type="button" class="bsk-btn bsk-btn--admin-action bsk-btn--admin-exit" id="admin-btn-exit">Beenden</button>
+      </div>
+      <p id="admin-update-result" class="bsk-admin-update-result" style="display:none;"></p>
+    </div>
+  </div>
+
+  <!-- LAYER 500: Update config (Phase 5 D-20, mutually exclusive with #admin-menu) -->
+  <div id="update-config"
+       class="bsk-layer bsk-layer--admin"
+       style="display:none;"
+       aria-hidden="true"
+       role="dialog"
+       aria-label="Auto-Update konfigurieren">
+    <div class="bsk-card">
+      <img src="assets/logo-dark.png" class="bsk-logo" alt="Bee Strong Fitness" width="160">
+      <h2 class="bsk-card-title">Auto-Update einrichten</h2>
+      <p class="bsk-update-config-hint">
+        GitHub Personal Access Token (PAT) mit <strong>contents:read</strong>-Berechtigung
+        f&uuml;r das private Releases-Repository eingeben.
+      </p>
+      <label class="bsk-field">
+        <span class="bsk-field-label">GitHub PAT</span>
+        <input type="password" id="update-pat-input" class="bsk-input" autocomplete="off" spellcheck="false" autocapitalize="none" aria-label="GitHub Personal Access Token">
+      </label>
+      <p id="update-config-error" class="bsk-field-error" style="display:none;"></p>
+      <button type="button" id="update-config-save" class="bsk-btn bsk-btn--primary" disabled>Speichern</button>
+      <button type="button" id="update-config-cancel" class="bsk-btn">Abbrechen</button>
     </div>
   </div>
 
