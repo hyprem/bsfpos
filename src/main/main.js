@@ -616,7 +616,11 @@ app.whenReady().then(() => {
               return { ok: true, result: r };
             }
             case 'view-logs': {
-              try { app.setKiosk(false); } catch (_) {}
+              // WR-04: do NOT toggle kiosk mode off — there is no re-enable
+              // path, so after the admin closes Explorer the kiosk would stay
+              // out of kiosk mode for the next member session. Explorer opens
+              // as a separate process and will appear behind the kiosk window;
+              // if the admin needs to see it they can use exit-to-windows.
               try { await shell.openPath(app.getPath('logs')); } catch (e) {
                 log.error('shell.openPath failed: ' + (e && e.message));
                 return { ok: false, error: String(e && e.message) };
