@@ -430,25 +430,43 @@ app.whenReady().then(() => {
       ipcMain.handle('verify-pin', async (_e, payload) => {
         try {
           const pin = (payload && typeof payload.pin === 'string') ? payload.pin : '';
-          // WR-01: reset-loop admin recovery interception. When the PIN modal
-          // was surfaced by `request-reset-loop-recovery`, we must bypass the
-          // authFlow state machine — authFlow would transition to
-          // CREDENTIALS_UNAVAILABLE → NEEDS_CREDENTIALS and show the
-          // credentials overlay, which is not what the reset-loop banner
-          // offered. The only valid outcome of a valid PIN here is
-          // app.relaunch() + app.quit(). Verify directly against adminPin.
-          if (resetLoopPending) {
-            if (!adminPin.verifyPin(store, pin)) {
+          // CR-02: legacy verify-pin (reset-loop recovery AND authFlow
+          // pin-recovery) MUST route through adminPinLockout so a bad actor
+          // cannot brute-force via this channel. Both branches share the same
+          // PIN material as verify-admin-pin, so they must share the same
+          // rolling 5-in-60s / 5-minute lockout counter.
+          const result = adminPinLockout.verifyPinWithLockout(store, pin);
+          if (result.locked) {
+            log.audit('pin.lockout', {
+              lockedUntil: result.lockedUntil ? result.lockedUntil.toISOString() : null,
+              via: 'verify-pin',
+            });
+            try {
+              mainWindow.webContents.send('show-pin-lockout', {
+                lockedUntil: result.lockedUntil ? result.lockedUntil.toISOString() : null,
+              });
+            } catch (_) {}
+            return { ok: false, locked: true };
+          }
+          if (!result.ok) {
+            if (resetLoopPending) {
               log.warn('sessionReset.admin-recovery: bad PIN');
               return { ok: false };
             }
+            authFlow.notify({ type: 'pin-bad' });
+            return { ok: false };
+          }
+          // PIN verified. Two success branches: reset-loop relaunch OR the
+          // authFlow pin-recovery path (which transitions via pin-ok notify).
+          if (resetLoopPending) {
             log.info('sessionReset.admin-recovery: PIN ok — app.relaunch + app.quit');
             resetLoopPending = false;
             app.relaunch();
             app.quit();
             return { ok: true };
           }
-          return authFlow.handlePinAttempt(pin);
+          authFlow.notify({ type: 'pin-ok' });
+          return { ok: true };
         } catch (err) {
           log.error('ipc.verify-pin failed: ' + (err && err.message));
           return { ok: false };
