@@ -71,8 +71,12 @@ const KNOWN_EVENT_TYPES = new Set([
   'cash-register-ready',
   'observer-scope-fallback',
   'observer-attach-failed',
-  'login-detected',     // Phase 3 (D-03)
-  'login-submitted'     // Phase 3 (D-03)
+  'login-detected',          // Phase 3 (D-03)
+  'login-submitted',         // Phase 3 (D-03)
+  // Phase 4 additions (D-06, D-10)
+  'product-search-focused',
+  'product-search-blurred',
+  'activity',
 ]);
 
 function computeDefaultZoom() {
@@ -166,6 +170,12 @@ function createMagiclineView(mainWindow, store) {
   // D-02: reuse Phase 1 lockdown on the child view's webContents.
   // attachLockdown is a no-op in dev mode per Phase 1 D-07.
   attachLockdown(magiclineView.webContents);
+  // Phase 4 (D-01, D-02, research Pattern 1): two-attach pattern mirror of
+  // attachLockdown — badge input arbiter must see keystrokes on both the host
+  // wc AND the Magicline child wc. Lockdown first, badgeInput second so the
+  // global-shortcut no-ops are installed before the keydown listener runs.
+  const { attachBadgeInput } = require('./badgeInput');
+  attachBadgeInput(magiclineView.webContents);
 
   // D-08 / D-09: zoom factor from electron-store override or runtime default.
   const zoom = store.get('magiclineZoomFactor', computeDefaultZoom());
@@ -195,9 +205,18 @@ function createMagiclineView(mainWindow, store) {
 
   log.info('magicline.view.created: partition=' + PARTITION + ' url=' + MAGICLINE_URL);
 
-  // Render-process-gone logging only — Phase 4 will handle recovery.
+  // Phase 4 D-22 / IDLE-07: log + trigger sessionReset hard reset on crash.
+  // Research pin #6: the details.reason === 'clean-exit' guard prevents a
+  // recovery loop during normal app shutdown when Chromium tears the render
+  // process down cleanly.
   magiclineView.webContents.on('render-process-gone', (_e, details) => {
     log.error('magicline.render-process-gone: ' + JSON.stringify(details));
+    if (details && details.reason === 'clean-exit') return;
+    try {
+      require('./sessionReset').hardReset({ reason: 'crash' });
+    } catch (e) {
+      log.error('sessionReset.hardReset failed from crash path: ' + (e && e.message));
+    }
   });
 
   return magiclineView;
@@ -367,6 +386,38 @@ function handleInjectEvent(evt, mainWindow) {
       require('./authFlow').notify({ type: type, payload: payload });
     } catch (e) {
       log.error('magicline.authFlow.notify.' + type + ' failed: ' + (e && e.message));
+    }
+    return;
+  }
+
+  // Phase 4 (D-06, D-09 #3): badge-input arbitration — product search focus
+  // toggles the badgeInput "staff product scan passthrough" flag so NFC scans
+  // hit the customer-search field except when staff is scanning a product.
+  if (type === 'product-search-focused') {
+    try {
+      require('./badgeInput').setProductSearchFocused(true);
+    } catch (e) {
+      log.error('magicline.badgeInput.setProductSearchFocused(true) failed: ' + (e && e.message));
+    }
+    return;
+  }
+  if (type === 'product-search-blurred') {
+    try {
+      require('./badgeInput').setProductSearchFocused(false);
+    } catch (e) {
+      log.error('magicline.badgeInput.setProductSearchFocused(false) failed: ' + (e && e.message));
+    }
+    return;
+  }
+
+  // Phase 4 (D-10): any touch/pointer/keyboard activity inside the Magicline
+  // view bumps the idle timer so the "are you still there?" overlay is not
+  // shown while a member is mid-checkout.
+  if (type === 'activity') {
+    try {
+      require('./idleTimer').bump();
+    } catch (e) {
+      log.error('magicline.idleTimer.bump failed: ' + (e && e.message));
     }
     return;
   }
