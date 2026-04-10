@@ -14,9 +14,8 @@ const log = require('./logger');
 
 // Chosen per 03-01-KIOSK-VERIFICATION.md §scrypt Benchmark.
 // Research default: N=16384, r=8, p=1, keylen=32, maxmem=64MB.
-// The kiosk CPU benchmark is DEFERRED to plan 03-09 (next kiosk visit).
-// If 03-09 measures the median outside the 50-250 ms band it will update
-// this constant and add a `// N adjusted per 03-09 benchmark: median was XXX ms` comment.
+// Confirmed by 03-09 (2026-04-10): median 94.8 ms on i3-2350M proxy box,
+// inside the 50-250 ms target band. N=16384 kept; no retune needed.
 const SCRYPT_PARAMS = Object.freeze({
   N: 16384,
   r: 8,

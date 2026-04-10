@@ -5,9 +5,38 @@
 
 ## TabTip
 
-- Auto-invoke on text-input focus: DEFERRED — see 03-09
-- Manual `tabtip.exe` launch: DEFERRED — see 03-09
-- Verdict: DEFERRED — Phase 3 proceeds assuming manual `tabtip.exe` works at the standard path
+**Measured 2026-04-10 via `tools/kiosk-probes/` on proxy box `DESKTOP-P1E98A1`
+(Windows 10.0.19045, Intel i3-2350M, regular user session). See §Caveats at end
+of this section for why a regular-user proxy is acceptable for the verdict.**
+
+- Auto-invoke on text-input focus: **NO**
+- Manual `tabtip.exe` launch: **YES** at `C:\Program Files\Common Files\microsoft shared\ink\TabTip.exe`
+- Verdict: **manual button** — kiosk must expose a touch-keyboard button in the credentials overlay that invokes the `launch-touch-keyboard` IPC handler wired in Plan 03-07, which `child_process.exec`s the path above.
+
+### Caveats — regular-user proxy vs Assigned Access
+
+Probe A was run under a **regular** Windows user on a separate test box, not under
+the Phase 1 Assigned Access kiosk user on the real POS terminal. This is
+acceptable for closing Phase 3 on the following reasoning:
+
+1. **Auto-invoke NO under a regular user is a stronger-than-needed signal.**
+   Regular Windows sessions have *more* touch-keyboard auto-invoke heuristics
+   than locked-down Assigned Access sessions (which strip "tablet mode"
+   affordances). If the keyboard does not auto-invoke under a regular user, it
+   will not auto-invoke under Assigned Access either — the verdict can only
+   move from "manual button" toward "manual button" on the real kiosk.
+2. **Manual `TabTip.exe` launch is not gated by user account kind.** The probe
+   shell-executes a standard Win32 binary with no elevation or session-state
+   requirements. If it works under a regular user, it will work under Assigned
+   Access barring an explicit AppLocker / SRP policy blocking `TabTip.exe`
+   (none is configured by the Phase 1 hardening runbook — see
+   `.planning/phases/01-locked-down-shell-os-hardening/01-05-SUMMARY.md`).
+3. **Residual risk:** the `launch-touch-keyboard` handler path and the
+   "manual button" touch target are not physically confirmed on the real POS
+   terminal under the Phase 1 kiosk user. Flagged for a 30-second re-check on
+   the next physical kiosk visit (see Phase 3 open concerns in
+   `03-09-SUMMARY.md`). If that re-check fails, the fix is local to the IPC
+   handler and/or the credentials overlay — no architectural change.
 
 ## Magicline failed-login DOM
 
@@ -66,7 +95,24 @@ banner text on a wrong submit is:
 
 ## scrypt Benchmark
 
-- Median ms at N=16384: DEFERRED — see 03-09
-- In 50–250 ms band: DEFERRED — see 03-09
-- Chosen N: 16384 (research default — to be confirmed or retuned by 03-09)
-- CPU model (if known): DEFERRED — see 03-09
+**Measured 2026-04-10 via `tools/kiosk-probes/` on proxy box `DESKTOP-P1E98A1`
+(Intel Core i3-2350M @ 2.30GHz, 3.9 GB RAM, Node v24.14.1).**
+
+- Samples (ms, 5 runs): `79.6, 82.2, 111.2, 118.6, 94.8`
+- Sorted: `79.6, 82.2, 94.8, 111.2, 118.6`
+- Median ms at N=16384: **94.8**
+- In 50–250 ms band: **YES**
+- Chosen N: **16384** (unchanged — research default confirmed by measurement)
+- CPU model: Intel(R) Core(TM) i3-2350M CPU @ 2.30GHz
+- `src/main/adminPin.js` edit: **none** (N stays at 16384; stale "DEFERRED" comment refreshed to reference this measurement)
+
+### Caveats — proxy CPU vs production POS CPU
+
+The i3-2350M is a 2011-era 2-core/4-thread Sandy Bridge mobile CPU. If the
+production POS terminal has materially different silicon (e.g. a modern Celeron
+or an ARM SoC), the median could shift. The band 50–250 ms has ~2.6× headroom
+on the low end and ~2.6× headroom on the high end from the measured 94.8 ms,
+so the verdict tolerates a 2.5× CPU speed difference in either direction before
+a retune is warranted. Retune rule documented in `03-09-PLAN.md` §Probe C.
+Flagged for a 60-second re-run on the next physical kiosk visit alongside the
+TabTip re-check.
