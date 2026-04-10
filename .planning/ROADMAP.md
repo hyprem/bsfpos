@@ -84,7 +84,7 @@
 - [x] 04-01-PLAN.md — idleTimer.js + badgeInput.js pure main modules + unit tests (NFC-01..06, IDLE-01, IDLE-02)
 - [x] 04-02-PLAN.md — sessionReset.js mutex + unified rolling-window loop counter + unit tests (IDLE-03, IDLE-05)
 - [x] 04-03-PLAN.md — main-process wire-up: magiclineView delegations, authFlow start-idle-timer side-effect, main.js + preload.js IPC surface (NFC-01, NFC-05, NFC-06, IDLE-04, IDLE-07)
-- [ ] 04-04-PLAN.md — renderer wire-up: inject.js listeners, fragile-selectors JETZT_VERKAUFEN_TEXT, host.html/css/js idle overlay + reset-loop variant (NFC-06, IDLE-01, IDLE-02, IDLE-06)
+- [x] 04-04-PLAN.md — renderer wire-up: inject.js listeners, fragile-selectors JETZT_VERKAUFEN_TEXT, host.html/css/js idle overlay + reset-loop variant (NFC-06, IDLE-01, IDLE-02, IDLE-06)
 - [ ] 04-05-PLAN.md — 100-cycle reset harness + integration tests + human kiosk verification checklist (IDLE-04 acceptance + all 13 requirements)
 **UI hint**: yes
 

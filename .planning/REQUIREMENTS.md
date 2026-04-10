@@ -45,12 +45,12 @@ Requirements for initial release. Each maps to roadmap phases via the Traceabili
 
 ### Idle, Reset & Recovery
 
-- [ ] **IDLE-01**: After 60 seconds without user input (keyboard, touch, NFC scan, mouse), a fullscreen translucent Bee Strong-branded "Are you still there?" overlay appears with a visible countdown (default 30 s) and a "Tap to continue" button
-- [ ] **IDLE-02**: Any user input while the overlay is visible dismisses it and restarts the 60 s idle timer without clearing Magicline state
+- [x] **IDLE-01**: After 60 seconds without user input (keyboard, touch, NFC scan, mouse), a fullscreen translucent Bee Strong-branded "Are you still there?" overlay appears with a visible countdown (default 30 s) and a "Tap to continue" button
+- [x] **IDLE-02**: Any user input while the overlay is visible dismisses it and restarts the 60 s idle timer without clearing Magicline state
 - [ ] **IDLE-03**: If the overlay countdown expires without interaction, the app performs a hard session reset: navigate to `about:blank`, `await session.clearStorageData()`, `await cookies.flushStore()`, reload Magicline — fully mutex-guarded so no two resets can overlap
 - [x] **IDLE-04**: After a hard reset, the auto-login state machine fires again automatically; the member sees only the branded splash, then the clean cash register with no cart, no prior customer
 - [ ] **IDLE-05**: Reset-loop detection triggers a branded error screen if more than 3 resets occur within 60 seconds (prevents crash-loop bricking)
-- [ ] **IDLE-06**: 3 seconds after the "Jetzt verkaufen" button is clicked, the customer search field is cleared (post-sale reset, does not drop cart history/receipts)
+- [x] **IDLE-06**: 3 seconds after the "Jetzt verkaufen" button is clicked, the customer search field is cleared (post-sale reset, does not drop cart history/receipts)
 - [x] **IDLE-07**: On `render-process-gone` (Magicline BrowserView crash), the app logs the crash, shows the branded error screen briefly, and reloads the view — auto-login fires as normal
 
 ### Admin Exit, Logging & Updates
@@ -136,12 +136,12 @@ Which phases cover which requirements. Filled in during roadmap creation.
 | NFC-04 | Phase 4 | Pending |
 | NFC-05 | Phase 4 | Complete |
 | NFC-06 | Phase 4 | Complete |
-| IDLE-01 | Phase 4 | Pending |
-| IDLE-02 | Phase 4 | Pending |
+| IDLE-01 | Phase 4 | Complete |
+| IDLE-02 | Phase 4 | Complete |
 | IDLE-03 | Phase 4 | Pending |
 | IDLE-04 | Phase 4 | Complete |
 | IDLE-05 | Phase 4 | Pending |
-| IDLE-06 | Phase 4 | Pending |
+| IDLE-06 | Phase 4 | Complete |
 | IDLE-07 | Phase 4 | Complete |
 | ADMIN-01 | Phase 5 | Pending |
 | ADMIN-02 | Phase 5 | Pending |
