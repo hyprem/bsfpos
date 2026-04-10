@@ -142,13 +142,60 @@ No orphaned requirements. No ROADMAP requirements unclaimed by any plan.
 - `DEP0190` electron-builder deprecation warning (tracked baseline for Phase 5 BRAND-01).
 - `reservedShortcuts` Set exported empty — correct for Phase 1; Phase 5 ADMIN-01 will `.add('Ctrl+Shift+F12')`.
 
-### Human Verification Required
+### Human Verification Required (Next Kiosk Visit — consolidated batch)
+
+**This is the single source-of-truth checklist for the next physical kiosk visit.** Phase 3 (03-09 TabTip manual-button re-check) and Phase 4 (all 13 NFC + idle requirements) have been folded into this file so the tester works through one document, not three.
+
+#### Phase 1 — Original deferred items
 
 1. **`npm start` visual checkpoint** — Dev window 420x800, #1A1A1A, dark logo, pulsing bar, "BITTE WARTEN…", DevTools detached, no white flash on first paint.
 2. **Splash permanence** — Leave splash visible 10+ s without any Phase 2 injection; confirm it does NOT auto-lift.
 3. **Double-launch race** — Second `npm start` exits ~1 s with no second window; `main.log` contains `second instance detected — exiting silently (D-05)`.
 4. **Prod-sim chord test** — `NODE_ENV= electron .`; Alt+F4/F11/Escape/Ctrl+W do not close or unfullscreen. Exit via Task Manager.
 5. **On-device runbook** — Physical maintenance visit: run 01..05 scripts, then `05-verify-lockdown.ps1`, then walk `BREAKOUT-CHECKLIST.md`.
+
+#### Phase 3 — Deferred soft re-check (added 2026-04-10 via 03-09)
+
+- [ ] **TabTip manual-button path re-verified on production kiosk hardware** — proxy box DESKTOP-P1E98A1 confirmed `C:\Program Files\Common Files\microsoft shared\ink\TabTip.exe` launches on manual invoke (no auto-invoke). Repeat on the actual Bee Strong POS terminal to catch any Windows 11 Pro vs Windows 10 drift in the TabTip path.
+
+#### Phase 4 — Deferred Physical Verification (added 2026-04-10)
+
+**Reason:** Kiosk hardware not at hand at phase 4 close; Deka NFC reader has never been physically validated. Automated test coverage is 100% (102/102 green across Phase 4 + harness).
+
+**Authoritative per-requirement spec:** `.planning/phases/04-nfc-input-idle-session-lifecycle/04-VERIFICATION.md` (expected-behavior text, PASS conditions, FAIL conditions, log-line assertions for each row).
+
+**NFC requirements (Deka USB HID + test badge required):**
+
+- [ ] **NFC-01** — First scan after cold boot writes to customer-search input (member name visible within 1s; no first-character drop)
+- [ ] **NFC-02** — Rapid 5-badge burst de-bounces correctly, all 5 commit, no stuck buffer
+- [ ] **NFC-03** — First-character-drop regression fixed (sentinel-null arbitration) — scan immediately after a 90s idle-expired hard reset
+- [ ] **NFC-04** — Badge input triggers Magicline React state update (MUI React-native value setter + input/change dispatch)
+- [ ] **NFC-05** — Badge scanned while idle overlay visible is absorbed as dismiss, never leaks to customer field
+- [ ] **NFC-06** — Badge scan during product-search focus passes through to product-search, bypasses coalesce buffer
+
+**Idle/lifecycle requirements (touchscreen + Task Manager required):**
+
+- [ ] **IDLE-01** — 60s idle → branded overlay visible with German copy ("Noch da?" / "SEKUNDEN" / "Weiter") + 80px yellow countdown at 30s
+- [ ] **IDLE-02** — Tap mid-countdown dismisses overlay, cart + customer state preserved
+- [ ] **IDLE-03** — Countdown expire → splash → clean cash register (no prior member, no cart)
+- [ ] **IDLE-04** — Second manual idle reset +90s passes cleanly (harness already covers 100-cycle stress in `test/sessionReset.harness.js`)
+- [ ] **IDLE-05** — 3 renderer kills in 60s → reset-loop branded error ("Kiosk muss neu gestartet werden") → admin PIN → `app.relaunch()` (**RUN THIS LAST** — disruptive, leaves kiosk in loopActive=true until PIN flow relaunches)
+- [ ] **IDLE-06** — "Jetzt verkaufen" click → customer-search input cleared 3s later; sale retained in Magicline history
+- [ ] **IDLE-07** — Single renderer kill → `magicline.render-process-gone` → splash → clean re-login (no reset-loop trip on first kill)
+
+**Log spot-checks to validate in `%AppData%\Bee Strong POS\logs\main.log`:**
+
+- `badgeInput.commit: length=N` (length only — badge content must NEVER appear)
+- `idleTimer.state: IDLE -> OVERLAY_SHOWING reason=timeout`
+- `idleTimer.state: OVERLAY_SHOWING -> IDLE reason=dismissed`
+- `sessionReset.hardReset: reason=idle-expired count=1`
+- `sessionReset.hardReset: reason=crash count=1`
+- `sessionReset.loop-detected: count=3 reasons=[...]`
+- `magicline.render-process-gone: {"reason":"killed",...}`
+
+**Privacy requirement:** Use the **staging test badge only**, tied to a staging-account member. If any real member data appears in a failure log excerpt, redact before committing the filled-in checklist. No real badge numbers, no real member names in git.
+
+**IDLE-05 ordering constraint:** IDLE-05 MUST be the last Phase 4 item executed in the visit. It intentionally trips the reset-loop guard and only recovers via the admin-PIN-driven `app.relaunch()` path — running it mid-checklist leaves the device unusable for subsequent rows.
 
 ### Gaps Summary
 
