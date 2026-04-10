@@ -318,3 +318,66 @@ body:not([data-dev="true"]) { cursor: none; }
 .bsk-keypad-btn--ok:active {
   background: #D9AD10;
 }
+
+/* ============================================================ */
+/* Phase 4 — Idle overlay (Layer 200)                           */
+/* ============================================================ */
+/* Base .bsk-layer already provides flex + column + center, so  */
+/* .bsk-layer--idle only sets z-index/background/pointer-events.*/
+
+.bsk-layer--idle {
+  z-index: 200;
+  background: #1A1A1A;   /* opaque — see 04-UI-SPEC §Color reinterpretation */
+  pointer-events: auto;  /* catches all taps — dismiss handler in host.js   */
+}
+
+.bsk-idle-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin: 16px 0 16px 0;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.bsk-idle-countdown {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.bsk-idle-number {
+  font-size: 80px;
+  font-weight: 700;
+  color: #F5C518;
+  line-height: 1.0;
+  font-variant-numeric: tabular-nums;
+}
+
+.bsk-idle-seconds-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #9CA3AF;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.bsk-idle-subtext {
+  font-size: 16px;
+  font-weight: 400;
+  color: #FFFFFF;
+  text-align: center;
+  padding: 0 32px;
+  margin: 16px 0 0 0;
+  line-height: 1.5;
+}
+
+.bsk-btn--idle-dismiss {
+  min-width: 80px;
+  min-height: 80px;
+  margin-top: 24px;
+  font-size: 20px;
+  font-weight: 700;
+  padding: 16px 32px;
+}
