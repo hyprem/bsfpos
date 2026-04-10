@@ -87,15 +87,25 @@ require.cache[magiclineViewPath] = {
 };
 
 // Fake idleTimer (module does not exist on disk yet — Plan 04-01 sibling).
-// Register it under the resolved path sessionReset would compute.
-const idleTimerPath = path.join(path.dirname(magiclineViewPath), 'idleTimer.js');
-require.cache[idleTimerPath] = {
-  id: idleTimerPath,
-  filename: idleTimerPath,
+// Install via Module._resolveFilename hook so `require('./idleTimer')` from
+// sessionReset.js resolves to a virtual path that we pre-seed in require.cache.
+const Module = require('module');
+const VIRTUAL_IDLE_TIMER = path.join(path.dirname(magiclineViewPath), '__virtual_idleTimer.js');
+require.cache[VIRTUAL_IDLE_TIMER] = {
+  id: VIRTUAL_IDLE_TIMER,
+  filename: VIRTUAL_IDLE_TIMER,
   loaded: true,
   exports: {
     stop: () => { callLog.push(['idleTimer.stop']); },
   },
+};
+const origResolve = Module._resolveFilename;
+Module._resolveFilename = function (request, parent, ...rest) {
+  if (request === './idleTimer' && parent && parent.filename &&
+      parent.filename.endsWith('sessionReset.js')) {
+    return VIRTUAL_IDLE_TIMER;
+  }
+  return origResolve.call(this, request, parent, ...rest);
 };
 
 // Now require the module under test.
