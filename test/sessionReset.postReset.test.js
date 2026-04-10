@@ -32,6 +32,8 @@ const fakeLog = {
   info: () => {},
   warn: () => {},
   error: () => {},
+  // Phase 5 Plan 06: sessionReset emits log.audit('idle.reset', ...) now.
+  audit: () => {},
 };
 const loggerPath = require.resolve('../src/main/logger');
 require.cache[loggerPath] = {

@@ -209,6 +209,33 @@ function createMagiclineView(mainWindow, store) {
   // Research pin #6: the details.reason === 'clean-exit' guard prevents a
   // recovery loop during normal app shutdown when Chromium tears the render
   // process down cleanly.
+  // Phase 5 Plan 06 D-27: relay sale-completion sentinel from inject.js
+  // (which runs in the Magicline main world and has no preload/IPC access)
+  // to the main process via a console.log sentinel. The main-process listener
+  // forwards it as the `audit-sale-completed` ipc, which emits
+  // `log.audit('sale.completed', {})` in the canonical taxonomy.
+  try {
+    magiclineView.webContents.on('console-message', (...args) => {
+      // Electron has shipped two signatures for console-message over the
+      // 30..41 line: (event, level, message, line, sourceId) and
+      // (event) with event.message. Handle both defensively.
+      let message = '';
+      if (args.length >= 3 && typeof args[2] === 'string') {
+        message = args[2];
+      } else if (args[0] && typeof args[0].message === 'string') {
+        message = args[0].message;
+      }
+      if (message && message.indexOf('BSK_AUDIT_SALE_COMPLETED') !== -1) {
+        try {
+          const { ipcMain } = require('electron');
+          ipcMain.emit('audit-sale-completed');
+        } catch (_) { /* swallow */ }
+      }
+    });
+  } catch (e) {
+    log.warn('magicline.console-message.attach failed: ' + (e && e.message));
+  }
+
   magiclineView.webContents.on('render-process-gone', (_e, details) => {
     log.error('magicline.render-process-gone: ' + JSON.stringify(details));
     if (details && details.reason === 'clean-exit') return;

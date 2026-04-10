@@ -254,6 +254,8 @@ if (!gotLock) {
 
 app.whenReady().then(() => {
   log.info('app ready (isDev=' + isDev + ')');
+  // Phase 5 D-28 / Plan 06: canonical startup audit event.
+  try { log.audit('startup', { version: app.getVersion(), isDev: isDev }); } catch (_) {}
 
   // D-04 layer 1: runtime self-heal auto-start.
   // Writes HKCU\Software\Microsoft\Windows\CurrentVersion\Run\Bee Strong POS
@@ -322,7 +324,22 @@ app.whenReady().then(() => {
         openAdminPinModal();
       }
     });
+
+    // Phase 5 D-28 / Plan 06: mark the startup sequence as complete once the
+    // host wc has lockdown + badge input + admin-hotkey wiring attached.
+    try { log.audit('startup.complete', {}); } catch (_) {}
   }
+
+  // Phase 5 Plan 06 D-27: sale-completion audit hook.
+  // inject.js emits the sentinel `BSK_AUDIT_SALE_COMPLETED` on console in the
+  // Magicline main world at the 'Jetzt verkaufen' click; magiclineView.js
+  // relays it via this IPC channel for the canonical `sale.completed` event.
+  try {
+    ipcMain.removeAllListeners('audit-sale-completed');
+  } catch (_) {}
+  ipcMain.on('audit-sale-completed', () => {
+    try { log.audit('sale.completed', {}); } catch (_) {}
+  });
 
   // --- Phase 2: Magicline child view + injection pipeline ---------------
   // createMagiclineView attaches a WebContentsView child to mainWindow, loads

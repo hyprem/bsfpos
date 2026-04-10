@@ -411,12 +411,24 @@ function makeFakeMainWindow() {
 }
 
 function makeFakeLog() {
-  const lines = { info: [], warn: [], error: [] };
+  const lines = { info: [], warn: [], error: [], audit: [] };
   return {
     _lines: lines,
     info:  (m) => lines.info.push(m),
     warn:  (m) => lines.warn.push(m),
     error: (m) => lines.error.push(m),
+    // Phase 5 Plan 06: authFlow now emits structured audit events via
+    // deps.log.audit(event, fields). Record the full payload so tests can
+    // match on `event` + fields rather than free-form info text.
+    audit: (event, fields) => {
+      const entry = { event: event, fields: (fields || {}) };
+      lines.audit.push(entry);
+      // Also mirror to `info` as a formatted string so legacy assertions
+      // that grep `_lines.info` keep working during the migration.
+      const parts = ['event=' + event];
+      for (const k of Object.keys(entry.fields)) parts.push(k + '=' + String(entry.fields[k]));
+      lines.info.push(parts.join(' '));
+    },
   };
 }
 
@@ -446,8 +458,9 @@ test('executor: start() happy path with cached creds → BOOTING + arms boot wat
   // After creds-loaded with hasCreds=true, reducer stays in BOOTING.
   assert.strictEqual(authFlow._getCurrentStateForTests(), STATES.BOOTING);
   // Audit-trail log line for the side-effect 'log' was emitted.
-  const hasAuthState = deps.log._lines.info.some((l) => /^auth\.state:/.test(l));
-  assert.ok(hasAuthState, 'expected auth.state log line');
+  // Phase 5 Plan 06: state transitions now emit via log.audit('auth.state',...)
+  const hasAuthState = deps.log._lines.audit.some((e) => e.event === 'auth.state');
+  assert.ok(hasAuthState, 'expected auth.state audit event');
   authFlow._resetForTests();
 });
 

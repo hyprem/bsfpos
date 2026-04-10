@@ -15,6 +15,8 @@ require.cache[loggerPath] = {
     warn: () => {},
     error: () => {},
     debug: () => {},
+    // Phase 5 Plan 06: credentialsStore now emits log.audit('credentials.saved',...)
+    audit: () => {},
   },
 };
 

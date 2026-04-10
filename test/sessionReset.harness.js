@@ -73,10 +73,20 @@ try {
 // -----------------------------------------------------------------------------
 
 const fakeLog = {
-  _lines: { info: [], warn: [], error: [] },
+  _lines: { info: [], warn: [], error: [], audit: [] },
   info:  (m) => fakeLog._lines.info.push(m),
   warn:  (m) => fakeLog._lines.warn.push(m),
   error: (m) => fakeLog._lines.error.push(m),
+  // Phase 5 Plan 06: sessionReset emits log.audit('idle.reset', ...) on each
+  // non-suppressed hardReset call. Mirror stringified form into _lines.info
+  // so legacy searches still work.
+  audit: (event, fields) => {
+    const entry = { event: event, fields: (fields || {}) };
+    fakeLog._lines.audit.push(entry);
+    const parts = ['event=' + event];
+    for (const k of Object.keys(entry.fields)) parts.push(k + '=' + String(entry.fields[k]));
+    fakeLog._lines.info.push(parts.join(' '));
+  },
 };
 const loggerPath = require.resolve('../src/main/logger');
 require.cache[loggerPath] = {
@@ -146,6 +156,7 @@ function resetAll() {
   fakeLog._lines.info.length  = 0;
   fakeLog._lines.warn.length  = 0;
   fakeLog._lines.error.length = 0;
+  fakeLog._lines.audit.length = 0;
   stressDelayMs = 0;
   clearGate = null;
 }

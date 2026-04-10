@@ -61,10 +61,21 @@ try {
 
 // Fake logger
 const fakeLog = {
-  _lines: { info: [], warn: [], error: [] },
+  _lines: { info: [], warn: [], error: [], audit: [] },
   info: (m) => fakeLog._lines.info.push(m),
   warn: (m) => fakeLog._lines.warn.push(m),
   error: (m) => fakeLog._lines.error.push(m),
+  // Phase 5 Plan 06: sessionReset emits log.audit('idle.reset', ...) on
+  // each non-suppressed hardReset call. Record the full entry and mirror a
+  // stringified form onto _lines.info so legacy startsWith() matchers keep
+  // working during the migration.
+  audit: (event, fields) => {
+    const entry = { event: event, fields: (fields || {}) };
+    fakeLog._lines.audit.push(entry);
+    const parts = ['event=' + event];
+    for (const k of Object.keys(entry.fields)) parts.push(k + '=' + String(entry.fields[k]));
+    fakeLog._lines.info.push(parts.join(' '));
+  },
 };
 const loggerPath = require.resolve('../src/main/logger');
 require.cache[loggerPath] = {
@@ -131,6 +142,7 @@ function resetAll() {
   fakeLog._lines.info.length = 0;
   fakeLog._lines.warn.length = 0;
   fakeLog._lines.error.length = 0;
+  fakeLog._lines.audit.length = 0;
 }
 
 // -----------------------------------------------------------------------------
@@ -401,13 +413,13 @@ test('hardReset with no init throws clearly-named error', async () => {
   );
 });
 
-test('log line sessionReset.hardReset: reason=idle-expired count=1 fires on each non-suppressed call', async () => {
+test('audit event idle.reset fires on each non-suppressed hardReset call (Phase 5 Plan 06)', async () => {
   resetAll();
   const mw = makeFakeMainWindow();
   sessionReset.init({ mainWindow: mw, store: {} });
   await sessionReset.hardReset({ reason: 'idle-expired' });
-  const line = fakeLog._lines.info.find(
-    (l) => l.startsWith('sessionReset.hardReset: reason=idle-expired count=1')
+  const entry = fakeLog._lines.audit.find(
+    (e) => e.event === 'idle.reset' && e.fields.reason === 'idle-expired' && e.fields.count === 1
   );
-  assert.ok(line, 'expected hardReset log line with reason and count');
+  assert.ok(entry, 'expected idle.reset audit event with {reason:idle-expired, count:1}');
 });

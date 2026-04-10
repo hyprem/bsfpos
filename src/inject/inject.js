@@ -93,6 +93,11 @@
       var btn = e.target && e.target.closest && e.target.closest('[data-role="button"]');
       if (!btn) return;
       if (btn.textContent && btn.textContent.trim() === JETZT_VERKAUFEN_TEXT) {
+        // Phase 5 Plan 06 D-27: sale-completed audit sentinel. inject.js runs
+        // in the Magicline main world without preload/IPC, so we use a
+        // console.log sentinel that magiclineView.js matches on the
+        // console-message listener and relays as `audit-sale-completed`.
+        try { console.log('BSK_AUDIT_SALE_COMPLETED'); } catch (e) { /* swallow */ }
         setTimeout(function () {
           try {
             var input = document.querySelector('[data-role="customer-search"] input');

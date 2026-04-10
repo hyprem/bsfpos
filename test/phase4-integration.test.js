@@ -135,7 +135,7 @@ test('integration: sessionReset unified rolling window (D-18) — idle+crash+idl
   const origLogger = require.cache[loggerPath];
   require.cache[loggerPath] = {
     id: loggerPath, filename: loggerPath, loaded: true,
-    exports: { info: () => {}, warn: () => {}, error: () => {} },
+    exports: { info: () => {}, warn: () => {}, error: () => {}, audit: () => {} },
   };
 
   const magiclineViewPath = require.resolve('../src/main/magiclineView');

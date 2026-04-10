@@ -72,9 +72,11 @@ function buildCiphertext(safeStorage, creds) {
 function saveCredentials(store, safeStorage, creds) {
   const cipherB64 = buildCiphertext(safeStorage, creds);
   store.set(STORE_KEY, cipherB64);
-  // NEVER log the cipherB64 content or its length — length can leak a weak signal about
-  // password length across users.
-  log.info('credentialsStore.save: persisted (encrypted)');
+  // Phase 5 D-27 / D-25: `cipher` field name → CIPHER_FIELDS redactor in
+  // logger.js → `[cipher:<N>]`. We deliberately pass the ciphertext (not the
+  // plaintext) through the allowlist so the redactor length-only format is the
+  // only thing that ever reaches the log file.
+  log.audit('credentials.saved', { cipher: cipherB64 });
 }
 
 function loadCredentials(store, safeStorage) {

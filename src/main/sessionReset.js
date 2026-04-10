@@ -98,9 +98,10 @@ async function hardReset({ reason }) {
     return;
   }
 
-  log.info(
-    'sessionReset.hardReset: reason=' + reason + ' count=' + (recent.length + 1)
-  );
+  // Phase 5 D-27: structured audit event for the canonical taxonomy
+  // `idle.reset`. The `reason` field is non-sensitive (idle-expired, crash,
+  // admin-requested); `count` is the rolling-window tally.
+  log.audit('idle.reset', { reason: reason, count: (recent.length + 1) });
 
   // D-15 step 3 — SET in-flight mutex BEFORE the first await
   let succeeded = false;

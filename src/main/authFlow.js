@@ -276,7 +276,11 @@ function _runSideEffect(effect) {
   try {
     switch (effect.kind) {
       case 'log':
-        deps.log.info('auth.state: ' + currentState + ' reason=' + effect.reason);
+        // Phase 5 D-27: migrate state-reason log to log.audit('auth.state', ...).
+        // The side-effect 'log' kind is emitted by the reducer on most
+        // transitions; the reason string is the literal taxonomy reason
+        // (e.g. 'creds-loaded', 'login-failed-text-match', 'pin-ok', ...).
+        deps.log.audit('auth.state', { state: currentState, reason: effect.reason });
         return;
       case 'start-timer': {
         // Defensive: clear any existing timer with the same name first.
@@ -380,7 +384,12 @@ function notify(event) {
   const ctx = { hasCreds: hasCreds };
   const result = reduce(currentState, event, ctx);
   if (result.next !== currentState) {
-    deps.log.info('auth.state: ' + currentState + ' -> ' + result.next + ' reason=' + (event.type || 'unknown'));
+    // Phase 5 D-27: structured transition audit event.
+    deps.log.audit('auth.state', {
+      from: currentState,
+      to: result.next,
+      reason: (event.type || 'unknown'),
+    });
   }
   currentState = result.next;
   for (const sx of result.sideEffects) {
@@ -438,10 +447,13 @@ async function handleCredentialsSubmit(input) {
         adminPin: record,
         credentialsCiphertext: ciphertext,
       });
-      deps.log.info('auth.credentials-submitted: persisted (atomic first-run)');
+      // Phase 5 D-27: ciphertext length is the only non-secret signal worth
+      // logging — the `cipher` field name hits the CIPHER_FIELDS redactor in
+      // logger.js which renders it as `[cipher:<N>]`.
+      deps.log.audit('auth.submit', { firstRun: true, cipher: ciphertext });
     } else {
       deps.store.set('credentialsCiphertext', ciphertext);
-      deps.log.info('auth.credentials-submitted: persisted (credentials-only re-entry)');
+      deps.log.audit('auth.submit', { firstRun: false, cipher: ciphertext });
     }
     notify({ type: 'credentials-submitted' });
     return { ok: true };
@@ -484,8 +496,6 @@ exports.handlePinAttempt = handlePinAttempt;
 exports.handlePinRecoveryRequested = handlePinRecoveryRequested;
 exports._runSideEffect = _runSideEffect;
 exports._getCurrentStateForTests = () => currentState;
-// Phase 5 D-29: public accessor for the post-update health watchdog poller
-exports.getState = () => currentState;
 // Phase 5 D-29: public accessor for the post-update health watchdog poller
 exports.getState = () => currentState;
 exports._resetForTests = () => {

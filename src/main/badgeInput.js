@@ -58,7 +58,9 @@ function commitBuffer(wc) {
 
   if (committed.length <= MIN_BADGE_LENGTH) return;
 
-  log.info('badgeInput.commit: length=' + committed.length);
+  // Phase 5 D-27 / D-25: `badge` field name → BADGE_FIELDS redactor in
+  // logger.js → sha256(0,8) prefix. Raw badge string never hits disk.
+  log.audit('badge.scanned', { badge: committed, length: committed.length });
 
   if (wc.isDestroyed()) return;  // Pitfall 7
 
