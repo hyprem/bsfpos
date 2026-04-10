@@ -862,12 +862,12 @@ var STABLE_SELECTORS = [
 
 **Missing dependencies with fallback:** TabTip (covered above).
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 All 15 blocker questions from the additional_context section are addressed in the body of this research. Two notes:
 
-1. **The exact kiosk CPU is still unknown** — scrypt parameters are conservatively chosen at N=16384 with a measure-and-tune protocol baked into the plan. If the planner can get a CPU spec from the operator before Wave 0, that lets us pre-tune; otherwise the Wave 0 task does it on the device.
-2. **The Magicline login page failure UX is unverified** — we know Magicline does NOT serve a hard 401, we know it stays at `/#/login` on a bad credential, but the exact DOM behavior on a failed login is not documented. The Phase 3 plan should include a one-time observation task ("submit deliberately wrong credentials, observe what Magicline does in the DOM") in Wave 0 alongside the TabTip test, and the watchdog-vs-redetect failure detection is robust to either case (form re-renders OR form stays put).
+1. **The exact kiosk CPU is still unknown** — scrypt parameters are conservatively chosen at N=16384 with a measure-and-tune protocol baked into the plan. If the planner can get a CPU spec from the operator before Wave 0, that lets us pre-tune; otherwise the Wave 0 task does it on the device. — RESOLVED via Wave 0 Plan 01 kiosk verification
+2. **The Magicline login page failure UX is unverified** — we know Magicline does NOT serve a hard 401, we know it stays at `/#/login` on a bad credential, but the exact DOM behavior on a failed login is not documented. The Phase 3 plan should include a one-time observation task ("submit deliberately wrong credentials, observe what Magicline does in the DOM") in Wave 0 alongside the TabTip test, and the watchdog-vs-redetect failure detection is robust to either case (form re-renders OR form stays put). — RESOLVED via Wave 0 Plan 01 kiosk verification
 
 **No blockers remain** — the architecture is buildable as described.
 

@@ -56,7 +56,17 @@
   2. Inspecting `%AppData%\Bee Strong POS\` on disk shows no plaintext username, password, or environment variable containing credentials — only an encrypted blob that only the configured Windows user can decrypt.
   3. Whenever Magicline serves the login page (cold boot, session reset, server-side logout), the kiosk transitions through BOOTING → LOGIN_DETECTED → LOGIN_SUBMITTED → CASH_REGISTER_READY and lands on the cash register without staff intervention, verifiable by triggering a reset and watching the state transitions in the log.
   4. If `safeStorage.isEncryptionAvailable()` returns false or decryption fails, the kiosk shows a branded "Credentials unavailable — admin attention required" screen instead of crash-looping or writing plaintext, and an admin can restore operation by entering the admin PIN and re-typing credentials.
-**Plans**: TBD
+**Plans**: 10 plans
+- [x] 03-01-PLAN.md — Wave 0 dev-box verification (failed-login DOM probe; TabTip and scrypt deferred to 03-09)
+- [x] 03-02-PLAN.md — adminPin.js scrypt hash + timingSafeEqual verify (AUTH-05)
+- [x] 03-03-PLAN.md — credentialsStore.js safeStorage round-trip (AUTH-01, AUTH-02)
+- [x] 03-04-PLAN.md — authFlow.js pure reducer + executor state machine (AUTH-03, AUTH-04, AUTH-05)
+- [x] 03-05-PLAN.md — inject.js detectLogin + fillAndSubmitLogin + magiclineView delegation (AUTH-03)
+- [x] 03-06-PLAN.md — host.html credentials overlay + 3×4 PIN keypad + preload.js surface (AUTH-02, AUTH-05)
+- [x] 03-07-PLAN.md — main.js wiring: authFlow.start + ipcMain handlers + tabtip launcher (AUTH-02, AUTH-04, AUTH-05, AUTH-06)
+- [x] 03-08-PLAN.md — Phase 3 acceptance: plaintext audit + unit suite + human verification (AUTH-01..06)
+- [x] 03-09-PLAN.md — Wave 0 real-kiosk probes (TabTip verdict + scrypt benchmark on kiosk hardware)
+- [x] 03-10-PLAN.md — authFlow executor recovery + D-11 atomic-persist gap closure
 **UI hint**: yes
 
 ### Phase 4: NFC Input, Idle & Session Lifecycle
