@@ -5,7 +5,7 @@
 // lock, and globalShortcut registrations are added by plan 03 (REPLACES the
 // ORCHESTRATION block below — do NOT move createMainWindow).
 
-const { app, BrowserWindow, Menu, globalShortcut, ipcMain, safeStorage } = require('electron');
+const { app, BrowserWindow, Menu, globalShortcut, ipcMain, safeStorage, shell } = require('electron');
 const path = require('path');
 const child_process = require('child_process');
 const log = require('./logger');
@@ -14,6 +14,10 @@ const Store = require('electron-store').default;
 const { createMagiclineView, destroyMagiclineView } = require('./magiclineView');
 const authFlow = require('./authFlow');
 const adminPin = require('./adminPin');
+const adminPinLockout = require('./adminPinLockout');
+const autoUpdater     = require('./autoUpdater');
+const updateGate      = require('./updateGate');
+const sessionResetMod = require('./sessionReset');
 
 // WR-01: set when `request-reset-loop-recovery` surfaces the PIN modal and
 // cleared only after a successful app.relaunch() — or on process exit. When
@@ -25,10 +29,161 @@ let resetLoopPending = false;
 
 const isDev = process.env.NODE_ENV === 'development';
 
+// --- Phase 5 constants ------------------------------------------------
+// TODO(runbook): set GITHUB_OWNER via build-time env var or here before first prod build.
+const GITHUB_OWNER = process.env.BSFPOS_GH_OWNER || 'TODO-set-owner';
+const GITHUB_REPO  = process.env.BSFPOS_GH_REPO  || 'bsfpos';
+const UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000; // D-14: every 6 hours
+const HEALTH_WATCHDOG_MS       = 2 * 60 * 1000;      // D-29: 2-minute post-update watchdog
+const AUTH_POLL_MS             = 2000;               // poll authFlow.getState every 2s
+
+// --- Phase 5 module-scope state ---------------------------------------
+let adminMenuOpen       = false;
+let healthWatchdogTimer = null;
+let authPollTimer       = null;
+let updateCheckInterval = null;
+
 // --- createMainWindow -------------------------------------------------------
 // Plan 03 imports/consumes this function unchanged. Keep it self-contained.
 
 let mainWindow = null;
+
+// --- Phase 5 helpers --------------------------------------------------
+
+/**
+ * Send the PIN modal show IPC with `context:'admin'` so host.js knows this
+ * is an admin PIN attempt (NOT a reset-loop recovery).
+ */
+function openAdminPinModal() {
+  if (!mainWindow) return;
+  log.info('adminHotkey: Ctrl+Shift+F12 pressed — surfacing admin PIN modal');
+  try {
+    mainWindow.webContents.send('show-pin-modal', { context: 'admin' });
+  } catch (e) {
+    log.error('adminHotkey.send failed: ' + (e && e.message));
+  }
+}
+
+/**
+ * Tries to decrypt the stored GitHub PAT and initialise the auto-updater.
+ * No-ops in dev (app.isPackaged=false), when PAT is absent (D-19), or when
+ * autoUpdateDisabled has been latched by a bad-release health check (D-30).
+ */
+function tryInitAutoUpdater(store) {
+  if (store.get('autoUpdateDisabled') === true) {
+    log.audit('update.check', { result: 'disabled' });
+    return false;
+  }
+  const cipherB64 = store.get('githubUpdatePat');
+  if (!cipherB64) {
+    log.info('autoUpdater: no PAT stored (D-19) — auto-update silently disabled');
+    return false;
+  }
+  let pat = null;
+  try {
+    pat = safeStorage.decryptString(Buffer.from(cipherB64, 'base64'));
+  } catch (e) {
+    log.audit('update.failed', { reason: 'pat-decrypt-failed', phase: 'init' });
+    return false;
+  }
+  return autoUpdater.initUpdater({
+    owner: GITHUB_OWNER,
+    repo: GITHUB_REPO,
+    pat: pat,
+    store: store,
+    isPackaged: app.isPackaged,
+    onUpdateDownloaded: (info) => armUpdateGate(store, info),
+    onUpdateFailed: (err) => {
+      try {
+        if (mainWindow) mainWindow.webContents.send('show-magicline-error', { variant: 'update-failed' });
+      } catch (e) {
+        log.error('update-failed variant send failed: ' + (e && e.message));
+      }
+    },
+  });
+}
+
+function armUpdateGate(store, info) {
+  updateGate.onUpdateDownloaded({
+    installFn: () => {
+      log.audit('update.install', { phase: 'quitAndInstall', version: (info && info.version) || 'unknown' });
+      try { if (mainWindow) mainWindow.webContents.send('show-updating-cover'); } catch (_) {}
+      autoUpdater.installUpdate();
+    },
+    log: log,
+    sessionResetModule: sessionResetMod,
+  });
+}
+
+function startUpdateCheckInterval() {
+  if (updateCheckInterval) clearInterval(updateCheckInterval);
+  updateCheckInterval = setInterval(() => {
+    autoUpdater.checkForUpdates();
+  }, UPDATE_CHECK_INTERVAL_MS);
+}
+
+/**
+ * D-29 post-update health watchdog. Called at the top of app.whenReady.
+ * Reads `pendingUpdate` flag and arms a 2-minute timer; if authFlow reaches
+ * CASH_REGISTER_READY first, the timer is cleared (healthy). Otherwise,
+ * the timer expires → mark bad release + show bad-release variant.
+ */
+function startHealthWatchdog(store) {
+  const pending = store.get('pendingUpdate');
+  if (!pending || !pending.pendingVersion) return;
+  log.audit('update.install', { phase: 'watchdog-started', version: pending.pendingVersion });
+  healthWatchdogTimer = setTimeout(() => {
+    healthWatchdogTimer = null;
+    log.audit('update.failed', { reason: 'watchdog-expired', version: pending.pendingVersion });
+    try { store.set('autoUpdateDisabled', true); } catch (_) {}
+    try { store.delete('pendingUpdate'); } catch (_) {}
+    try {
+      if (mainWindow) mainWindow.webContents.send('show-magicline-error', { variant: 'bad-release' });
+    } catch (_) {}
+    if (authPollTimer) { clearInterval(authPollTimer); authPollTimer = null; }
+  }, HEALTH_WATCHDOG_MS);
+
+  // Poll authFlow.getState every AUTH_POLL_MS; success clears the watchdog.
+  authPollTimer = setInterval(() => {
+    try {
+      const af = require('./authFlow');
+      const state = (typeof af.getState === 'function') ? af.getState() : null;
+      if (state === 'CASH_REGISTER_READY') {
+        log.audit('update.install', { phase: 'health-check-passed', version: pending.pendingVersion });
+        clearHealthWatchdog(store);
+      }
+    } catch (e) {
+      // authFlow may not be loaded yet — keep polling
+    }
+  }, AUTH_POLL_MS);
+}
+
+function clearHealthWatchdog(store) {
+  if (healthWatchdogTimer) { clearTimeout(healthWatchdogTimer); healthWatchdogTimer = null; }
+  if (authPollTimer) { clearInterval(authPollTimer); authPollTimer = null; }
+  try { store.delete('pendingUpdate'); } catch (_) {}
+}
+
+function buildAdminDiagnostics(store) {
+  let authState = 'UNKNOWN';
+  try {
+    const af = require('./authFlow');
+    authState = (typeof af.getState === 'function' && af.getState()) || 'UNKNOWN';
+  } catch (_) {}
+  let lastResetAt = null;
+  try { lastResetAt = sessionResetMod.getLastResetAt ? sessionResetMod.getLastResetAt() : null; } catch (_) {}
+  let updateStatus = 'nicht konfiguriert';
+  if (store.get('autoUpdateDisabled') === true) updateStatus = 'deaktiviert';
+  else if (autoUpdater.isEnabled()) updateStatus = 'aktiv';
+  return {
+    version: app.getVersion(),
+    lastUpdateCheck: autoUpdater.getLastCheckAt(),
+    authState: authState,
+    lastResetAt: lastResetAt,
+    updateStatus: updateStatus,
+    patConfigured: !!store.get('githubUpdatePat'),
+  };
+}
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
@@ -135,6 +290,16 @@ app.whenReady().then(() => {
     }
   }
 
+  // Phase 5 D-08: register admin hotkey via globalShortcut (defense-in-depth)
+  if (!isDev) {
+    const adminOk = globalShortcut.register('Ctrl+Shift+F12', openAdminPinModal);
+    if (!adminOk) {
+      log.warn('globalShortcut.register(Ctrl+Shift+F12) returned false — will still work via before-input-event');
+    } else {
+      log.info('globalShortcut registered: Ctrl+Shift+F12 (admin hotkey)');
+    }
+  }
+
   // Build the window.
   createMainWindow();
 
@@ -148,6 +313,15 @@ app.whenReady().then(() => {
     // child wc. Lockdown first, badgeInput second (D-02).
     const { attachBadgeInput } = require('./badgeInput');
     attachBadgeInput(mainWindow.webContents);
+
+    // Phase 5 D-08: before-input-event fallback on host webContents
+    mainWindow.webContents.on('before-input-event', (_event, input) => {
+      if (input.type !== 'keyDown') return;
+      const { canonical: canon } = require('./keyboardLockdown');
+      if (canon(input) === 'Ctrl+Shift+F12') {
+        openAdminPinModal();
+      }
+    });
   }
 
   // --- Phase 2: Magicline child view + injection pipeline ---------------
@@ -167,8 +341,22 @@ app.whenReady().then(() => {
       // Phase 4 (D-07): idleTimer needs the host wc so it can send
       // 'show-idle-overlay' / 'hide-idle-overlay' IPCs to host.html.
       require('./idleTimer').init(mainWindow);
+
+      // Phase 5 D-29: post-update health watchdog (runs before authFlow.start so
+      // the auth-state poller picks up CASH_REGISTER_READY when it arrives).
+      startHealthWatchdog(store);
+
       const magiclineView = createMagiclineView(mainWindow, store);
       log.info('phase2.magicline-view.created');
+
+      // Phase 5 D-08: admin hotkey also captured on Magicline child wc when it has focus
+      magiclineView.webContents.on('before-input-event', (_event, input) => {
+        if (input.type !== 'keyDown') return;
+        const { canonical: canon } = require('./keyboardLockdown');
+        if (canon(input) === 'Ctrl+Shift+F12') {
+          openAdminPinModal();
+        }
+      });
 
       // --- Phase 3 auth-flow wiring ------------------------------------
       // Per research Pitfall #2: safeStorage.isEncryptionAvailable() must
@@ -190,6 +378,18 @@ app.whenReady().then(() => {
             log: log,
           });
           log.info('phase3.authFlow.started');
+
+          // Phase 5 D-14, D-18, D-19: attempt to initialise auto-updater
+          try {
+            const ok = tryInitAutoUpdater(store);
+            if (ok) {
+              // Initial check, then every 6 hours
+              autoUpdater.checkForUpdates();
+              startUpdateCheckInterval();
+            }
+          } catch (err) {
+            log.error('phase5.autoUpdater.init failed: ' + (err && err.message));
+          }
         } catch (err) {
           log.error('phase3.authFlow.start failed: ' + (err && err.message));
         }
@@ -305,6 +505,158 @@ app.whenReady().then(() => {
             }
           });
         });
+      });
+
+      // === Phase 5 IPC handlers ================================================
+
+      // --- verify-admin-pin: admin hotkey → PIN modal → admin menu
+      ipcMain.handle('verify-admin-pin', async (_e, payload) => {
+        try {
+          const pin = (payload && typeof payload.pin === 'string') ? payload.pin : '';
+          const result = adminPinLockout.verifyPinWithLockout(store, pin);
+          if (result.ok) {
+            adminMenuOpen = true;
+            log.audit('admin.open', {});
+            try {
+              mainWindow.webContents.send('hide-pin-modal');
+              const diagnostics = buildAdminDiagnostics(store);
+              mainWindow.webContents.send('show-admin-menu', diagnostics);
+            } catch (_) {}
+            return { ok: true, locked: false, lockedUntil: null };
+          }
+          if (result.locked) {
+            log.audit('pin.lockout', { lockedUntil: result.lockedUntil ? result.lockedUntil.toISOString() : null });
+            try {
+              mainWindow.webContents.send('show-pin-lockout', {
+                lockedUntil: result.lockedUntil ? result.lockedUntil.toISOString() : null,
+              });
+            } catch (_) {}
+          } else {
+            log.audit('pin.verify', { result: 'fail' });
+          }
+          return {
+            ok: false,
+            locked: !!result.locked,
+            lockedUntil: result.lockedUntil ? result.lockedUntil.toISOString() : null,
+          };
+        } catch (err) {
+          log.error('ipc.verify-admin-pin failed: ' + (err && err.message));
+          return { ok: false, locked: false, lockedUntil: null };
+        }
+      });
+
+      // --- get-admin-diagnostics: refresh diagnostic header on demand
+      ipcMain.handle('get-admin-diagnostics', async () => {
+        try {
+          return buildAdminDiagnostics(store);
+        } catch (err) {
+          log.error('ipc.get-admin-diagnostics failed: ' + (err && err.message));
+          return null;
+        }
+      });
+
+      // --- admin-menu-action: dispatch admin menu button taps
+      ipcMain.handle('admin-menu-action', async (_e, payload) => {
+        const action = payload && payload.action;
+        if (!adminMenuOpen) {
+          log.warn('admin-menu-action: refused — adminMenuOpen=false (action=' + action + ')');
+          return { ok: false, error: 'not-authorised' };
+        }
+        log.audit('admin.exit', { action: String(action) });
+        try {
+          switch (action) {
+            case 'check-updates': {
+              const r = await autoUpdater.checkForUpdates();
+              try {
+                mainWindow.webContents.send('show-admin-update-result', {
+                  status: r.result,
+                  message: r.error || null,
+                });
+              } catch (_) {}
+              return { ok: true, result: r };
+            }
+            case 'view-logs': {
+              try { app.setKiosk(false); } catch (_) {}
+              try { await shell.openPath(app.getPath('logs')); } catch (e) {
+                log.error('shell.openPath failed: ' + (e && e.message));
+                return { ok: false, error: String(e && e.message) };
+              }
+              return { ok: true };
+            }
+            case 'reload': {
+              adminMenuOpen = false;
+              try { mainWindow.webContents.send('hide-admin-menu'); } catch (_) {}
+              try { mainWindow.webContents.reload(); } catch (_) {}
+              return { ok: true };
+            }
+            case 're-enter-credentials': {
+              try { mainWindow.webContents.send('hide-admin-menu'); } catch (_) {}
+              try { mainWindow.webContents.send('show-credentials-overlay', { firstRun: false }); } catch (_) {}
+              adminMenuOpen = false;
+              return { ok: true };
+            }
+            case 'configure-auto-update': {
+              try { mainWindow.webContents.send('hide-admin-menu'); } catch (_) {}
+              try {
+                mainWindow.webContents.send('show-update-config', {
+                  hasExistingPat: !!store.get('githubUpdatePat'),
+                });
+              } catch (_) {}
+              return { ok: true };
+            }
+            case 'exit-to-windows': {
+              try { globalShortcut.unregisterAll(); } catch (_) {}
+              try { app.setKiosk(false); } catch (_) {}
+              adminMenuOpen = false;
+              app.quit();
+              return { ok: true };
+            }
+            default:
+              return { ok: false, error: 'unknown-action' };
+          }
+        } catch (err) {
+          log.error('ipc.admin-menu-action failed: ' + (err && err.message));
+          return { ok: false, error: String(err && err.message) };
+        }
+      });
+
+      // --- close-admin-menu: PAT config cancel / explicit close
+      ipcMain.handle('close-admin-menu', async () => {
+        adminMenuOpen = false;
+        try { mainWindow.webContents.send('hide-admin-menu'); } catch (_) {}
+        return { ok: true };
+      });
+
+      // --- submit-update-pat: save PAT, re-initialise updater
+      ipcMain.handle('submit-update-pat', async (_e, payload) => {
+        try {
+          const pat = (payload && typeof payload.pat === 'string') ? payload.pat.trim() : '';
+          if (!pat || /\s/.test(pat)) {
+            return { ok: false, error: 'empty-or-whitespace' };
+          }
+          if (!safeStorage.isEncryptionAvailable()) {
+            log.audit('update.failed', { reason: 'safestorage-unavailable', phase: 'pat-save' });
+            return { ok: false, error: 'safestorage-unavailable' };
+          }
+          const cipher = safeStorage.encryptString(pat);
+          store.set('githubUpdatePat', cipher.toString('base64'));
+          // Clearing the disabled flag: admin entering a PAT means "try again"
+          try { store.delete('autoUpdateDisabled'); } catch (_) {}
+          log.audit('update.pat.configured', { pat: pat });
+          const initOk = tryInitAutoUpdater(store);
+          if (initOk) {
+            autoUpdater.checkForUpdates();
+            startUpdateCheckInterval();
+          }
+          // Return to admin menu with refreshed diagnostics
+          adminMenuOpen = true;
+          try { mainWindow.webContents.send('hide-update-config'); } catch (_) {}
+          try { mainWindow.webContents.send('show-admin-menu', buildAdminDiagnostics(store)); } catch (_) {}
+          return { ok: true };
+        } catch (err) {
+          log.error('ipc.submit-update-pat failed: ' + (err && err.message));
+          return { ok: false, error: String(err && err.message) };
+        }
       });
 
       // WR-03: tear down module-scoped magiclineView state on window close so

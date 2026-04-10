@@ -52,6 +52,7 @@ let mainWindow = null;
 let store      = null;
 
 let postResetListener = null; // Phase 5 D-15/D-16: single listener for updateGate
+let lastResetAt       = null; // Phase 5 D-03: ms since epoch of last successful hardReset
 
 // --- Public API -------------------------------------------------------------
 
@@ -142,6 +143,7 @@ async function hardReset({ reason }) {
     // Step 10 — recreate Magicline child view; auto-login will follow.
     createMagiclineView(mainWindow, store);
     succeeded = true;
+    lastResetAt = Date.now();
   } finally {
     // Step 11 — always clear the mutex, even on throw (T-04-11).
     resetting = false;
@@ -166,6 +168,16 @@ function _resetForTests() {
   mainWindow = null;
   store      = null;
   postResetListener = null; // Phase 5
+  lastResetAt = null;       // Phase 5
+}
+
+/**
+ * Phase 5 D-03: returns ms-since-epoch of the last successful hardReset,
+ * or null if none has completed since boot. Consumed by the admin menu
+ * diagnostic header.
+ */
+function getLastResetAt() {
+  return lastResetAt;
 }
 
 /**
@@ -192,6 +204,7 @@ module.exports = {
   init: init,
   hardReset: hardReset,
   onPostReset: onPostReset,   // Phase 5 D-15/D-16
+  getLastResetAt: getLastResetAt, // Phase 5 D-03
   _resetForTests: _resetForTests,
   _getStateForTests: _getStateForTests,
   _RESET_WINDOW_MS: RESET_WINDOW_MS,

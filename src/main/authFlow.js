@@ -484,6 +484,10 @@ exports.handlePinAttempt = handlePinAttempt;
 exports.handlePinRecoveryRequested = handlePinRecoveryRequested;
 exports._runSideEffect = _runSideEffect;
 exports._getCurrentStateForTests = () => currentState;
+// Phase 5 D-29: public accessor for the post-update health watchdog poller
+exports.getState = () => currentState;
+// Phase 5 D-29: public accessor for the post-update health watchdog poller
+exports.getState = () => currentState;
 exports._resetForTests = () => {
   currentState = STATES.BOOTING;
   deps = null;
