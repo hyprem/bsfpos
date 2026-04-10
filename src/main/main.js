@@ -477,6 +477,10 @@ app.whenReady().then(() => {
 
       ipcMain.handle('request-pin-recovery', async () => {
         try {
+          // WR-06: clear the reset-loop latch so a verify-pin that follows
+          // this recovery flow does NOT take the relaunch branch (which would
+          // surprise the user expecting the credentials overlay).
+          resetLoopPending = false;
           authFlow.handlePinRecoveryRequested();
           return { ok: true };
         } catch (err) {
