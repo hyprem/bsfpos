@@ -780,17 +780,17 @@ adminMenuAction:    (action) => ipcRenderer.invoke('admin-menu-action', { action
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Fine-grained PAT scope — `contents:read` vs `releases:read`**
    - What we know: ADMIN-06 says "fine-grained PAT with only `contents:read` scope". The electron-updater GitHub provider fetches `releases/latest` via the GitHub API.
-   - What's unclear: Whether `contents:read` is sufficient or if `releases:read` (a separate fine-grained scope) is needed for GitHub Releases API access.
-   - Recommendation: The first `checkForUpdates` call after PAT setup is the real validator (per D-20). Log the error class clearly. If 403 is returned, the error log will tell staff exactly what failed. Document the two scopes to try in the runbook. Start with `contents:read`; if that fails, add `metadata:read` (which covers release listing).
+   - What was unclear: Whether `contents:read` is sufficient or if `releases:read` (a separate fine-grained scope) is needed for GitHub Releases API access.
+   - **RESOLVED:** Start with `contents:read` (matches ADMIN-06 literally). The first `checkForUpdates` call after PAT setup is the real validator (per D-20); if it returns 403 the runbook instructs staff to add `metadata:read` as the next candidate. Log the GitHub error class verbatim so staff can diagnose scope issues without opening DevTools. No code change is needed for either path — the scope is a PAT-creation step, not a client config.
 
 2. **sessionReset EventEmitter extension — callback vs EventEmitter**
    - What we know: `sessionReset.js` currently exports functions and module-scoped state. `updateGate.js` needs a `post-reset` signal after `hardReset()` completes successfully.
-   - What's unclear: Whether to extend sessionReset with a Node `EventEmitter` mixin or export a callback registration function.
-   - Recommendation: The simplest approach is a callback registration: `sessionReset.onPostReset(callback)` that stores a single listener and calls it after step 11 (mutex release) in `hardReset()`. This avoids adding EventEmitter to the module and matches the existing module style. One listener is sufficient — only `updateGate.js` needs this signal.
+   - What was unclear: Whether to extend sessionReset with a Node `EventEmitter` mixin or export a callback registration function.
+   - **RESOLVED:** Use callback registration — `sessionReset.onPostReset(callback)` that stores a single listener and invokes it after step 11 (mutex release) in `hardReset()`. This avoids adding EventEmitter to the module, matches the existing single-export module style, and is sufficient because only `updateGate.js` needs this signal. The hook MUST fire only on successful reset completion (not on guard/loop-active short-circuits) to preserve the Phase 4 D-15 contract.
 
 ---
 
