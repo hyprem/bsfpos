@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-last_updated: "2026-04-10T11:57:03.308Z"
+status: verifying
+last_updated: "2026-04-10T12:09:49.080Z"
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 32
-  completed_plans: 31
-  percent: 97
+  completed_plans: 32
+  percent: 100
 ---
 
 # Project State: Bee Strong POS Kiosk
@@ -32,10 +32,10 @@ Plan: 6 of 6
 - **Phase 02** (magicline-embed-injection-layer): ✓ COMPLETE (5/5 plans)
 - **Phase 03** (credentials-auto-login-state-machine): ✓ COMPLETE (10/10 plans; TabTip soft re-check in next-visit batch)
 - **Phase 04** (nfc-input-idle-session-lifecycle): ✓ COMPLETE (5/5 plans; 13 physical rows deferred to next-visit batch)
-- **Phase 05** (admin-exit-logging-auto-update-branded-polish): IN PROGRESS (3/6 plans — 05-01, 05-02, 05-03 complete)
-- **Status:** Ready to execute
-- **Progress:** [██████████] 97%
-- **Last completed:** Plan 05-03 (update gate + sessionReset onPostReset hook) at 2026-04-10 — commits 0f5ecc8, 34ec3e6, 754f8db
+- **Phase 05** (admin-exit-logging-auto-update-branded-polish): ✓ COMPLETE (6/6 plans)
+- **Status:** Phase complete — ready for verification
+- **Progress:** [██████████] 100%
+- **Last completed:** Plan 05-06 (log migration + verification) at 2026-04-10 — commits a7604de, 93b2f7e, 10b9a5f. 265/265 tests green. ADMIN-04 / ADMIN-05 / BRAND-02 closed.
 
 ## Performance Metrics
 
@@ -63,6 +63,8 @@ See PROJECT.md "Key Decisions" table for the full list. Roadmap-level highlights
 - [Phase 05]: Plan 03: sessionReset.onPostReset uses local succeeded flag inside try to guarantee no fire on throws or short-circuits (T-05-17)
 - [Phase 05]: Plan 05-05: context-aware PIN modal (pinModalContext) routes admin hotkey to verifyAdminPin and reset-loop to legacy verifyPin
 - [Phase 05]: Plan 05-05: update-failed variant uses dual cleanup (10s timeout + once pointerdown), hideMagiclineError clears both
+- [Phase 05]: Plan 06: sale-completed bridge uses console.log sentinel -> console-message -> ipcMain.emit because inject.js has no preload access
+- [Phase 05]: Plan 06: non-sensitive lifecycle log.info lines deliberately left as-is (migration scope = sensitive fields only)
 
 ### Open TODOs (surfaced during planning)
 
@@ -88,17 +90,17 @@ None. Phase 04 is unblocked — Phase 03's idempotent auto-login is the dependen
 
 ### Last session summary
 
-- Closed Plan 05-03 (update gate + sessionReset onPostReset hook) on 2026-04-10 across a two-session continuation. Shipped `src/main/updateGate.js` (pure DI safe-window gate; first-of post-reset | 03:00–05:00), extended `src/main/sessionReset.js` (+27 lines: `onPostReset` hook + `succeeded` flag to gate fire-on-success only), and added `test/updateGate.test.js` (8 tests) + `test/sessionReset.postReset.test.js` (4 tests). Full suite 242/242 green, Phase 4 regression clean. ADMIN-07 closed.
-- Commits: 0f5ecc8 (Task 1 sessionReset hook), 34ec3e6 (Task 2 updateGate), 754f8db (Task 3 tests) + docs commit for SUMMARY/STATE/ROADMAP.
-- Continuation: an earlier executor died after Task 2; the continuation executor verified both prior commits via git log, executed only Task 3, and did NOT re-do Tasks 1–2.
+- Closed Plan 05-06 (log migration + verification) on 2026-04-10 — the final Phase 5 plan. Migrated every sensitive-field log.info/warn/error call site in src/main/** to `log.audit()` with the canonical D-28 taxonomy (auth.state, auth.submit, badge.scanned, credentials.saved, idle.reset, startup, startup.complete, sale.completed). Wired a `console.log('BSK_AUDIT_SALE_COMPLETED')` bridge from inject.js through a new `magiclineView.webContents.on('console-message',...)` listener to a new `audit-sale-completed` ipcMain handler. Added `test/phase5-touch-target.test.js` (12 tests — CSS-level BRAND-02 audit) and `test/phase5-acceptance.test.js` (11 tests — requirement-ID grep trace), plus `05-VERIFICATION.md` (30 P5-* human-verification rows + rollback runbook). Full suite 265/265 green; 242 pre-Plan-06 tests still pass (zero regression). ADMIN-04 / ADMIN-05 / BRAND-02 closed.
+- Commits: a7604de (Task 1 log migration + bridge), 93b2f7e (Task 2 touch-target test), 10b9a5f (Task 3 acceptance trace + VERIFICATION.md).
+- Phase 5 complete. Phase 6 (milestone verification / ship) is next.
 
 ### Next session entry point
 
-Plan 05-04 (main orchestration) — wire `updateGate.onUpdateDownloaded` to the real `electron-updater` `NsisUpdater` via injected `quitAndInstall` as installFn. Also the hook-up for admin PIN IPC (Plan 05-02's `adminPinLockout`) and the v1.0 admin exit menu is planned here. Run `/gsd-execute-phase 5` to continue.
+Phase 05 closed. Run `/gsd-verify-phase 5` to run the verifier agent, then proceed to milestone closure / ship. All physical verification rows (Phase 1/3/4/5 combined) live in `01-VERIFICATION.md` next-visit batch.
 
 ### Stopped At
 
-Phase 05 in progress — 3/6 plans complete (05-01, 05-02, 05-03). Ready to execute 05-04-main-orchestration-PLAN.md.
+Phase 05 ✓ COMPLETE — 6/6 plans shipped. 265/265 automated tests green. Awaiting verifier agent + physical kiosk visit for the consolidated human-verification batch.
 
 ---
 *State initialized: 2026-04-08 · Last refresh: 2026-04-10*
