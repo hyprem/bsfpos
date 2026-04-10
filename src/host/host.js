@@ -92,6 +92,38 @@
         pinBtn.textContent = 'PIN eingeben';
         pinBtn.onclick = pinBtnRequestResetLoopRecovery;
       }
+    } else if (variant === 'bad-release') {
+      // Phase 5 D-31 — post-update health check failed. Staff must recover.
+      if (title) title.textContent = 'Update fehlgeschlagen';
+      if (sub)   sub.textContent   = 'Bitte Studio-Personal verst\u00E4ndigen';
+      if (pinBtn) {
+        pinBtn.style.display = 'inline-block';
+        pinBtn.textContent = 'PIN eingeben';
+        pinBtn.onclick = pinBtnRequestPinRecovery;
+      }
+    } else if (variant === 'update-failed') {
+      // Phase 5 D-32 — install attempt failed at install time. Kiosk still
+      // runs on old version; auto-dismiss after 10s or tap.
+      if (title) title.textContent = 'Aktualisierung fehlgeschlagen';
+      if (sub)   sub.textContent   = 'Erneuter Versuch beim n\u00E4chsten Neustart \u2014 der Kiosk l\u00E4uft weiter.';
+      if (pinBtn) {
+        pinBtn.style.display = 'none';
+      }
+      // 10-second auto-dismiss + one-shot tap-to-dismiss
+      if (updateFailedTimer) { clearTimeout(updateFailedTimer); updateFailedTimer = null; }
+      if (updateFailedHandler) {
+        el.removeEventListener('pointerdown', updateFailedHandler);
+        updateFailedHandler = null;
+      }
+      updateFailedTimer = setTimeout(function () {
+        updateFailedTimer = null;
+        hideMagiclineError();
+      }, 10000);
+      updateFailedHandler = function () {
+        if (updateFailedTimer) { clearTimeout(updateFailedTimer); updateFailedTimer = null; }
+        hideMagiclineError();
+      };
+      el.addEventListener('pointerdown', updateFailedHandler, { once: true });
     }
 
     el.style.display = 'flex';
@@ -100,6 +132,13 @@
   function hideMagiclineError() {
     var el = document.getElementById('magicline-error');
     if (!el) return;
+    // Phase 5: clean up update-failed variant timers/handlers so stale
+    // state does not leak across variant changes.
+    if (updateFailedTimer) { clearTimeout(updateFailedTimer); updateFailedTimer = null; }
+    if (updateFailedHandler) {
+      el.removeEventListener('pointerdown', updateFailedHandler);
+      updateFailedHandler = null;
+    }
     el.style.display = 'none';
     el.setAttribute('aria-hidden', 'true');
   }
@@ -108,6 +147,13 @@
   // Phase 4 — Idle overlay (Layer 200, D-11 / 04-UI-SPEC countdown contract)
   // =================================================================
   var idleInterval = null;
+
+  // --- Phase 5 state ------------------------------------------------------
+  var pinModalContext = 'admin';          // 'admin' | 'reset-loop'
+  var lockoutInterval = null;             // countdown setInterval id
+  var adminUpdateResultTimer = null;      // 5s auto-hide for admin update result
+  var updateFailedTimer = null;           // 10s auto-dismiss for update-failed variant
+  var updateFailedHandler = null;         // one-shot pointerdown listener for update-failed
 
   function hideIdleOverlayDom() {
     if (idleInterval) {
@@ -339,7 +385,26 @@
       pinBuffer = '';
       updatePinDisplay();
       try {
-        var res = await window.kiosk.verifyPin(submitted);
+        // Phase 5: route by context. Admin hotkey path uses verify-admin-pin
+        // (with lockout); reset-loop recovery path uses legacy verify-pin
+        // (with resetLoopPending intercept in main).
+        var res;
+        if (pinModalContext === 'admin' && window.kiosk.verifyAdminPin) {
+          res = await window.kiosk.verifyAdminPin(submitted);
+          if (res && res.locked) {
+            showPinLockout({ lockedUntil: res.lockedUntil });
+            // Do not close modal — lockout panel replaces keypad
+            return;
+          }
+          if (res && res.ok) {
+            // Main will send hide-pin-modal + show-admin-menu — nothing more to do
+            return;
+          }
+          setPinModalError(true);
+          return;
+        }
+        // Legacy path (context === 'reset-loop') flows through Phase 3 verify-pin
+        res = await window.kiosk.verifyPin(submitted);
         if (!res || !res.ok) {
           setPinModalError(true);
         }
@@ -357,9 +422,248 @@
   }
 
   // =================================================================
+  // Phase 5 — Admin menu, update config, updating cover, PIN lockout
+  // =================================================================
+
+  function formatRelativeGerman(iso) {
+    if (!iso) return 'noch nie';
+    var t = (typeof iso === 'number') ? iso : Date.parse(iso);
+    if (!Number.isFinite(t)) return 'noch nie';
+    var diff = Date.now() - t;
+    if (diff < 60000) return 'gerade eben';
+    var mins = Math.floor(diff / 60000);
+    if (mins < 60) return 'vor ' + mins + ' Min';
+    var hrs = Math.floor(mins / 60);
+    if (hrs < 24) return 'vor ' + hrs + ' Std';
+    var days = Math.floor(hrs / 24);
+    return 'vor ' + days + ' Tag(en)';
+  }
+
+  function authStateLabel(s) {
+    switch (s) {
+      case 'CASH_REGISTER_READY': return 'BEREIT';
+      case 'LOGIN_SUBMITTED':     return 'ANMELDUNG';
+      case 'LOGIN_DETECTED':      return 'LOGIN ERKANNT';
+      case 'BOOTING':             return 'STARTET';
+      case 'NEEDS_CREDENTIALS':   return 'KEINE DATEN';
+      case 'CREDENTIALS_UNAVAILABLE': return 'FEHLER';
+      default:                    return s || 'UNBEKANNT';
+    }
+  }
+
+  function renderDiagnostics(d) {
+    if (!d) return;
+    var set = function (id, text) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = text;
+    };
+    set('diag-version',       d.version ? ('v' + d.version) : '\u2014');
+    set('diag-last-update',   formatRelativeGerman(d.lastUpdateCheck));
+    set('diag-auth-state',    authStateLabel(d.authState));
+    set('diag-last-reset',    formatRelativeGerman(d.lastResetAt));
+    set('diag-update-status', d.updateStatus || '\u2014');
+    // Swap "Auto-Update einrichten" / "Update-Zugang ändern" label
+    var cfgBtn = document.getElementById('admin-btn-update-config');
+    if (cfgBtn) cfgBtn.textContent = d.patConfigured ? 'Update-Zugang \u00E4ndern' : 'Auto-Update einrichten';
+  }
+
+  function showAdminMenu(diagnostics) {
+    renderDiagnostics(diagnostics);
+    var menu = document.getElementById('admin-menu');
+    if (menu) { menu.style.display = 'flex'; menu.setAttribute('aria-hidden', 'false'); }
+    var cfg = document.getElementById('update-config');
+    if (cfg) { cfg.style.display = 'none'; cfg.setAttribute('aria-hidden', 'true'); }
+  }
+
+  function hideAdminMenu() {
+    var menu = document.getElementById('admin-menu');
+    if (menu) { menu.style.display = 'none'; menu.setAttribute('aria-hidden', 'true'); }
+    var res = document.getElementById('admin-update-result');
+    if (res) res.style.display = 'none';
+    if (adminUpdateResultTimer) { clearTimeout(adminUpdateResultTimer); adminUpdateResultTimer = null; }
+  }
+
+  function showUpdateConfig(_payload) {
+    var cfg = document.getElementById('update-config');
+    if (cfg) { cfg.style.display = 'flex'; cfg.setAttribute('aria-hidden', 'false'); }
+    var menu = document.getElementById('admin-menu');
+    if (menu) { menu.style.display = 'none'; menu.setAttribute('aria-hidden', 'true'); }
+    var input = document.getElementById('update-pat-input');
+    if (input) input.value = '';
+    var save = document.getElementById('update-config-save');
+    if (save) save.disabled = true;
+    var err = document.getElementById('update-config-error');
+    if (err) err.style.display = 'none';
+  }
+
+  function hideUpdateConfig() {
+    var cfg = document.getElementById('update-config');
+    if (cfg) { cfg.style.display = 'none'; cfg.setAttribute('aria-hidden', 'true'); }
+    var input = document.getElementById('update-pat-input');
+    if (input) input.value = ''; // defensive: never retain PAT in DOM
+  }
+
+  function showUpdatingCover() {
+    var el = document.getElementById('updating-cover');
+    if (el) { el.style.display = 'flex'; el.setAttribute('aria-hidden', 'false'); }
+  }
+
+  function hideUpdatingCover() {
+    var el = document.getElementById('updating-cover');
+    if (el) { el.style.display = 'none'; el.setAttribute('aria-hidden', 'true'); }
+  }
+
+  function showAdminUpdateResult(payload) {
+    var el = document.getElementById('admin-update-result');
+    if (!el) return;
+    var text = '\u2014';
+    var status = payload && payload.status;
+    if (status === 'none') text = 'Aktuell';
+    else if (status === 'available') text = 'Update verf\u00FCgbar \u2014 wird bei n\u00E4chster Ruhepause installiert';
+    else if (status === 'disabled') text = 'Auto-Update nicht konfiguriert';
+    else if (status === 'error') text = 'Fehler bei der Update-Pr\u00FCfung';
+    el.textContent = text;
+    el.classList.toggle('bsk-admin-update-result--available', status === 'available');
+    el.style.display = 'block';
+    if (adminUpdateResultTimer) clearTimeout(adminUpdateResultTimer);
+    adminUpdateResultTimer = setTimeout(function () {
+      el.style.display = 'none';
+      adminUpdateResultTimer = null;
+    }, 5000);
+  }
+
+  function formatMmSs(remainingMs) {
+    if (remainingMs < 0) remainingMs = 0;
+    var mins = Math.floor(remainingMs / 60000);
+    var secs = Math.floor((remainingMs % 60000) / 1000);
+    return String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+  }
+
+  function showPinLockout(payload) {
+    var modal = document.getElementById('pin-modal');
+    if (modal && modal.style.display === 'none') {
+      modal.style.display = 'flex';
+      modal.setAttribute('aria-hidden', 'false');
+    }
+    var keypad = document.querySelector('#pin-modal .bsk-keypad');
+    var display = document.getElementById('pin-display');
+    var errEl = document.getElementById('pin-modal-error');
+    var panel = document.getElementById('pin-lockout-panel');
+    var countdownEl = document.getElementById('pin-lockout-countdown');
+    if (keypad) keypad.style.display = 'none';
+    if (display) display.style.display = 'none';
+    if (errEl) errEl.style.display = 'none';
+    if (panel) panel.style.display = 'block';
+
+    // PITFALL 4 / T-05-31: guard against double setInterval
+    if (lockoutInterval) { clearInterval(lockoutInterval); lockoutInterval = null; }
+
+    var until = payload && payload.lockedUntil ? Date.parse(payload.lockedUntil) : 0;
+    function tick() {
+      var remaining = until - Date.now();
+      if (countdownEl) countdownEl.textContent = formatMmSs(remaining);
+      if (remaining <= 0) {
+        if (lockoutInterval) { clearInterval(lockoutInterval); lockoutInterval = null; }
+        hidePinLockout();
+      }
+    }
+    tick();
+    lockoutInterval = setInterval(tick, 1000);
+  }
+
+  function hidePinLockout() {
+    if (lockoutInterval) { clearInterval(lockoutInterval); lockoutInterval = null; }
+    var panel = document.getElementById('pin-lockout-panel');
+    if (panel) panel.style.display = 'none';
+    var keypad = document.querySelector('#pin-modal .bsk-keypad');
+    var display = document.getElementById('pin-display');
+    if (keypad) keypad.style.display = '';
+    if (display) {
+      display.style.display = '';
+      display.textContent = '\u00B7\u00B7\u00B7\u00B7';
+    }
+  }
+
+  function wireAdminButtons() {
+    var handlers = {
+      'admin-btn-check-updates':   'check-updates',
+      'admin-btn-logs':            'view-logs',
+      'admin-btn-reload':          'reload',
+      'admin-btn-credentials':     're-enter-credentials',
+      'admin-btn-update-config':   'configure-auto-update',
+      'admin-btn-exit':            'exit-to-windows',
+    };
+    Object.keys(handlers).forEach(function (id) {
+      var btn = document.getElementById(id);
+      if (!btn) return;
+      btn.addEventListener('click', function () {
+        if (window.kiosk && window.kiosk.adminMenuAction) {
+          window.kiosk.adminMenuAction(handlers[id]);
+        }
+      });
+    });
+
+    // PAT config form wiring
+    var patInput = document.getElementById('update-pat-input');
+    var saveBtn  = document.getElementById('update-config-save');
+    var cancelBtn = document.getElementById('update-config-cancel');
+    var errEl    = document.getElementById('update-config-error');
+    if (patInput && saveBtn) {
+      patInput.addEventListener('input', function () {
+        var v = patInput.value;
+        saveBtn.disabled = !(v && v.trim().length > 0 && !/\s/.test(v.trim()));
+      });
+    }
+    if (saveBtn) {
+      saveBtn.addEventListener('click', async function () {
+        if (!patInput || !window.kiosk || !window.kiosk.submitUpdatePat) return;
+        var v = patInput.value.trim();
+        if (!v) {
+          if (errEl) { errEl.textContent = 'Bitte PAT eingeben'; errEl.style.display = 'block'; }
+          return;
+        }
+        saveBtn.disabled = true;
+        try {
+          var r = await window.kiosk.submitUpdatePat(v);
+          if (r && r.ok) {
+            patInput.value = '';
+            if (errEl) errEl.style.display = 'none';
+            // Main sends hide-update-config + show-admin-menu
+          } else {
+            if (errEl) {
+              errEl.textContent = 'PAT ung\u00FCltig \u2014 Verbindungsfehler. Bitte pr\u00FCfen und erneut speichern.';
+              errEl.style.display = 'block';
+            }
+            saveBtn.disabled = false;
+          }
+        } catch (e) {
+          if (errEl) {
+            errEl.textContent = 'PAT ung\u00FCltig \u2014 Verbindungsfehler. Bitte pr\u00FCfen und erneut speichern.';
+            errEl.style.display = 'block';
+          }
+          saveBtn.disabled = false;
+        }
+      });
+    }
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', async function () {
+        // Return to admin menu without state change
+        hideUpdateConfig();
+        if (window.kiosk && window.kiosk.getAdminDiagnostics) {
+          try {
+            var d = await window.kiosk.getAdminDiagnostics();
+            if (d) showAdminMenu(d);
+          } catch (e) { /* ignore */ }
+        }
+      });
+    }
+  }
+
+  // =================================================================
   // Wiring
   // =================================================================
   function wireStatic() {
+    wireAdminButtons();
     // Submit button
     var submit = document.getElementById('creds-submit');
     if (submit) submit.addEventListener('click', submitCredentials);
@@ -432,11 +736,27 @@
     if (window.kiosk.onHideMagiclineError)   window.kiosk.onHideMagiclineError(hideMagiclineError);
     if (window.kiosk.onShowCredentialsOverlay) window.kiosk.onShowCredentialsOverlay(showCredentialsOverlay);
     if (window.kiosk.onHideCredentialsOverlay) window.kiosk.onHideCredentialsOverlay(hideCredentialsOverlay);
-    if (window.kiosk.onShowPinModal)         window.kiosk.onShowPinModal(showPinModal);
+    if (window.kiosk.onShowPinModal) {
+      window.kiosk.onShowPinModal(function (payload) {
+        pinModalContext = (payload && payload.context) || 'admin';
+        hidePinLockout(); // reset lockout view in case reopened
+        showPinModal();
+      });
+    }
     if (window.kiosk.onHidePinModal)         window.kiosk.onHidePinModal(hidePinModal);
     // Phase 4 — idle overlay IPC
     if (window.kiosk.onShowIdleOverlay)      window.kiosk.onShowIdleOverlay(showIdleOverlay);
     if (window.kiosk.onHideIdleOverlay)      window.kiosk.onHideIdleOverlay(hideIdleOverlayDom);
+    // Phase 5 — admin menu / update config / updating cover / PIN lockout
+    if (window.kiosk.onShowAdminMenu)        window.kiosk.onShowAdminMenu(showAdminMenu);
+    if (window.kiosk.onHideAdminMenu)        window.kiosk.onHideAdminMenu(hideAdminMenu);
+    if (window.kiosk.onShowUpdateConfig)     window.kiosk.onShowUpdateConfig(showUpdateConfig);
+    if (window.kiosk.onHideUpdateConfig)     window.kiosk.onHideUpdateConfig(hideUpdateConfig);
+    if (window.kiosk.onShowUpdatingCover)    window.kiosk.onShowUpdatingCover(showUpdatingCover);
+    if (window.kiosk.onHideUpdatingCover)    window.kiosk.onHideUpdatingCover(hideUpdatingCover);
+    if (window.kiosk.onShowAdminUpdateResult) window.kiosk.onShowAdminUpdateResult(showAdminUpdateResult);
+    if (window.kiosk.onShowPinLockout)       window.kiosk.onShowPinLockout(showPinLockout);
+    if (window.kiosk.onHidePinLockout)       window.kiosk.onHidePinLockout(hidePinLockout);
   }
 
   if (document.readyState === 'loading') {
