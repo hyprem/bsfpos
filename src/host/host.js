@@ -27,8 +27,28 @@
   }
 
   // =================================================================
-  // Phase 2/3 — Magicline error (variant-aware)
+  // Phase 2/3/4 — Magicline error (variant-aware)
   // =================================================================
+  // Variant click-target handlers. Phase 3 variants route the PIN button to
+  // requestPinRecovery; Phase 4 reset-loop variant routes to
+  // requestResetLoopRecovery. We assign .onclick per variant (instead of
+  // stacking addEventListener calls) so the handler is replaced, not
+  // accumulated across variant switches.
+  function pinBtnRequestPinRecovery() {
+    try {
+      if (window.kiosk && window.kiosk.requestPinRecovery) {
+        window.kiosk.requestPinRecovery();
+      }
+    } catch (e) { /* ignore */ }
+  }
+  function pinBtnRequestResetLoopRecovery() {
+    try {
+      if (window.kiosk && window.kiosk.requestResetLoopRecovery) {
+        window.kiosk.requestResetLoopRecovery();
+      }
+    } catch (e) { /* ignore */ }
+  }
+
   function showMagiclineError(payload) {
     var el = document.getElementById('magicline-error');
     if (!el) return;
@@ -41,15 +61,37 @@
     if (variant === 'drift') {
       if (title) title.textContent = 'Kasse vor\u00FCbergehend nicht verf\u00FCgbar';
       if (sub)   sub.textContent   = (payload && payload.message) || 'Bitte wenden Sie sich an das Studio-Personal';
-      if (pinBtn) pinBtn.style.display = 'none';
+      if (pinBtn) {
+        pinBtn.style.display = 'none';
+        pinBtn.onclick = pinBtnRequestPinRecovery;
+      }
     } else if (variant === 'credentials-unavailable') {
       if (title) title.textContent = 'Anmeldedaten nicht verf\u00FCgbar';
       if (sub)   sub.textContent   = 'Administrator erforderlich \u2014 Bitte Studio-Personal verst\u00E4ndigen';
-      if (pinBtn) pinBtn.style.display = 'inline-block';
+      if (pinBtn) {
+        pinBtn.style.display = 'inline-block';
+        pinBtn.textContent = 'PIN eingeben';
+        pinBtn.onclick = pinBtnRequestPinRecovery;
+      }
     } else if (variant === 'login-failed') {
       if (title) title.textContent = 'Anmeldung fehlgeschlagen';
       if (sub)   sub.textContent   = 'Bitte Studio-Personal verst\u00E4ndigen';
-      if (pinBtn) pinBtn.style.display = 'inline-block';
+      if (pinBtn) {
+        pinBtn.style.display = 'inline-block';
+        pinBtn.textContent = 'PIN eingeben';
+        pinBtn.onclick = pinBtnRequestPinRecovery;
+      }
+    } else if (variant === 'reset-loop') {
+      // Phase 4 D-19 — unrecoverable reset-storm. Staff must enter PIN to
+      // relaunch. Click target is requestResetLoopRecovery, NOT
+      // requestPinRecovery (variant-specific routing per 04-UI-SPEC).
+      if (title) title.textContent = 'Kiosk muss neu gestartet werden';
+      if (sub)   sub.textContent   = 'Bitte Studio-Personal verst\u00E4ndigen';
+      if (pinBtn) {
+        pinBtn.style.display = 'inline-block';
+        pinBtn.textContent = 'PIN eingeben';
+        pinBtn.onclick = pinBtnRequestResetLoopRecovery;
+      }
     }
 
     el.style.display = 'flex';
@@ -60,6 +102,65 @@
     if (!el) return;
     el.style.display = 'none';
     el.setAttribute('aria-hidden', 'true');
+  }
+
+  // =================================================================
+  // Phase 4 — Idle overlay (Layer 200, D-11 / 04-UI-SPEC countdown contract)
+  // =================================================================
+  var idleInterval = null;
+
+  function hideIdleOverlayDom() {
+    if (idleInterval) {
+      clearInterval(idleInterval);
+      idleInterval = null;
+    }
+    var overlay = document.getElementById('idle-overlay');
+    if (overlay) {
+      overlay.style.display = 'none';
+      overlay.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  function showIdleOverlay() {
+    var overlay = document.getElementById('idle-overlay');
+    var numEl = document.getElementById('idle-countdown-number');
+    if (!overlay || !numEl) return;
+    // Guard against a double-show race: a stale interval from a previous
+    // show would keep ticking and double-decrement the new counter.
+    if (idleInterval) {
+      clearInterval(idleInterval);
+      idleInterval = null;
+    }
+    var countdown = 30;
+    numEl.textContent = '30';
+    overlay.style.display = 'flex';
+    overlay.setAttribute('aria-hidden', 'false');
+    idleInterval = setInterval(function () {
+      countdown -= 1;
+      numEl.textContent = String(countdown);
+      if (countdown <= 0) {
+        clearInterval(idleInterval);
+        idleInterval = null;
+        overlay.style.display = 'none';
+        overlay.setAttribute('aria-hidden', 'true');
+        try {
+          if (window.kiosk && window.kiosk.notifyIdleExpired) {
+            window.kiosk.notifyIdleExpired();
+          }
+        } catch (e) { /* ignore */ }
+      }
+    }, 1000);
+  }
+
+  function dismissIdleOverlay() {
+    // Single dismiss path for button click AND overlay
+    // pointerdown/touchstart/keydown (UI-SPEC §Component Inventory).
+    hideIdleOverlayDom();
+    try {
+      if (window.kiosk && window.kiosk.notifyIdleDismissed) {
+        window.kiosk.notifyIdleDismissed();
+      }
+    } catch (e) { /* ignore */ }
   }
 
   // =================================================================
@@ -289,16 +390,28 @@
       });
     }
 
-    // Error overlay PIN button
+    // Error overlay PIN button — variant-aware click target is assigned
+    // via .onclick inside showMagiclineError (Phase 3 requestPinRecovery vs
+    // Phase 4 reset-loop requestResetLoopRecovery). Default to Phase 3
+    // behaviour so clicks work even if a variant with no explicit onclick
+    // assignment ever shows the button.
     var errPin = document.getElementById('error-pin-button');
     if (errPin) {
-      errPin.addEventListener('click', function () {
-        try {
-          if (window.kiosk && window.kiosk.requestPinRecovery) {
-            window.kiosk.requestPinRecovery();
-          }
-        } catch (e) { /* ignore */ }
-      });
+      errPin.onclick = pinBtnRequestPinRecovery;
+    }
+
+    // Idle overlay dismiss bindings — button click AND overlay
+    // pointerdown/touchstart/keydown route to the same dismiss() function
+    // per 04-UI-SPEC §Component Inventory.
+    var idleBtn = document.getElementById('idle-dismiss-btn');
+    if (idleBtn) {
+      idleBtn.addEventListener('click', dismissIdleOverlay);
+    }
+    var idleOverlay = document.getElementById('idle-overlay');
+    if (idleOverlay) {
+      idleOverlay.addEventListener('pointerdown', dismissIdleOverlay);
+      idleOverlay.addEventListener('touchstart',  dismissIdleOverlay);
+      idleOverlay.addEventListener('keydown',     dismissIdleOverlay);
     }
 
     // Keypad buttons
@@ -321,6 +434,9 @@
     if (window.kiosk.onHideCredentialsOverlay) window.kiosk.onHideCredentialsOverlay(hideCredentialsOverlay);
     if (window.kiosk.onShowPinModal)         window.kiosk.onShowPinModal(showPinModal);
     if (window.kiosk.onHidePinModal)         window.kiosk.onHidePinModal(hidePinModal);
+    // Phase 4 — idle overlay IPC
+    if (window.kiosk.onShowIdleOverlay)      window.kiosk.onShowIdleOverlay(showIdleOverlay);
+    if (window.kiosk.onHideIdleOverlay)      window.kiosk.onHideIdleOverlay(hideIdleOverlayDom);
   }
 
   if (document.readyState === 'loading') {
