@@ -134,6 +134,11 @@ app.whenReady().then(() => {
   // via the same attachLockdown export — see Pitfall 1 in RESEARCH.md.
   if (mainWindow) {
     attachLockdown(mainWindow.webContents);
+    // Phase 4 (D-01, D-02, research Pattern 1): two-attach pattern — badge
+    // input arbiter must see keystrokes on BOTH the host wc and the Magicline
+    // child wc. Lockdown first, badgeInput second (D-02).
+    const { attachBadgeInput } = require('./badgeInput');
+    attachBadgeInput(mainWindow.webContents);
   }
 
   // --- Phase 2: Magicline child view + injection pipeline ---------------
@@ -145,6 +150,14 @@ app.whenReady().then(() => {
   if (mainWindow) {
     try {
       const store = new Store({ name: 'config' });
+      // Phase 4 (D-14): sessionReset must be initialised BEFORE any code path
+      // that could call hardReset() — idle expiry, render-process-gone crash
+      // handler in magiclineView, or admin menu recovery in Phase 5. init is
+      // idempotent but calling hardReset without init throws.
+      require('./sessionReset').init({ mainWindow: mainWindow, store: store });
+      // Phase 4 (D-07): idleTimer needs the host wc so it can send
+      // 'show-idle-overlay' / 'hide-idle-overlay' IPCs to host.html.
+      require('./idleTimer').init(mainWindow);
       const magiclineView = createMagiclineView(mainWindow, store);
       log.info('phase2.magicline-view.created');
 
@@ -215,6 +228,52 @@ app.whenReady().then(() => {
       // as a manual fallback. On the real kiosk, the path is
       // "C:\Program Files\Common Files\microsoft shared\ink\TabTip.exe"
       // — see Wave 0 verification file for the verdict.
+      // Phase 4 D-12: idle overlay round-trip (renderer → main).
+      // idleTimer.dismiss/expired are idempotent (Plan 04-01 contract).
+      ipcMain.on('idle-dismissed', () => {
+        try {
+          require('./idleTimer').dismiss();
+        } catch (err) {
+          log.error('ipc.idle-dismissed failed: ' + (err && err.message));
+        }
+      });
+      ipcMain.on('idle-expired', () => {
+        try {
+          require('./idleTimer').expired();
+        } catch (err) {
+          log.error('ipc.idle-expired failed: ' + (err && err.message));
+        }
+      });
+      // Phase 4 D-19: reset-loop admin recovery — surfaces the PIN modal so
+      // the admin can authorise an app.relaunch(). Admin PIN remains the gate
+      // (T-04-16). The actual relaunch fires only after pin-ok with
+      // context:'reset-loop' is received.
+      ipcMain.on('request-reset-loop-recovery', () => {
+        log.warn('sessionReset.admin-recovery.requested: surfacing PIN modal');
+        try {
+          mainWindow.webContents.send('show-pin-modal', { context: 'reset-loop' });
+        } catch (err) {
+          log.error('ipc.request-reset-loop-recovery send failed: ' + (err && err.message));
+        }
+      });
+      // Phase 4 D-19: pin-ok admin-recovery branch. This fires-and-forgets
+      // from the host renderer after the user enters a valid PIN in the
+      // reset-loop recovery flow. The existing Phase 3 PIN flow uses the
+      // 'verify-pin' invoke handler + authFlow state machine and is NOT
+      // touched — those flows live on a different channel. Strict context
+      // check (T-04-17) prevents any other caller from triggering relaunch.
+      ipcMain.on('pin-ok', (_e, payload) => {
+        if (payload && payload.context === 'reset-loop') {
+          log.info('sessionReset.admin-recovery: app.relaunch + app.quit');
+          app.relaunch();
+          app.quit();
+          return;
+        }
+        // Any other context: log and no-op. Phase 3 authFlow pin-ok travels
+        // through 'verify-pin' invoke and does NOT reach this listener.
+        log.warn('ipc.pin-ok: ignored payload without reset-loop context');
+      });
+
       ipcMain.handle('launch-touch-keyboard', async () => {
         if (process.platform !== 'win32') {
           log.info('ipc.launch-touch-keyboard: no-op on non-win32');

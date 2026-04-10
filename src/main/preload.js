@@ -31,4 +31,13 @@ contextBridge.exposeInMainWorld('kiosk', {
   verifyPin:         (pin)     => ipcRenderer.invoke('verify-pin', { pin: pin }),
   requestPinRecovery:()        => ipcRenderer.invoke('request-pin-recovery'),
   launchTouchKeyboard:()       => ipcRenderer.invoke('launch-touch-keyboard'),
+
+  // Phase 4 D-12 — idle overlay (main → renderer)
+  onShowIdleOverlay: (cb) => { ipcRenderer.on('show-idle-overlay', (_e) => cb()); },
+  onHideIdleOverlay: (cb) => { ipcRenderer.on('hide-idle-overlay', (_e) => cb()); },
+  // Phase 4 D-12 — idle overlay (renderer → main, fire-and-forget)
+  notifyIdleDismissed: () => { ipcRenderer.send('idle-dismissed'); },
+  notifyIdleExpired:   () => { ipcRenderer.send('idle-expired');   },
+  // Phase 4 D-19 — reset-loop admin recovery trigger (renderer → main)
+  requestResetLoopRecovery: () => { ipcRenderer.send('request-reset-loop-recovery'); },
 });
