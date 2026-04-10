@@ -442,6 +442,35 @@ function destroyMagiclineView(mainWindow) {
       // mainWindow may already be destroyed — safe to ignore.
     }
   }
+  // CR-01: detach the child view from the host contentView and destroy the
+  // underlying webContents before nulling module state. Without this, every
+  // sessionReset.hardReset cycle stacks a new WebContentsView on top of the
+  // orphaned one — leaking composited layers, GPU resources, and (worst)
+  // leaving the old wc's before-input-event / render-process-gone listeners
+  // alive. An orphaned render-process-gone listener can itself re-trigger
+  // hardReset and trip the reset-loop guard on the next crash.
+  if (magiclineView) {
+    try {
+      if (mainWindow && mainWindow.contentView &&
+          typeof mainWindow.contentView.removeChildView === 'function') {
+        mainWindow.contentView.removeChildView(magiclineView);
+      }
+    } catch (e) {
+      log.warn('magicline.view.removeChildView failed: ' + (e && e.message));
+    }
+    try {
+      const wc = magiclineView.webContents;
+      if (wc && typeof wc.isDestroyed === 'function' && !wc.isDestroyed()) {
+        if (typeof wc.close === 'function') {
+          wc.close();
+        } else if (typeof wc.destroy === 'function') {
+          wc.destroy();
+        }
+      }
+    } catch (e) {
+      log.warn('magicline.view.wc.close failed: ' + (e && e.message));
+    }
+  }
   resizeHandler = null;
   magiclineView = null;
   readyFired    = false;
