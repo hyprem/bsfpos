@@ -120,6 +120,7 @@ function reduce(state, event, ctx) {
           sideEffects: [
             { kind: 'log', reason: 'cash-register-ready-cookie' },
             { kind: 'clear-timer', name: 'boot' },
+            { kind: 'start-idle-timer' },   // Phase 4 D-08
           ],
         };
       }
@@ -168,6 +169,7 @@ function reduce(state, event, ctx) {
           sideEffects: [
             { kind: 'log', reason: 'cash-register-ready' },
             { kind: 'clear-timer', name: 'post-submit' },
+            { kind: 'start-idle-timer' },   // Phase 4 D-08
           ],
         };
       }
@@ -334,6 +336,11 @@ function _runSideEffect(effect) {
       case 'clear-credentials':
         credentialsStore.clearCredentials(deps.store);
         hasCreds = false;
+        return;
+      case 'start-idle-timer':
+        // Phase 4 D-08: lazy require to avoid any future circular-dep risk
+        // with idleTimer. idleTimer.start() is idempotent (Plan 04-01 contract).
+        require('./idleTimer').start();
         return;
       case 'rerun-boot': {
         const loaded = credentialsStore.loadCredentials(deps.store, deps.safeStorage);
