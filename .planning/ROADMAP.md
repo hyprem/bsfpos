@@ -11,7 +11,7 @@
 - [ ] **Phase 1: Locked-Down Shell & OS Hardening** - Branded Electron kiosk window that cannot be escaped, backed by a hardened Windows user account
 - [ ] **Phase 2: Magicline Embed & Injection Layer** - Magicline cash register renders inside a child BrowserView with a permanent, drift-isolated hide layer and no flash of unhidden UI
 - [ ] **Phase 3: Credentials & Auto-Login State Machine** - The kiosk boots straight into an authenticated cash register using DPAPI-encrypted credentials, with a safe failure mode when decryption is unavailable
-- [ ] **Phase 4: NFC Input, Idle & Session Lifecycle** - Badge scans land in the customer field, idle members are reset without cart bleed, and the session recovers automatically from crashes and loops
+- [x] **Phase 4: NFC Input, Idle & Session Lifecycle** - Badge scans land in the customer field, idle members are reset without cart bleed, and the session recovers automatically from crashes and loops *(deferred-close: automated-green, physical verification bundled into Phase 1 next-visit batch)*
 - [ ] **Phase 5: Admin Exit, Logging, Auto-Update & Branded Polish** - An operator can unlock the kiosk with a hidden PIN, the device self-updates safely from GitHub Releases, every significant event is logged, and all branded overlays are touch-ready
 
 ## Phase Details
@@ -85,7 +85,7 @@
 - [x] 04-02-PLAN.md — sessionReset.js mutex + unified rolling-window loop counter + unit tests (IDLE-03, IDLE-05)
 - [x] 04-03-PLAN.md — main-process wire-up: magiclineView delegations, authFlow start-idle-timer side-effect, main.js + preload.js IPC surface (NFC-01, NFC-05, NFC-06, IDLE-04, IDLE-07)
 - [x] 04-04-PLAN.md — renderer wire-up: inject.js listeners, fragile-selectors JETZT_VERKAUFEN_TEXT, host.html/css/js idle overlay + reset-loop variant (NFC-06, IDLE-01, IDLE-02, IDLE-06)
-- [ ] 04-05-PLAN.md — 100-cycle reset harness + integration tests + human kiosk verification checklist (IDLE-04 acceptance + all 13 requirements)
+- [x] 04-05-PLAN.md — 100-cycle reset harness + integration tests + human kiosk verification checklist (IDLE-04 acceptance + all 13 requirements) — **deferred-close: automated 102/102 green, 13 physical rows moved to Phase 1 next-visit batch**
 **UI hint**: yes
 
 ### Phase 5: Admin Exit, Logging, Auto-Update & Branded Polish
@@ -105,11 +105,11 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Locked-Down Shell & OS Hardening | 1/6 | In Progress|  |
-| 2. Magicline Embed & Injection Layer | 0/0 | Not started | - |
-| 3. Credentials & Auto-Login State Machine | 0/0 | Not started | - |
-| 4. NFC Input, Idle & Session Lifecycle | 0/5 | Not started | - |
-| 5. Admin Exit, Logging, Auto-Update & Branded Polish | 0/0 | Not started | - |
+| 1. Locked-Down Shell & OS Hardening | 6/6 | Complete (visual debt in next-visit batch) | 2026-04-08 |
+| 2. Magicline Embed & Injection Layer | 5/5 | Complete | 2026-04-09 |
+| 3. Credentials & Auto-Login State Machine | 10/10 | Complete (TabTip re-check in next-visit batch) | 2026-04-10 |
+| 4. NFC Input, Idle & Session Lifecycle | 5/5 | Complete (deferred-close: 13 physical rows in next-visit batch) | 2026-04-10 |
+| 5. Admin Exit, Logging, Auto-Update & Branded Polish | 0/TBD | Not started | - |
 
 ## Notes
 

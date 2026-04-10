@@ -37,9 +37,9 @@ Requirements for initial release. Each maps to roadmap phases via the Traceabili
 ### NFC Badge Input
 
 - [x] **NFC-01**: USB HID keystrokes from the Deka badge reader are captured at the main-process level via `before-input-event` on the host BrowserWindow (not via page-level `document.activeElement` which races React re-renders)
-- [ ] **NFC-02**: Captured characters are buffered using a <50 ms inter-key timing gate to distinguish badge scans from human typing; the buffer is committed on Enter (confirmed as the Deka terminator) or on a brief timeout
-- [ ] **NFC-03**: The latent first-character-drop bug present in the Android prototype's `BADGE_SPEED_MS` check is fixed in the Electron port (`lastKeyTime` must not start at 0 in a way that makes `timeSinceLast` huge for the first char)
-- [ ] **NFC-04**: On buffer commit with length > 3, the badge string is injected into `[data-role="customer-search"] input` via the React-native value setter and an `input`+`change` event dispatch
+- [x] **NFC-02**: Captured characters are buffered using a <50 ms inter-key timing gate to distinguish badge scans from human typing; the buffer is committed on Enter (confirmed as the Deka terminator) or on a brief timeout *(code-complete; physical verification deferred to next-visit batch)*
+- [x] **NFC-03**: The latent first-character-drop bug present in the Android prototype's `BADGE_SPEED_MS` check is fixed in the Electron port (`lastKeyTime` must not start at 0 in a way that makes `timeSinceLast` huge for the first char) *(code-complete via sentinel-null arbitration; physical verification deferred to next-visit batch)*
+- [x] **NFC-04**: On buffer commit with length > 3, the badge string is injected into `[data-role="customer-search"] input` via the React-native value setter and an `input`+`change` event dispatch *(code-complete; physical verification deferred to next-visit batch)*
 - [x] **NFC-05**: If the idle overlay or admin PIN modal is visible, HID keystrokes count as "user activity" for the idle timer and are routed to the overlay/modal, not to Magicline
 - [x] **NFC-06**: While the Magicline product search field has focus (staff scanning products), HID keystrokes pass through to Magicline naturally and are not captured into the customer-search buffer
 
@@ -47,9 +47,9 @@ Requirements for initial release. Each maps to roadmap phases via the Traceabili
 
 - [x] **IDLE-01**: After 60 seconds without user input (keyboard, touch, NFC scan, mouse), a fullscreen translucent Bee Strong-branded "Are you still there?" overlay appears with a visible countdown (default 30 s) and a "Tap to continue" button
 - [x] **IDLE-02**: Any user input while the overlay is visible dismisses it and restarts the 60 s idle timer without clearing Magicline state
-- [ ] **IDLE-03**: If the overlay countdown expires without interaction, the app performs a hard session reset: navigate to `about:blank`, `await session.clearStorageData()`, `await cookies.flushStore()`, reload Magicline — fully mutex-guarded so no two resets can overlap
+- [x] **IDLE-03**: If the overlay countdown expires without interaction, the app performs a hard session reset: navigate to `about:blank`, `await session.clearStorageData()`, `await cookies.flushStore()`, reload Magicline — fully mutex-guarded so no two resets can overlap *(code-complete; 100-cycle automated harness proves mutex + step-order; physical verification deferred to next-visit batch)*
 - [x] **IDLE-04**: After a hard reset, the auto-login state machine fires again automatically; the member sees only the branded splash, then the clean cash register with no cart, no prior customer
-- [ ] **IDLE-05**: Reset-loop detection triggers a branded error screen if more than 3 resets occur within 60 seconds (prevents crash-loop bricking)
+- [x] **IDLE-05**: Reset-loop detection triggers a branded error screen if more than 3 resets occur within 60 seconds (prevents crash-loop bricking) *(code-complete via unified rolling-window counter D-18; automated tests prove loop-detected trip + suppression; physical verification deferred to next-visit batch, must run LAST as destructive)*
 - [x] **IDLE-06**: 3 seconds after the "Jetzt verkaufen" button is clicked, the customer search field is cleared (post-sale reset, does not drop cart history/receipts)
 - [x] **IDLE-07**: On `render-process-gone` (Magicline BrowserView crash), the app logs the crash, shows the branded error screen briefly, and reloads the view — auto-login fires as normal
 
@@ -130,19 +130,19 @@ Which phases cover which requirements. Filled in during roadmap creation.
 | AUTH-04 | Phase 3 | Pending |
 | AUTH-05 | Phase 3 | Pending |
 | AUTH-06 | Phase 3 | Pending |
-| NFC-01 | Phase 4 | Complete |
-| NFC-02 | Phase 4 | Pending |
-| NFC-03 | Phase 4 | Pending |
-| NFC-04 | Phase 4 | Pending |
-| NFC-05 | Phase 4 | Complete |
-| NFC-06 | Phase 4 | Complete |
-| IDLE-01 | Phase 4 | Complete |
-| IDLE-02 | Phase 4 | Complete |
-| IDLE-03 | Phase 4 | Pending |
-| IDLE-04 | Phase 4 | Complete |
-| IDLE-05 | Phase 4 | Pending |
-| IDLE-06 | Phase 4 | Complete |
-| IDLE-07 | Phase 4 | Complete |
+| NFC-01 | Phase 4 | Code complete (physical deferred) |
+| NFC-02 | Phase 4 | Code complete (physical deferred) |
+| NFC-03 | Phase 4 | Code complete (physical deferred) |
+| NFC-04 | Phase 4 | Code complete (physical deferred) |
+| NFC-05 | Phase 4 | Code complete (physical deferred) |
+| NFC-06 | Phase 4 | Code complete (physical deferred) |
+| IDLE-01 | Phase 4 | Code complete (physical deferred) |
+| IDLE-02 | Phase 4 | Code complete (physical deferred) |
+| IDLE-03 | Phase 4 | Code complete (physical deferred) |
+| IDLE-04 | Phase 4 | Code complete (100-cycle harness green; physical spot-check deferred) |
+| IDLE-05 | Phase 4 | Code complete (physical deferred — runs LAST) |
+| IDLE-06 | Phase 4 | Code complete (physical deferred) |
+| IDLE-07 | Phase 4 | Code complete (physical deferred) |
 | ADMIN-01 | Phase 5 | Pending |
 | ADMIN-02 | Phase 5 | Pending |
 | ADMIN-03 | Phase 5 | Pending |
