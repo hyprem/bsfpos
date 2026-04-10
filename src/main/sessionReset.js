@@ -51,6 +51,8 @@ const resetTimestamps = []; // Array<{ t: number, reason: string }>
 let mainWindow = null;
 let store      = null;
 
+let postResetListener = null; // Phase 5 D-15/D-16: single listener for updateGate
+
 // --- Public API -------------------------------------------------------------
 
 function init(opts) {
@@ -100,6 +102,7 @@ async function hardReset({ reason }) {
   );
 
   // D-15 step 3 — SET in-flight mutex BEFORE the first await
+  let succeeded = false;
   resetting = true;
   try {
     // Step 4 — stop idle timer (lazy require to break circular dep with Plan 04-01)
@@ -138,9 +141,19 @@ async function hardReset({ reason }) {
 
     // Step 10 — recreate Magicline child view; auto-login will follow.
     createMagiclineView(mainWindow, store);
+    succeeded = true;
   } finally {
     // Step 11 — always clear the mutex, even on throw (T-04-11).
     resetting = false;
+  }
+
+  // Phase 5 D-15/D-16: post-reset listener fires ONLY on successful completion
+  if (succeeded && postResetListener) {
+    try {
+      postResetListener();
+    } catch (e) {
+      log.error('sessionReset.postReset-listener-threw: ' + (e && e.message));
+    }
   }
 }
 
@@ -152,6 +165,19 @@ function _resetForTests() {
   resetTimestamps.length = 0;
   mainWindow = null;
   store      = null;
+  postResetListener = null; // Phase 5
+}
+
+/**
+ * Phase 5 D-15/D-16: register a single post-reset callback.
+ * Fires ONLY after a hardReset() completes successfully (not on in-flight
+ * or loop-detected short-circuits). Consumed by updateGate.js to gate
+ * electron-updater quitAndInstall.
+ *
+ * @param {(() => void)|null} cb - listener, or null to clear
+ */
+function onPostReset(cb) {
+  postResetListener = (typeof cb === 'function') ? cb : null;
 }
 
 function _getStateForTests() {
@@ -165,6 +191,7 @@ function _getStateForTests() {
 module.exports = {
   init: init,
   hardReset: hardReset,
+  onPostReset: onPostReset,   // Phase 5 D-15/D-16
   _resetForTests: _resetForTests,
   _getStateForTests: _getStateForTests,
   _RESET_WINDOW_MS: RESET_WINDOW_MS,
