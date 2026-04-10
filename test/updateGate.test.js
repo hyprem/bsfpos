@@ -1,0 +1,180 @@
+// test/updateGate.test.js
+// Phase 5 Plan 05-03: unit coverage for src/main/updateGate.js safe-window gate.
+//
+// Pure-module tests — updateGate.js has NO electron coupling, so no require.cache
+// stubs needed.
+
+const test = require('node:test');
+const assert = require('node:assert');
+
+const gate = require('../src/main/updateGate');
+
+function makeLog() {
+  const calls = [];
+  return {
+    calls,
+    audit: (event, fields) => calls.push({ event, fields }),
+    error: (msg) => calls.push({ event: 'error', msg }),
+  };
+}
+
+function makeSessionReset() {
+  let listener = null;
+  return {
+    onPostReset: (cb) => { listener = cb; },
+    _fire: () => { if (listener) listener(); },
+    _getListener: () => listener,
+  };
+}
+
+test('isMaintenanceWindow: true only for hours 3 and 4', () => {
+  for (let h = 0; h < 24; h++) {
+    const actual = gate.isMaintenanceWindow(() => h);
+    const expected = (h === 3 || h === 4);
+    assert.strictEqual(actual, expected, 'hour=' + h);
+  }
+});
+
+test('onUpdateDownloaded: emits update.downloaded audit on arm', () => {
+  gate._resetForTests();
+  const log = makeLog();
+  const sr = makeSessionReset();
+  let installed = 0;
+  gate.onUpdateDownloaded({
+    installFn: () => installed++,
+    log,
+    sessionResetModule: sr,
+    getHour: () => 12,
+  });
+  const downloaded = log.calls.find(c => c.event === 'update.downloaded');
+  assert.ok(downloaded, 'update.downloaded audit missing');
+  assert.deepStrictEqual(downloaded.fields, { gateState: 'waiting' });
+  assert.strictEqual(installed, 0, 'install must not fire immediately');
+  gate._resetForTests();
+});
+
+test('onUpdateDownloaded: post-reset trigger fires installFn exactly once', () => {
+  gate._resetForTests();
+  const log = makeLog();
+  const sr = makeSessionReset();
+  let installed = 0;
+  gate.onUpdateDownloaded({
+    installFn: () => installed++,
+    log,
+    sessionResetModule: sr,
+    getHour: () => 12, // not maintenance window
+  });
+  sr._fire();  // post-reset fires
+  assert.strictEqual(installed, 1);
+  const installAudit = log.calls.find(c => c.event === 'update.install');
+  assert.ok(installAudit);
+  assert.strictEqual(installAudit.fields.trigger, 'post-reset');
+  // Second post-reset fire must not re-install
+  sr._fire();
+  assert.strictEqual(installed, 1, 'second fire must be no-op');
+  gate._resetForTests();
+});
+
+test('onUpdateDownloaded: maintenance-window trigger fires installFn', () => {
+  gate._resetForTests();
+  // Monkey-patch setInterval to run synchronously for test determinism
+  const origSetInterval = global.setInterval;
+  const origClearInterval = global.clearInterval;
+  let intervalFn = null;
+  let intervalCleared = false;
+  global.setInterval = (fn) => { intervalFn = fn; return 'fake-timer'; };
+  global.clearInterval = (id) => { if (id === 'fake-timer') intervalCleared = true; };
+
+  try {
+    const log = makeLog();
+    const sr = makeSessionReset();
+    let installed = 0;
+    gate.onUpdateDownloaded({
+      installFn: () => installed++,
+      log,
+      sessionResetModule: sr,
+      getHour: () => 3, // maintenance window
+    });
+    assert.strictEqual(installed, 0, 'install must wait for interval tick');
+    // Trigger the polled interval manually
+    intervalFn();
+    assert.strictEqual(installed, 1);
+    assert.ok(intervalCleared, 'timer should be cleared after fire');
+    const installAudit = log.calls.find(c => c.event === 'update.install');
+    assert.strictEqual(installAudit.fields.trigger, 'maintenance-window');
+  } finally {
+    global.setInterval = origSetInterval;
+    global.clearInterval = origClearInterval;
+    gate._resetForTests();
+  }
+});
+
+test('onUpdateDownloaded: first trigger wins (post-reset beats maintenance)', () => {
+  gate._resetForTests();
+  const origSetInterval = global.setInterval;
+  const origClearInterval = global.clearInterval;
+  let intervalFn = null;
+  global.setInterval = (fn) => { intervalFn = fn; return 'fake-timer-2'; };
+  global.clearInterval = () => {};
+  try {
+    const log = makeLog();
+    const sr = makeSessionReset();
+    let installed = 0;
+    gate.onUpdateDownloaded({
+      installFn: () => installed++,
+      log,
+      sessionResetModule: sr,
+      getHour: () => 3,
+    });
+    sr._fire(); // post-reset wins
+    // Attempting to also fire interval should be no-op
+    if (intervalFn) intervalFn();
+    assert.strictEqual(installed, 1);
+  } finally {
+    global.setInterval = origSetInterval;
+    global.clearInterval = origClearInterval;
+    gate._resetForTests();
+  }
+});
+
+test('onUpdateDownloaded: double-arm clears prior gate', () => {
+  gate._resetForTests();
+  const log = makeLog();
+  const sr = makeSessionReset();
+  let installedA = 0, installedB = 0;
+  gate.onUpdateDownloaded({
+    installFn: () => installedA++,
+    log, sessionResetModule: sr, getHour: () => 12,
+  });
+  gate.onUpdateDownloaded({
+    installFn: () => installedB++,
+    log, sessionResetModule: sr, getHour: () => 12,
+  });
+  sr._fire();
+  assert.strictEqual(installedA, 0, 'first gate should have been cleared');
+  assert.strictEqual(installedB, 1, 'second gate should fire');
+  gate._resetForTests();
+});
+
+test('onUpdateDownloaded: throws clearly on missing args', () => {
+  assert.throws(() => gate.onUpdateDownloaded(), /installFn is required/);
+  assert.throws(() => gate.onUpdateDownloaded({ installFn: () => {} }), /log\.audit is required/);
+  assert.throws(() => gate.onUpdateDownloaded({
+    installFn: () => {},
+    log: { audit: () => {} },
+  }), /sessionResetModule/);
+});
+
+test('onUpdateDownloaded: installFn throw is logged not propagated', () => {
+  gate._resetForTests();
+  const log = makeLog();
+  const sr = makeSessionReset();
+  gate.onUpdateDownloaded({
+    installFn: () => { throw new Error('boom'); },
+    log, sessionResetModule: sr, getHour: () => 12,
+  });
+  assert.doesNotThrow(() => sr._fire());
+  const errCall = log.calls.find(c => c.event === 'error');
+  assert.ok(errCall, 'error should be logged');
+  gate._resetForTests();
+});
