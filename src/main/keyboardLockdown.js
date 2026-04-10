@@ -23,6 +23,12 @@ const isDev = process.env.NODE_ENV === 'development';
 // D-10: Phase 5 will add 'Ctrl+Shift+F12'. Phase 1 ships this empty.
 const reservedShortcuts = new Set();
 
+// Phase 5 D-08: register the admin hotkey. main.js installs a handler on
+// before-input-event that opens the admin PIN modal when canonical() ===
+// 'Ctrl+Shift+F12'. Adding to the Set here (at module load) guarantees the
+// set is populated before attachLockdown runs (RESEARCH Gotcha 5).
+reservedShortcuts.add('Ctrl+Shift+F12');
+
 // D-09: broad-sweep blocklist.
 // SHELL-04 required: Alt+F4, Alt+Tab, Meta (Win), F11, Escape, Ctrl+W.
 // Defensive extras: reload/DevTools/print/view-source/open/new-tab.
