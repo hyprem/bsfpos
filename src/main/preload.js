@@ -23,7 +23,8 @@ contextBridge.exposeInMainWorld('kiosk', {
   onHideCredentialsOverlay: (cb) => ipcRenderer.on('hide-credentials-overlay', () => cb()),
 
   // Phase 3 — PIN modal (main → renderer)
-  onShowPinModal: (cb) => ipcRenderer.on('show-pin-modal', () => cb()),
+  // Phase 5 extends payload: { context: 'admin' | 'reset-loop' } — host.js branches on context
+  onShowPinModal: (cb) => ipcRenderer.on('show-pin-modal', (_e, payload) => cb(payload)),
   onHidePinModal: (cb) => ipcRenderer.on('hide-pin-modal', () => cb()),
 
   // Phase 3 — renderer → main (invoke)
@@ -40,4 +41,22 @@ contextBridge.exposeInMainWorld('kiosk', {
   notifyIdleExpired:   () => { ipcRenderer.send('idle-expired');   },
   // Phase 4 D-19 — reset-loop admin recovery trigger (renderer → main)
   requestResetLoopRecovery: () => { ipcRenderer.send('request-reset-loop-recovery'); },
+
+  // --- Phase 5 main → renderer subscribers ------------------------------
+  onShowAdminMenu:      (cb) => ipcRenderer.on('show-admin-menu',       (_e, payload) => cb(payload)),
+  onHideAdminMenu:      (cb) => ipcRenderer.on('hide-admin-menu',       () => cb()),
+  onShowUpdateConfig:   (cb) => ipcRenderer.on('show-update-config',    (_e, payload) => cb(payload)),
+  onHideUpdateConfig:   (cb) => ipcRenderer.on('hide-update-config',    () => cb()),
+  onShowUpdatingCover:  (cb) => ipcRenderer.on('show-updating-cover',   () => cb()),
+  onHideUpdatingCover:  (cb) => ipcRenderer.on('hide-updating-cover',   () => cb()),
+  onShowAdminUpdateResult: (cb) => ipcRenderer.on('show-admin-update-result', (_e, payload) => cb(payload)),
+  onShowPinLockout:     (cb) => ipcRenderer.on('show-pin-lockout',      (_e, payload) => cb(payload)),
+  onHidePinLockout:     (cb) => ipcRenderer.on('hide-pin-lockout',      () => cb()),
+
+  // --- Phase 5 renderer → main invokes ---------------------------------
+  verifyAdminPin:       (pin)     => ipcRenderer.invoke('verify-admin-pin',       { pin: pin }),
+  getAdminDiagnostics:  ()        => ipcRenderer.invoke('get-admin-diagnostics'),
+  adminMenuAction:      (action)  => ipcRenderer.invoke('admin-menu-action',      { action: action }),
+  closeAdminMenu:       ()        => ipcRenderer.invoke('close-admin-menu'),
+  submitUpdatePat:      (pat)     => ipcRenderer.invoke('submit-update-pat',      { pat: pat }),
 });
