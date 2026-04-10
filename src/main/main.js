@@ -659,7 +659,10 @@ app.whenReady().then(() => {
           store.set('githubUpdatePat', cipher.toString('base64'));
           // Clearing the disabled flag: admin entering a PAT means "try again"
           try { store.delete('autoUpdateDisabled'); } catch (_) {}
-          log.audit('update.pat.configured', { pat: pat });
+          // CR-01: never pass the raw PAT (even field-named 'pat' that the
+          // logger redactor allowlist would catch) into the audit log. Length
+          // alone is sufficient for operational telemetry.
+          log.audit('update.pat.configured', { length: pat.length });
           const initOk = tryInitAutoUpdater(store);
           if (initOk) {
             autoUpdater.checkForUpdates();
