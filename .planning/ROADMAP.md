@@ -46,7 +46,7 @@
   4. A JS call of the form `document.querySelector('[data-role="customer-search"] input')` from the injected script still returns a live input element even though the visual customer search box is hidden.
 **Plans**: 6 plans
 - [x] 05-01-logger-deps-PLAN.md — Install electron-updater, extend logger.js with log.audit + redactor + 5-file archiveLogFn (ADMIN-04, ADMIN-05)
-- [ ] 05-02-admin-pin-lockout-PLAN.md — adminPinLockout.js wrapper around adminPin.js with persistent rolling-window lockout (ADMIN-03)
+- [x] 05-02-admin-pin-lockout-PLAN.md — adminPinLockout.js wrapper around adminPin.js with persistent rolling-window lockout (ADMIN-03)
 - [ ] 05-03-update-gate-session-hook-PLAN.md — sessionReset onPostReset hook + updateGate.js safe-window module (ADMIN-07)
 - [ ] 05-04-main-orchestration-PLAN.md — autoUpdater.js + Ctrl+Shift+F12 wiring + admin IPC handlers + health watchdog (ADMIN-01, ADMIN-02, ADMIN-06, ADMIN-07, ADMIN-08)
 - [ ] 05-05-host-ui-PLAN.md — host.html/css/js admin menu, update config, updating cover, PIN lockout, error variants (ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-08, BRAND-01, BRAND-02, BRAND-03)
