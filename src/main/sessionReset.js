@@ -53,6 +53,12 @@ let store      = null;
 
 let postResetListener = null; // Phase 5 D-15/D-16: single listener for updateGate
 let lastResetAt       = null; // Phase 5 D-03: ms since epoch of last successful hardReset
+// WR-08: pre-reset subscribers — called synchronously at the top of a
+// non-suppressed hardReset (AFTER the loop-detect guard, BEFORE the mutex).
+// Consumers use this to clear per-view timers (post-update health watchdog,
+// auth poller) so they do not fire against a recreated webContents. Main.js
+// re-arms them as needed after reset completes.
+const preResetListeners = [];
 
 // --- Public API -------------------------------------------------------------
 
@@ -102,6 +108,16 @@ async function hardReset({ reason }) {
   // `idle.reset`. The `reason` field is non-sensitive (idle-expired, crash,
   // admin-requested); `count` is the rolling-window tally.
   log.audit('idle.reset', { reason: reason, count: (recent.length + 1) });
+
+  // WR-08: fire pre-reset subscribers BEFORE teardown so they can clear any
+  // per-view timers (e.g. the post-update health watchdog + auth poller)
+  // before the current webContents is destroyed. Listeners must be
+  // synchronous and non-throwing.
+  for (const fn of preResetListeners) {
+    try { fn({ reason: reason }); } catch (e) {
+      log.error('sessionReset.preReset-listener-threw: ' + (e && e.message));
+    }
+  }
 
   // D-15 step 3 — SET in-flight mutex BEFORE the first await
   let succeeded = false;
@@ -170,6 +186,7 @@ function _resetForTests() {
   store      = null;
   postResetListener = null; // Phase 5
   lastResetAt = null;       // Phase 5
+  preResetListeners.length = 0; // WR-08
 }
 
 /**
@@ -193,6 +210,18 @@ function onPostReset(cb) {
   postResetListener = (typeof cb === 'function') ? cb : null;
 }
 
+/**
+ * WR-08: register a pre-reset callback. Unlike onPostReset (single-slot,
+ * used by updateGate), this is an append-only subscriber list. Callbacks
+ * fire synchronously at the top of a non-suppressed hardReset — consumers
+ * use this to clear per-view timers before teardown.
+ *
+ * @param {(ctx:{reason:string}) => void} cb
+ */
+function onPreReset(cb) {
+  if (typeof cb === 'function') preResetListeners.push(cb);
+}
+
 function _getStateForTests() {
   return {
     resetting: resetting,
@@ -205,6 +234,7 @@ module.exports = {
   init: init,
   hardReset: hardReset,
   onPostReset: onPostReset,   // Phase 5 D-15/D-16
+  onPreReset: onPreReset,     // Phase 5 WR-08
   getLastResetAt: getLastResetAt, // Phase 5 D-03
   _resetForTests: _resetForTests,
   _getStateForTests: _getStateForTests,

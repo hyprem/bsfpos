@@ -366,6 +366,34 @@ app.whenReady().then(() => {
       // the auth-state poller picks up CASH_REGISTER_READY when it arrives).
       startHealthWatchdog(store);
 
+      // WR-08: when a hard reset lands during the post-update health window,
+      // the watchdog's auth-poller would otherwise keep polling against a
+      // detached state OR the watchdog could expire and incorrectly latch
+      // autoUpdateDisabled. Clear both timers on every hard reset; if the
+      // pendingUpdate flag is still present afterwards (i.e. the reset was
+      // unrelated to the update), re-arm from scratch so the next
+      // CASH_REGISTER_READY still counts as a healthy post-update boot.
+      sessionResetMod.onPreReset(() => {
+        if (healthWatchdogTimer || authPollTimer) {
+          log.info('phase5.healthWatchdog.cleared-before-reset');
+          if (healthWatchdogTimer) { clearTimeout(healthWatchdogTimer); healthWatchdogTimer = null; }
+          if (authPollTimer) { clearInterval(authPollTimer); authPollTimer = null; }
+        }
+      });
+      // Post-reset re-arm: sessionReset.onPostReset is owned by updateGate
+      // (single-slot), so we cannot chain there. Use a short timer after the
+      // pre-reset hook fires; by then the new view has been rebuilt and
+      // authFlow is poised to transition through CASH_REGISTER_READY. If
+      // pendingUpdate is already gone (update succeeded), this is a no-op.
+      sessionResetMod.onPreReset(() => {
+        setTimeout(() => {
+          if (store.get('pendingUpdate')) {
+            log.info('phase5.healthWatchdog.re-armed-after-reset');
+            startHealthWatchdog(store);
+          }
+        }, 500);
+      });
+
       // WR-01: register the admin hotkey callback BEFORE createMagiclineView
       // so the initial view instance picks it up. magiclineView re-applies the
       // listener on every recreation (post-hardReset), so this single call is
