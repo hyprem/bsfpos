@@ -65,7 +65,7 @@ tokens required for Phase 5.
 | sm    | 8px   | Gap between rows in the diagnostic header; gap inside button stack      |
 | md    | 16px  | Padding inside `#admin-menu` card; spacing between card sections        |
 | lg    | 24px  | Margin below logo on updating cover; `margin-top` on admin menu buttons |
-| xl    | 32px  | Horizontal padding inside admin menu card (matches credentials card)    |
+| xl    | 32px  | Padding (all sides) inside admin menu card                              |
 | 2xl   | 48px  | Top/bottom breathing room on updating cover (flex alignment)            |
 | 3xl   | 64px  | Not used in Phase 5                                                     |
 
@@ -93,24 +93,41 @@ Phase 5 uses all four roles.
 | Body    | 16px  | 400 (regular) | 1.5         | Diagnostic header field values; lockout message text; updating cover subtext |
 | Label   | 14px  | 700 (bold)    | 1.3         | Diagnostic header field labels; admin menu version chip     |
 
-### Lockout Countdown — Scoped Size Override
+### Scoped Size Overrides
 
-The `mm:ss` countdown during PIN lockout is larger than the four standard type roles
-for visual salience. It is a one-off local override scoped to `#pin-lockout-countdown`,
-NOT a new design token:
+Three one-off sizes are used in Phase 5. Each is a local override scoped to a specific
+selector, NOT a new design token. All three are registered here to keep the typography
+section the authoritative list.
+
+#### Admin Menu Action Buttons — 18 px
+
+| Property    | Value                                                                        |
+|-------------|------------------------------------------------------------------------------|
+| Selector    | `.bsk-btn--admin-action`                                                     |
+| Font size   | 18px                                                                         |
+| Font weight | 700 (bold)                                                                   |
+| Rationale   | Arm's-length readability for standing-distance kiosk interaction. Admin staff tap these buttons while standing; 16 px (Body) is too small for reliable reading at 60–80 cm. 18 px bridges Body (16 px) and Heading (24 px) without inflating button height. Scoped to admin menu action buttons only. |
+
+#### Beenden Exit Button — 20 px
+
+| Property    | Value                                                                        |
+|-------------|------------------------------------------------------------------------------|
+| Selector    | `.bsk-btn--admin-exit`                                                       |
+| Font size   | 20px                                                                         |
+| Font weight | 700 (bold)                                                                   |
+| Rationale   | WCAG 2.1 contrast correction. `#FF6B6B` against `#1A1A1A` yields ≈ 3.95:1 — below AA 4.5:1 for normal text. At 18 px bold the text is borderline on the WCAG large-text definition (≥ 18.67 px bold = large). At 20 px bold the text unambiguously qualifies as large text and the 3:1 large-text threshold applies; 3.95:1 passes. Override is scoped to the single exit button. |
+
+#### PIN Lockout Countdown — 48 px
 
 | Property    | Value                                                              |
 |-------------|--------------------------------------------------------------------|
+| Selector    | `#pin-lockout-countdown`                                           |
 | Font size   | 48px                                                               |
 | Font weight | 700 (bold)                                                         |
 | Line height | 1.0                                                                |
 | Color       | `#F5C518` (brand accent — staff needs to see it instantly)         |
 | Font variant| `font-variant-numeric: tabular-nums` (prevents jitter on tick)     |
-
-Rationale: 48 px is large enough to read from arm's length during the lockout wait,
-smaller than the 80 px idle countdown (less critical — staff are not watching it
-second-by-second), consistent with the Display (32 px) to idle-number (80 px) visual
-hierarchy established in Phases 1–4.
+| Rationale   | 48 px is large enough to read from arm's length during the lockout wait, smaller than the 80 px idle countdown (less critical — staff are not watching it second-by-second), consistent with the Display (32 px) to idle-number (80 px) visual hierarchy established in Phases 1–4. |
 
 ### Error Variant Title — Inherited Style
 
@@ -197,7 +214,7 @@ Rules (unchanged from Phase 1, extended):
 
 **Visual structure:** Full-screen dark backdrop (`rgba(26,26,26,0.97)`) with a single
 centered `.bsk-card` (inherits `background: #222222; border: 2px solid #F5C518;
-border-radius: 12px; padding: 32px 28px;`). No new card styles needed.
+border-radius: 12px; padding: 32px;`). No new card styles needed.
 
 **Diagnostic header** (inside the card, above the button stack):
 
@@ -275,6 +292,7 @@ border-radius: 12px; padding: 32px 28px;`). No new card styles needed.
 
 .bsk-card--admin {
   gap: 16px;         /* md token — tighter than default bsk-card gap:18px for denser stack */
+  padding: 32px;     /* xl token — all sides; matches §Spacing table declaration */
   max-height: 92vh;
   overflow-y: auto;
 }
@@ -282,7 +300,7 @@ border-radius: 12px; padding: 32px 28px;`). No new card styles needed.
 .bsk-admin-diagnostics {
   border-top: 1px solid #3A3A3A;
   border-bottom: 1px solid #3A3A3A;
-  padding: 12px 0;
+  padding: 8px 0;          /* sm token — matches gap between diagnostic rows */
   display: flex;
   flex-direction: column;
   gap: 8px;          /* sm token */
