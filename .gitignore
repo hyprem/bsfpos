@@ -19,6 +19,9 @@ logs/
 .DS_Store
 Thumbs.db
 
+# claude code local config
+.claude/
+
 # local env overrides
 .env
 .env.local
