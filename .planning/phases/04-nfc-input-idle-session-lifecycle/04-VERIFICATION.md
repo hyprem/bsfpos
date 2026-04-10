@@ -2,10 +2,41 @@
 
 **Phase:** 04-nfc-input-idle-session-lifecycle
 **Plan:** 04-05 (acceptance)
-**Status:** Pending human checkpoint
+**Status:** human_needed — automated PASS, physical verification DEFERRED to next kiosk visit
 **Tester:** _______________
 **Date:** _______________
 **Device:** [ ] Production kiosk  [ ] Proxy box (DESKTOP-P1E98A1)  [ ] Other: _______________
+
+---
+
+## Deferred Verification (2026-04-10)
+
+**All 13 human checklist rows below (NFC-01..06 + IDLE-01..07) are DEFERRED to the next physical kiosk visit.**
+
+**Why:** Kiosk hardware not at hand on the 04-05 execution date (2026-04-10). The Deka USB HID badge reader has never been physically validated against the Electron build — this plan's human checkpoint would be the first real-hardware scan, and it cannot happen without the reader in hand.
+
+**Automated coverage is complete and green:**
+
+- `test/sessionReset.harness.js` — 4/4 passing (IDLE-04 literal 100-cycle loop, mutex never leaked)
+- `test/phase4-integration.test.js` — 9/9 passing (cross-module wiring contract)
+- Full Phase 4 suite (idleTimer + badgeInput + sessionReset + authFlow + harness + integration) — 102/102 green
+- Phase 3 regression guard (`test/phase3-integration.test.js`) — 82/82 green
+- `node --check` clean on all 8 modified `src/` files
+
+**Where the deferred items live now:** They have been folded into the single "Next Kiosk Visit" batch in
+[`.planning/phases/01-locked-down-shell-os-hardening/01-VERIFICATION.md`](../01-locked-down-shell-os-hardening/01-VERIFICATION.md)
+under the new section **"Phase 4 — Deferred Physical Verification"**, alongside the existing Phase 1
+visual-checkpoint debt (fresh-boot paint, splash permanence, double-launch race, prod-sim chord test,
+on-device runbook) and the 03-09 soft TabTip manual-button re-check. This keeps the kiosk visit to
+**one consolidated checklist**, not three separate files.
+
+**Rows 1..13 below therefore read `DEFERRED` instead of `PASS`/`FAIL`/`N/A`.** They remain here as the
+authoritative per-requirement spec so the next-visit tester can cross-reference the expected behavior
+and log lines while working through the consolidated Phase 1 checklist.
+
+**Phase 4 close posture:** code-complete + automated-green, physical-verification-deferred. Does not
+block Phase 5 planning — Phase 5 depends on Phase 4 code behavior (session lifecycle signals), not on
+the human sign-off of the physical checklist. The deferred items must be closed before v1.0 milestone.
 
 ---
 
@@ -49,7 +80,7 @@ For each row: perform the action on the physical kiosk (or proxy box), observe t
 - **FAIL condition:** First character is dropped (the latent prototype bug — e.g. badge `1234567` lands as `234567`). Any truncation, any delay > 1s, or no commit at all.
 - **Verify in log:** `%AppData%\Bee Strong POS\logs\main.log` contains `badgeInput.commit: length=N` where N matches the full badge length (never the content).
 
-Result: [ ] PASS   [ ] FAIL   [ ] N/A      Initials: ______    Date: __________
+Result: **DEFERRED** — moved to Phase 1 next-visit batch (see preamble). Do NOT fill in here.
 Notes:
 
 ---
@@ -62,7 +93,7 @@ Notes:
 - **FAIL condition:** Any scan does not update the customer field, or any two scans merge into one buffer.
 - **Verify in log:** 5 `badgeInput.commit: length=N` lines.
 
-Result: [ ] PASS   [ ] FAIL   [ ] N/A      Initials: ______    Date: __________
+Result: **DEFERRED** — moved to Phase 1 next-visit batch (see preamble). Do NOT fill in here.
 Notes:
 
 ---
@@ -75,7 +106,7 @@ Notes:
 - **FAIL condition:** First character dropped — the sentinel-null fix regressed.
 - **Verify in log:** `sessionReset.hardReset: reason=idle-expired count=1` followed by `badgeInput.commit: length=N` with N equal to full badge length.
 
-Result: [ ] PASS   [ ] FAIL   [ ] N/A      Initials: ______    Date: __________
+Result: **DEFERRED** — moved to Phase 1 next-visit batch (see preamble). Do NOT fill in here.
 Notes:
 
 ---
@@ -87,7 +118,7 @@ Notes:
 - **Expected PASS:** The customer-search field populates with the member name / badge ID and Magicline's React state updates (the member card / detail panel renders as if typed manually).
 - **FAIL condition:** Field shows raw text but Magicline does not react (indicates the React-native value setter failed and the input/change dispatch did not fire).
 
-Result: [ ] PASS   [ ] FAIL   [ ] N/A      Initials: ______    Date: __________
+Result: **DEFERRED** — moved to Phase 1 next-visit batch (see preamble). Do NOT fill in here.
 Notes:
 
 ---
@@ -100,7 +131,7 @@ Notes:
 - **FAIL condition:** Badge content leaks into Magicline customer field under the overlay.
 - **Verify in log:** `idleTimer.state: OVERLAY_SHOWING -> IDLE reason=dismissed` fires; no `badgeInput.commit` line follows the overlay dismiss.
 
-Result: [ ] PASS   [ ] FAIL   [ ] N/A      Initials: ______    Date: __________
+Result: **DEFERRED** — moved to Phase 1 next-visit batch (see preamble). Do NOT fill in here.
 Notes:
 
 ---
@@ -113,7 +144,7 @@ Notes:
 - **FAIL condition:** Keystrokes are hijacked into the customer-search buffer instead of going to product-search.
 - **Verify in log:** Expect a `product-search-focused` event in the inject event drain around the time of focus; the scan itself is not committed to customer-search.
 
-Result: [ ] PASS   [ ] FAIL   [ ] N/A      Initials: ______    Date: __________
+Result: **DEFERRED** — moved to Phase 1 next-visit batch (see preamble). Do NOT fill in here.
 Notes:
 
 ---
@@ -133,7 +164,7 @@ Notes:
   - "Weiter" button visible and tappable.
 - **FAIL condition:** Overlay fails to appear within ~62s; transparent overlay letting Magicline show through; missing countdown; wrong copy; wrong colors.
 
-Result: [ ] PASS   [ ] FAIL   [ ] N/A      Initials: ______    Date: __________
+Result: **DEFERRED** — moved to Phase 1 next-visit batch (see preamble). Do NOT fill in here.
 Notes:
 
 ---
@@ -145,7 +176,7 @@ Notes:
 - **Expected PASS:** Overlay disappears, cart and customer state are unchanged, 60s idle timer restarts fresh.
 - **FAIL condition:** Cart cleared, customer lost, or overlay not dismissible by tap.
 
-Result: [ ] PASS   [ ] FAIL   [ ] N/A      Initials: ______    Date: __________
+Result: **DEFERRED** — moved to Phase 1 next-visit batch (see preamble). Do NOT fill in here.
 Notes:
 
 ---
@@ -158,7 +189,7 @@ Notes:
 - **FAIL condition:** Half-logged-in state visible (empty cash register with prior member's data still cached); crash; stuck splash; login page re-appears without auto-login.
 - **Verify in log:** `idleTimer.state: OVERLAY_SHOWING -> RESETTING reason=expired`, `sessionReset.hardReset: reason=idle-expired count=1`.
 
-Result: [ ] PASS   [ ] FAIL   [ ] N/A      Initials: ______    Date: __________
+Result: **DEFERRED** — moved to Phase 1 next-visit batch (see preamble). Do NOT fill in here.
 Notes:
 
 ---
@@ -171,7 +202,7 @@ Notes:
 - **FAIL condition:** Any reset produces a half-logged-in state; harness failed.
 - **Combined pass requires:** automated harness PASS **AND** 2+ manual resets clean.
 
-Result: [ ] PASS   [ ] FAIL   [ ] N/A      Initials: ______    Date: __________
+Result: **DEFERRED** — moved to Phase 1 next-visit batch (see preamble). Do NOT fill in here.
 Notes:
 
 ---
@@ -188,7 +219,7 @@ Notes:
 - **FAIL condition:** Reset-loop error does not appear; PIN modal does not open; PIN entry does not restart the device.
 - **Verify in log:** `sessionReset.loop-detected: count=3 reasons=["crash","crash","crash"]` (or similar, unified D-18 counter tracks crash reason).
 
-Result: [ ] PASS   [ ] FAIL   [ ] N/A      Initials: ______    Date: __________
+Result: **DEFERRED** — moved to Phase 1 next-visit batch (see preamble). Do NOT fill in here.
 Notes:
 
 ---
@@ -200,7 +231,7 @@ Notes:
 - **Expected PASS:** At ~3 seconds after the click, the customer-search field clears automatically. The sale remains in Magicline's history / receipts pane (customer-search clear does NOT drop the sale record).
 - **FAIL condition:** Field never clears; clears immediately (timing wrong); or clears AND drops the sale record.
 
-Result: [ ] PASS   [ ] FAIL   [ ] N/A      Initials: ______    Date: __________
+Result: **DEFERRED** — moved to Phase 1 next-visit batch (see preamble). Do NOT fill in here.
 Notes:
 
 ---
@@ -213,7 +244,7 @@ Notes:
 - **FAIL condition:** Kiosk does not recover; reset-loop error appears on single kill; splash stuck indefinitely.
 - **Verify in log:** `magicline.render-process-gone: {"reason":"killed",...}` followed by `sessionReset.hardReset: reason=crash count=1`.
 
-Result: [ ] PASS   [ ] FAIL   [ ] N/A      Initials: ______    Date: __________
+Result: **DEFERRED** — moved to Phase 1 next-visit batch (see preamble). Do NOT fill in here.
 Notes:
 
 ---
@@ -237,7 +268,8 @@ Fold these into the next physical-kiosk visit alongside Phase 1 visual debt. The
 **Test Badge ID:** __________ (staging member — redact if real)
 
 **Overall Verdict:**
-- [ ] PASS — all 13 requirements green; Phase 4 accepted
+- [x] **DEFERRED (2026-04-10)** — automated 102/102 green; all 13 physical rows moved to Phase 1 next-visit batch
+- [ ] PASS — all 13 requirements green; Phase 4 accepted (pending next kiosk visit)
 - [ ] PASS-with-deferred — enumerate deferred items: ____________________
 - [ ] PARTIAL — some requirements failed; enumerate: ____________________
 - [ ] FAIL — trigger `/gsd-plan-phase --gaps` for gap closure
@@ -253,4 +285,5 @@ Fold these into the next physical-kiosk visit alongside Phase 1 visual debt. The
 
 ---
 
-*Verification document created by Plan 04-05 executor on 2026-04-10. Human checkpoint pending.*
+*Verification document created by Plan 04-05 executor on 2026-04-10.*
+*Human checkpoint DEFERRED same day to the consolidated Phase 1 "Next Kiosk Visit" batch — see `.planning/phases/01-locked-down-shell-os-hardening/01-VERIFICATION.md` → "Phase 4 — Deferred Physical Verification".*
