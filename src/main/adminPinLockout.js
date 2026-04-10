@@ -50,6 +50,15 @@ function prune(attempts, now) {
  * @param {string} pin - user-entered PIN digits
  * @returns {{ok:boolean, locked:boolean, lockedUntil:(Date|null)}}
  */
+// WR-07: classic read-modify-write against electron-store. SAFETY DEPENDS ON:
+//   1. Single-instance lock in main.js (app.requestSingleInstanceLock) —
+//      no second main process races against this one.
+//   2. ipcMain.handle channels are the ONLY callers — they run on the main
+//      process event loop, which is single-threaded. No concurrent PIN
+//      attempts can interleave between readState() and store.set().
+// If Phase >5 ever fans out PIN verification to a worker thread or second
+// BrowserWindow, this function MUST be rewritten with an in-process mutex
+// around the read→verify→write cycle.
 function verifyPinWithLockout(store, pin) {
   const now = Date.now();
   const state = readState(store);
