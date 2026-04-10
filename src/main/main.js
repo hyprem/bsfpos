@@ -94,8 +94,11 @@ function tryInitAutoUpdater(store) {
     isPackaged: app.isPackaged,
     onUpdateDownloaded: (info) => armUpdateGate(store, info),
     onUpdateFailed: (err) => {
+      // WR-02: guard against updater firing after shutdown / window close so
+      // the try/catch does not swallow real programming errors.
+      if (!mainWindow || mainWindow.isDestroyed()) return;
       try {
-        if (mainWindow) mainWindow.webContents.send('show-magicline-error', { variant: 'update-failed' });
+        mainWindow.webContents.send('show-magicline-error', { variant: 'update-failed' });
       } catch (e) {
         log.error('update-failed variant send failed: ' + (e && e.message));
       }
