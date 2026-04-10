@@ -41,6 +41,18 @@ var FRAGILE_SELECTORS = [
   }
 ];
 
+// --- Structural-text constants (Phase 4, D-21) ---------------------------
+// Text content used for structural matching against Magicline buttons. These
+// strings drift with Magicline localization / copy changes exactly like the
+// fragile MUI class hashes — isolating them here keeps the drift-patch blast
+// radius inside this single file (D-21).
+//
+// JETZT_VERKAUFEN_TEXT: German label on the primary "sell now" button inside
+// the cash-register <button data-role="button">. Used by inject.js Phase 4
+// post-sale clear (IDLE-06) to detect the click that ends a sale and schedule
+// the 3s customer-search clear.
+var JETZT_VERKAUFEN_TEXT = 'Jetzt verkaufen';
+
 var STABLE_SELECTORS = [
   { category: 'stable', selector: '[data-role="topbar"]',                      purpose: 'Topbar' },
   { category: 'stable', selector: '[data-role="global-search-button"]',        purpose: 'Global search button' },

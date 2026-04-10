@@ -42,6 +42,69 @@
   window.__bskiosk_injected__ = true;
   window.__bskiosk_events = window.__bskiosk_events || [];
 
+  // --- Phase 4 one-time setup listeners (research pin #4, Pattern 10) ------
+  // CRITICAL: all three listeners below are attached BELOW the idempotency
+  // anchor (`window.__bskiosk_injected__ = true`) and NOT inside the early-
+  // return block above. Listeners inside the re-injection path would stack
+  // N× per did-navigate-in-page tick and fire N× per event (Pitfall 4).
+
+  // 1) Product-search focus arbitration (D-05, NFC-06). focusin/focusout
+  //    bubble; focus/blur do NOT and would silently miss the signal.
+  document.addEventListener('focusin', function (e) {
+    try {
+      var container = document.querySelector('[data-role="product-search"]');
+      if (container && e.target && container.contains(e.target)) {
+        emit('product-search-focused', {});
+      }
+    } catch (err) { /* swallow */ }
+  });
+  document.addEventListener('focusout', function (e) {
+    try {
+      var container = document.querySelector('[data-role="product-search"]');
+      if (container && e.target && container.contains(e.target)) {
+        emit('product-search-blurred', {});
+      }
+    } catch (err) { /* swallow */ }
+  });
+
+  // 2) rAF-debounced activity emitter (D-09 #3, IDLE-01 bump source).
+  //    MUI churn produces dozens of pointer events per second; rAF coalesces
+  //    them to a single emit per frame (upper bound ~60/sec, cheap for the
+  //    main-process idleTimer.bump reset-timer). Capture phase ensures the
+  //    emit fires even if Magicline stopPropagation()'s the event deeper.
+  var _activityPending = false;
+  function _scheduleActivityEmit() {
+    if (_activityPending) return;
+    _activityPending = true;
+    window.requestAnimationFrame(function () {
+      _activityPending = false;
+      emit('activity', {});
+    });
+  }
+  document.addEventListener('pointerdown', _scheduleActivityEmit, true);
+  document.addEventListener('touchstart',  _scheduleActivityEmit, true);
+
+  // 3) Post-sale clear (D-21, IDLE-06). Verbatim port of the prototype
+  //    click listener (BeeStrong_POS_Kiosk_Project.md ~lines 441-446). The
+  //    'Jetzt verkaufen' literal lives in fragile-selectors.js as
+  //    JETZT_VERKAUFEN_TEXT so Magicline copy drift is a single-file patch.
+  document.addEventListener('click', function (e) {
+    try {
+      var btn = e.target && e.target.closest && e.target.closest('[data-role="button"]');
+      if (!btn) return;
+      if (btn.textContent && btn.textContent.trim() === JETZT_VERKAUFEN_TEXT) {
+        setTimeout(function () {
+          try {
+            var input = document.querySelector('[data-role="customer-search"] input');
+            if (input && window.__bskiosk_setMuiValue) {
+              window.__bskiosk_setMuiValue(input, '');
+            }
+          } catch (err) { /* swallow */ }
+        }, 3000);
+      }
+    } catch (err) { /* swallow */ }
+  });
+
   // --- Drain-queue event emitter (Pattern 5) -------------------------------
   // Main process polls `(() => { const q = window.__bskiosk_events || [];
   // window.__bskiosk_events = []; return q; })()` every 250ms.
