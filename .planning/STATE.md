@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-last_updated: "2026-04-10T12:54:09.471Z"
+last_updated: "2026-04-12T13:01:04.651Z"
 progress:
   total_phases: 5
   completed_phases: 5
@@ -33,7 +33,7 @@ Plan: Not started
 - **Phase 03** (credentials-auto-login-state-machine): ✓ COMPLETE (10/10 plans; TabTip soft re-check in next-visit batch)
 - **Phase 04** (nfc-input-idle-session-lifecycle): ✓ COMPLETE (5/5 plans; 13 physical rows deferred to next-visit batch)
 - **Phase 05** (admin-exit-logging-auto-update-branded-polish): ✓ COMPLETE (6/6 plans)
-- **Status:** Milestone complete
+- **Status:** v1.0 milestone complete
 - **Progress:** [██████████] 100%
 - **Last completed:** Plan 05-06 (log migration + verification) at 2026-04-10 — commits a7604de, 93b2f7e, 10b9a5f. 265/265 tests green. ADMIN-04 / ADMIN-05 / BRAND-02 closed.
 
@@ -88,19 +88,69 @@ None. Phase 04 is unblocked — Phase 03's idempotent auto-login is the dependen
 
 ## Session Continuity
 
-### Last session summary
+### Last session summary (2026-04-12 evening — continued)
 
-- Closed Plan 05-06 (log migration + verification) on 2026-04-10 — the final Phase 5 plan. Migrated every sensitive-field log.info/warn/error call site in src/main/** to `log.audit()` with the canonical D-28 taxonomy (auth.state, auth.submit, badge.scanned, credentials.saved, idle.reset, startup, startup.complete, sale.completed). Wired a `console.log('BSK_AUDIT_SALE_COMPLETED')` bridge from inject.js through a new `magiclineView.webContents.on('console-message',...)` listener to a new `audit-sale-completed` ipcMain handler. Added `test/phase5-touch-target.test.js` (12 tests — CSS-level BRAND-02 audit) and `test/phase5-acceptance.test.js` (11 tests — requirement-ID grep trace), plus `05-VERIFICATION.md` (30 P5-* human-verification rows + rollback runbook). Full suite 265/265 green; 242 pre-Plan-06 tests still pass (zero regression). ADMIN-04 / ADMIN-05 / BRAND-02 closed.
-- Commits: a7604de (Task 1 log migration + bridge), 93b2f7e (Task 2 touch-target test), 10b9a5f (Task 3 acceptance trace + VERIFICATION.md).
-- Phase 5 complete. Phase 6 (milestone verification / ship) is next.
+Hardware testing session on new Win 11 Pro kiosk PC (replaced China OEM). Built out a debugging toolkit (admin "Dev-Modus" toggle), traced multiple symptoms of the idle-reset-then-auth-failure cycle, and landed a principled self-heal path.
+
+**What was committed this session (on top of the 9 earlier hardware bug fixes — still uncommitted until the end of this session):**
+
+1. **`feat(admin): add dev mode toggle for on-device debugging`** (`09195a7`) — Dev-Modus button in admin menu that exits kiosk, opens DevTools on host + Magicline, fades host overlays. Used heavily to diagnose the issues below.
+2. **Dev mode improvements (iterative, uncommitted with bug fixes):**
+   - Dev mode state persists across view recreations (new view skips `HIDE_UNTIL_READY_CSS`, DevTools re-opens post-idle-reset)
+   - Removed window resize (kept full-size, just `setKiosk(false)`)
+   - Error overlay fades too
+3. **`opacity: 0` instead of `visibility: hidden` in HIDE_UNTIL_READY_CSS** + explicit `webContents.setBackgroundThrottling(false)` post-creation — belt-and-suspenders against Chromium throttling the hidden Magicline view (unverified fix; the real root cause turned out to be #4, but this stays as cheap insurance).
+4. **Self-heal on stale cookies (`magiclineView.clearCookiesAndReload` + `authFlow` cookieRetryUsed one-shot)** — when the boot watchdog expires once, authFlow clears the magicline partition storage (cookies + localStorage + sessionStorage + indexdb + cachestorage) and reloads. On success, flag resets so next idle-reset cycle gets a fresh retry. Falls through to `CREDENTIALS_UNAVAILABLE` on second expiry.
+5. Tests: added two new cases covering `BOOTING + timer-expired(boot)` both paths (self-heal and fallthrough). 268/269 green (1 pre-existing sessionReset localstorage test still fails — unrelated, uncommitted change from earlier bug fix #9).
+
+**The diagnosis journey (for posterity, so it's not repeated):**
+- **Symptom 1:** "Anmeldedaten nicht verfügbar" after idle reset. Initially thought it was decrypt-failed → wasn't. Log showed `LOGIN_SUBMITTED → post-submit-watchdog expired → CREDENTIALS_UNAVAILABLE`, meaning credentials submitted fine but `cash-register-ready` never fired.
+- **Symptom 2:** In dev mode, the reset cycle worked reliably. Without dev mode, it failed. Hypothesised Chromium throttling of the `visibility: hidden` view (DevTools attachment disables throttling) → pushed fix #3 above.
+- **Symptom 3:** The throttling fix didn't help. User eventually saw the actual Magicline page in dev mode: *"Du bist nicht berechtigt dich anzumelden oder dein Zugang ist abgelaufen. Bitte versuche die Anmeldung erneut."* No reCAPTCHA, just an "expired session" error page with a retry prompt — which inject.js's login-form selectors don't match, so `login-detected` never fires for that DOM. The real root cause: **preserved cookies from bug fix #9 were stale server-side, Magicline showed a retry page instead of a clean login form, our inject script had no pattern to detect it**.
+- **Fix:** self-heal (#4) — clear the partition on boot watchdog expiry and reload. Two test cycles confirmed it works; the third cycle revealed the localStorage routing bug (Magicline's SPA landed on `#/customermanagement/search` because localStorage remembered the last view) → final tweak: self-heal path now clears localStorage too (the normal idle reset path still preserves it for the register selection optimization).
+
+**Kiosk testing status when session paused:**
+- Second run survived successfully
+- Third run hit the self-heal + landed on wrong Magicline view (localStorage routing) → fix pushed in new build (`dist2\Bee Strong POS-Setup-0.1.0.exe`)
+- **NEXT SESSION:** flash the latest `dist2` installer, clear the Partitions folder manually one more time for a clean baseline, let it run through multiple reset cycles, confirm self-heal lands on `#/cash-register` not `#/customermanagement/search`.
+
+Found and fixed 9 bugs during physical kiosk testing — **all the source-code changes are being committed at the end of this session** (previously all uncommitted across 9 source files + 1 test file). 268/269 tests green on dev machine (1 pre-existing sessionReset localstorage test failure from bug fix #9).
+
+**Bugs fixed:**
+1. Splash blocking credentials input (host.js)
+2. Magicline WebContentsView stealing all input from host overlays — added setMagiclineViewVisible() (magiclineView.js, authFlow.js, idleTimer.js, main.js)
+3. Auto-login not firing after idle reset — CASH_REGISTER_READY now handles login-detected (authFlow.js)
+4. Stale webContents reference after view recreation — fill-and-submit uses live wc (authFlow.js)
+5. False drift errors blocking working UI — login selectors skipped on cash register page, post-ready drift is informational (fragile-selectors.js, inject.js, magiclineView.js)
+6. Appcues staff onboarding popup — hidden via CSS (inject.css)
+7. Register auto-selection after login — "Kasse auswählen" → "Self-Checkout" → "Speichern" (inject.js)
+8. Post-submit watchdog too aggressive — increased to 30s, retries from BOOTING, no credential deletion on timeout (authFlow.js)
+9. Persistent cookie preservation across idle reset (sessionReset.js)
+
+**What works on kiosk:** first boot → auto-login → register auto-select → cash register → idle overlay → reset → auto-login succeeds. **What doesn't:** after idle reset, Magicline's register selection is lost and the auto-selection inject code doesn't find the "Kasse auswählen" button post-reset (no [BSK] log messages). The register UI may render differently for mandatory selection vs the alert-bar variant.
+
+**Last untested change:** removed `localstorage` from `clearStorageData` in `sessionReset.js` to preserve register selection across resets. Needs kiosk testing.
 
 ### Next session entry point
 
-Phase 05 closed. Run `/gsd-verify-phase 5` to run the verifier agent, then proceed to milestone closure / ship. All physical verification rows (Phase 1/3/4/5 combined) live in `01-VERIFICATION.md` next-visit batch.
+1. **Flash** the latest `dist2\Bee Strong POS-Setup-0.1.0.exe` onto the kiosk
+2. **Clear the Partitions folder manually** one last time for a clean baseline:
+   ```powershell
+   Get-Process "Bee Strong POS" -ErrorAction SilentlyContinue | Stop-Process -Force
+   Remove-Item -Recurse -Force "C:\Users\bsfkiosk\AppData\Roaming\bee-strong-pos\Partitions" -ErrorAction SilentlyContinue
+   ```
+3. **Let it cycle through multiple idle resets** (≥3) without intervention. Watch for:
+   - Normal path: `cash-register-ready` within 1s of login-submitted
+   - Self-heal path: `boot-watchdog-expired-self-heal` → `magicline.self-heal: cookies + localStorage cleared, reloading` → clean login → `cash-register-ready`
+   - **Critical**: after self-heal, URL should end with `#/cash-register` (NOT `#/customermanagement/search` like the third cycle last time)
+4. If the self-heal path triggers and lands on cash-register correctly → ship it. Proceed with physical verification checklist (`docs/runbook/v1.0-KIOSK-VISIT.md`)
+5. Then complete milestone: `/gsd-complete-milestone`
+
+**Contingency if self-heal lands on wrong view again:** add a post-login navigation guard in inject.js that detects a non-cash-register route after login-submitted and forces `location.hash = '#/cash-register'`.
 
 ### Stopped At
 
-Phase 05 ✓ COMPLETE — 6/6 plans shipped. 265/265 automated tests green. Awaiting verifier agent + physical kiosk visit for the consolidated human-verification batch.
+Kiosk hardware testing — `dist2` installer built with self-heal + localStorage-clear-on-self-heal. Previous cycle (2nd) worked; 3rd cycle hit self-heal but landed on customermanagement due to preserved localStorage. This new build should fix that. All changes being committed at the end of this session (9 earlier bug fixes + dev mode improvements + throttling fix + self-heal + test updates).
 
 ---
-*State initialized: 2026-04-08 · Last refresh: 2026-04-10*
+*State initialized: 2026-04-08 · Last refresh: 2026-04-12*
