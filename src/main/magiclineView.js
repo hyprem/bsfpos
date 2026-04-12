@@ -550,11 +550,36 @@ function setAdminHotkeyHandler(fn) {
   adminHotkeyHandler = (typeof fn === 'function') ? fn : null;
 }
 
+// Dev mode: remove the HIDE_UNTIL_READY_CSS so the Magicline login flow is
+// visible behind the semi-transparent splash. Also opens DevTools on the
+// Magicline webContents.
+function enableDevMode() {
+  if (!magiclineView) return;
+  try {
+    if (hideCssKey) {
+      magiclineView.webContents.removeInsertedCSS(hideCssKey).catch(() => {});
+      hideCssKey = null;
+    }
+  } catch (_) {}
+  try {
+    magiclineView.webContents.openDevTools({ mode: 'detach' });
+  } catch (_) {}
+}
+
+function disableDevMode() {
+  if (!magiclineView) return;
+  try {
+    magiclineView.webContents.closeDevTools();
+  } catch (_) {}
+}
+
 module.exports = {
   createMagiclineView,
   destroyMagiclineView,
   getMagiclineWebContents,
   setAdminHotkeyHandler,
+  enableDevMode,
+  disableDevMode,
   // Exported for tests / diagnostics only — do NOT call from main.js:
   _computeDefaultZoom: computeDefaultZoom,
   _DRIFT_MESSAGE: DRIFT_MESSAGE,

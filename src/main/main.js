@@ -39,6 +39,7 @@ const AUTH_POLL_MS             = 2000;               // poll authFlow.getState e
 
 // --- Phase 5 module-scope state ---------------------------------------
 let adminMenuOpen       = false;
+let devModeActive       = false;
 let healthWatchdogTimer = null;
 let authPollTimer       = null;
 let updateCheckInterval = null;
@@ -679,6 +680,31 @@ app.whenReady().then(() => {
                 });
               } catch (_) {}
               return { ok: true };
+            }
+            case 'toggle-dev-mode': {
+              devModeActive = !devModeActive;
+              log.info('admin.dev-mode: ' + (devModeActive ? 'ON' : 'OFF'));
+              const mv = require('./magiclineView');
+              if (devModeActive) {
+                try { mainWindow.setKiosk(false); } catch (_) {}
+                try {
+                  const { width: sw, height: sh } = require('electron').screen.getPrimaryDisplay().workAreaSize;
+                  mainWindow.setSize(Math.round(sw * 0.65), Math.round(sh * 0.85));
+                  mainWindow.center();
+                } catch (_) {}
+                mv.enableDevMode();
+                try { mainWindow.webContents.openDevTools({ mode: 'detach' }); } catch (_) {}
+              } else {
+                mv.disableDevMode();
+                try { mainWindow.webContents.closeDevTools(); } catch (_) {}
+                try { mainWindow.setKiosk(true); } catch (_) {}
+              }
+              try {
+                mainWindow.webContents.send('dev-mode-changed', { active: devModeActive });
+              } catch (_) {}
+              adminMenuOpen = false;
+              try { mainWindow.webContents.send('hide-admin-menu'); } catch (_) {}
+              return { ok: true, devMode: devModeActive };
             }
             case 'exit-to-windows': {
               // WR-03: canonical admin.exit event reserved for actual exit.

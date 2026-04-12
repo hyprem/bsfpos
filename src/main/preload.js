@@ -53,6 +53,9 @@ contextBridge.exposeInMainWorld('kiosk', {
   onShowPinLockout:     (cb) => ipcRenderer.on('show-pin-lockout',      (_e, payload) => cb(payload)),
   onHidePinLockout:     (cb) => ipcRenderer.on('hide-pin-lockout',      () => cb()),
 
+  // Dev mode feedback (main → renderer)
+  onDevModeChanged:     (cb) => ipcRenderer.on('dev-mode-changed', (_e, payload) => cb(payload)),
+
   // --- Phase 5 renderer → main invokes ---------------------------------
   verifyAdminPin:       (pin)     => ipcRenderer.invoke('verify-admin-pin',       { pin: pin }),
   getAdminDiagnostics:  ()        => ipcRenderer.invoke('get-admin-diagnostics'),

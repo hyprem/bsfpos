@@ -591,6 +591,7 @@
       'admin-btn-reload':          'reload',
       'admin-btn-credentials':     're-enter-credentials',
       'admin-btn-update-config':   'configure-auto-update',
+      'admin-btn-dev-mode':        'toggle-dev-mode',
       'admin-btn-exit':            'exit-to-windows',
     };
     Object.keys(handlers).forEach(function (id) {
@@ -757,6 +758,16 @@
     if (window.kiosk.onShowAdminUpdateResult) window.kiosk.onShowAdminUpdateResult(showAdminUpdateResult);
     if (window.kiosk.onShowPinLockout)       window.kiosk.onShowPinLockout(showPinLockout);
     if (window.kiosk.onHidePinLockout)       window.kiosk.onHidePinLockout(hidePinLockout);
+    // Dev mode toggle feedback
+    if (window.kiosk.onDevModeChanged) window.kiosk.onDevModeChanged(function (payload) {
+      var active = payload && payload.active;
+      var btn = document.getElementById('admin-btn-dev-mode');
+      if (btn) btn.textContent = active ? 'Dev-Modus AUS' : 'Dev-Modus';
+      var splash = document.getElementById('splash');
+      if (splash) splash.style.opacity = active ? '0.3' : '1';
+      var creds = document.getElementById('credentials-overlay');
+      if (creds) creds.style.opacity = active ? '0.5' : '1';
+    });
   }
 
   if (document.readyState === 'loading') {
