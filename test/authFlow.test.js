@@ -48,7 +48,7 @@ test('STATES is frozen', () => {
 });
 
 test('watchdog constants are sane', () => {
-  assert.strictEqual(_POST_SUBMIT_WATCHDOG_MS, 8000);
+  assert.strictEqual(_POST_SUBMIT_WATCHDOG_MS, 30000);
   assert.strictEqual(_BOOT_WATCHDOG_MS, 12000);
 });
 
@@ -115,7 +115,7 @@ test('BOOTING + login-detected + hasCreds -> LOGIN_DETECTED + fill-and-submit + 
   assert.strictEqual(r.next, STATES.LOGIN_DETECTED);
   assert.ok(hasSideEffect(r.sideEffects, 'clear-timer', { name: 'boot' }));
   assert.ok(hasSideEffect(r.sideEffects, 'fill-and-submit'));
-  assert.ok(hasSideEffect(r.sideEffects, 'start-timer', { name: 'post-submit', ms: 8000 }));
+  assert.ok(hasSideEffect(r.sideEffects, 'start-timer', { name: 'post-submit', ms: 30000 }));
 });
 
 test('BOOTING + login-detected WITHOUT creds -> stays BOOTING (no fill-and-submit)', () => {
@@ -144,8 +144,17 @@ test('BOOTING + cash-register-ready emits {kind:"start-idle-timer"} side-effect 
     'existing clear-timer boot side-effect regressed');
 });
 
-test('BOOTING + timer-expired(boot) -> CREDENTIALS_UNAVAILABLE (D-21: was LOGIN_FAILED)', () => {
+test('BOOTING + timer-expired(boot) first time -> BOOTING + clear-session-and-retry (self-heal)', () => {
   const r = reduce(STATES.BOOTING, { type: 'timer-expired', name: 'boot' }, CTX_CREDS);
+  assert.strictEqual(r.next, STATES.BOOTING);
+  assert.ok(hasSideEffect(r.sideEffects, 'clear-session-and-retry'));
+  assert.ok(hasSideEffect(r.sideEffects, 'start-timer', { name: 'boot' }));
+  assert.ok(hasSideEffect(r.sideEffects, 'log', { reason: 'boot-watchdog-expired-self-heal' }));
+});
+
+test('BOOTING + timer-expired(boot) when self-heal already used -> CREDENTIALS_UNAVAILABLE', () => {
+  const ctx = { hasCreds: true, cookieRetryUsed: true };
+  const r = reduce(STATES.BOOTING, { type: 'timer-expired', name: 'boot' }, ctx);
   assert.strictEqual(r.next, STATES.CREDENTIALS_UNAVAILABLE);
   assert.ok(hasSideEffect(r.sideEffects, 'show-error', { variant: 'credentials-unavailable' }));
   assert.ok(hasSideEffect(r.sideEffects, 'log', { reason: 'boot-watchdog-expired' }));
@@ -176,10 +185,10 @@ test('LOGIN_DETECTED + login-failed -> CREDENTIALS_UNAVAILABLE + clear-credentia
   assert.ok(hasSideEffect(r.sideEffects, 'log', { reason: 'login-failed-text-match' }));
 });
 
-test('LOGIN_DETECTED + timer-expired(post-submit) -> CREDENTIALS_UNAVAILABLE + clear-credentials (D-21 watchdog)', () => {
+test('LOGIN_DETECTED + timer-expired(post-submit) -> CREDENTIALS_UNAVAILABLE (no cred clear on watchdog)', () => {
   const r = reduce(STATES.LOGIN_DETECTED, { type: 'timer-expired', name: 'post-submit' }, CTX_CREDS);
   assert.strictEqual(r.next, STATES.CREDENTIALS_UNAVAILABLE);
-  assert.ok(hasSideEffect(r.sideEffects, 'clear-credentials'));
+  assert.strictEqual(hasSideEffect(r.sideEffects, 'clear-credentials'), false);
   assert.ok(hasSideEffect(r.sideEffects, 'show-error', { variant: 'credentials-unavailable' }));
   assert.ok(hasSideEffect(r.sideEffects, 'log', { reason: 'post-submit-watchdog-expired' }));
 });
@@ -236,10 +245,11 @@ test('LOGIN_SUBMITTED + login-failed -> CREDENTIALS_UNAVAILABLE + clear-credenti
   assert.ok(hasSideEffect(r.sideEffects, 'show-error', { variant: 'credentials-unavailable' }));
 });
 
-test('LOGIN_SUBMITTED + timer-expired(post-submit) -> CREDENTIALS_UNAVAILABLE + clear-credentials', () => {
+test('LOGIN_SUBMITTED + timer-expired(post-submit) -> BOOTING (retry for register selection)', () => {
   const r = reduce(STATES.LOGIN_SUBMITTED, { type: 'timer-expired', name: 'post-submit' }, CTX_CREDS);
-  assert.strictEqual(r.next, STATES.CREDENTIALS_UNAVAILABLE);
-  assert.ok(hasSideEffect(r.sideEffects, 'clear-credentials'));
+  assert.strictEqual(r.next, STATES.BOOTING);
+  assert.ok(hasSideEffect(r.sideEffects, 'log', { reason: 'post-submit-watchdog-retry' }));
+  assert.ok(hasSideEffect(r.sideEffects, 'start-timer'));
 });
 
 test('LOGIN_SUBMITTED + login-detected (re-fire) -> STAYS LOGIN_SUBMITTED + log only (D-21: not a failure)', () => {
@@ -306,8 +316,14 @@ test('CREDENTIALS_UNAVAILABLE + unknown -> stays', () => {
 // CASH_REGISTER_READY is a terminal state
 // -----------------------------------------------------------------------------
 
-test('CASH_REGISTER_READY + any event -> stays (terminal state)', () => {
-  for (const evtType of ['login-detected', 'login-failed', 'timer-expired', 'pin-ok', 'credentials-submitted']) {
+test('CASH_REGISTER_READY + login-detected (post-reset) -> LOGIN_DETECTED + fill-and-submit', () => {
+  const r = reduce(STATES.CASH_REGISTER_READY, { type: 'login-detected' }, CTX_CREDS);
+  assert.strictEqual(r.next, STATES.LOGIN_DETECTED);
+  assert.ok(r.sideEffects.some(s => s.kind === 'fill-and-submit'));
+});
+
+test('CASH_REGISTER_READY + non-login events -> stays (terminal state)', () => {
+  for (const evtType of ['login-failed', 'timer-expired', 'pin-ok', 'credentials-submitted']) {
     const r = reduce(STATES.CASH_REGISTER_READY, { type: evtType }, CTX_CREDS);
     assert.strictEqual(r.next, STATES.CASH_REGISTER_READY, 'stays on ' + evtType);
   }

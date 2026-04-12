@@ -59,8 +59,9 @@ var STABLE_SELECTORS = [
   { category: 'stable', selector: '[data-role="categories"]',                  purpose: 'Category tree' },
   { category: 'stable', selector: '[data-role="customer-search"]',             purpose: 'Customer search container' },
   { category: 'stable', selector: '[data-role="toolbar"] [data-role="icon-button"]', purpose: 'Toolbar three-dot icon button' },
-  // Phase 3 — login page selectors (D-05)
-  { category: 'stable', selector: '[data-role="username"]',     purpose: 'Login: username field' },
-  { category: 'stable', selector: '[data-role="password"]',     purpose: 'Login: password field' },
-  { category: 'stable', selector: '[data-role="login-button"]', purpose: 'Login: submit button' }
+  // Phase 3 — login page selectors (D-05). page:'login' excludes them from
+  // the cash-register-page self-check (they legitimately don't exist there).
+  { category: 'stable', selector: '[data-role="username"]',     purpose: 'Login: username field',  page: 'login' },
+  { category: 'stable', selector: '[data-role="password"]',     purpose: 'Login: password field',  page: 'login' },
+  { category: 'stable', selector: '[data-role="login-button"]', purpose: 'Login: submit button',   page: 'login' }
 ];

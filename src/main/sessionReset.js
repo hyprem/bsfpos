@@ -142,16 +142,48 @@ async function hardReset({ reason }) {
 
     // Step 8 — clear exactly 6 storage types (D-15). filesystem, shadercache,
     // and websql are deliberately excluded per D-15 / T-04-10 accept.
+    // Save cookies before clearing so we can restore non-session cookies
+    // (e.g. register selection). Session cookies are cleared by the full
+    // clearStorageData, then we restore the persistent ones.
+    let savedCookies = [];
+    try {
+      const allCookies = await sess.cookies.get({ url: 'https://bee-strong-fitness.web.magicline.com' });
+      // Keep only persistent cookies (those with an expiration date).
+      // Session cookies (no expirationDate) are the login tokens we want gone.
+      savedCookies = allCookies.filter(c => c.expirationDate);
+    } catch (e) {
+      log.warn('sessionReset.saveCookies failed: ' + (e && e.message));
+    }
+
     await sess.clearStorageData({
       storages: [
         'cookies',
-        'localstorage',
         'sessionstorage',
         'serviceworkers',
         'indexdb',
         'cachestorage',
       ],
     });
+
+    // Restore persistent cookies (register selection, preferences, etc.)
+    for (const c of savedCookies) {
+      try {
+        await sess.cookies.set({
+          url: 'https://bee-strong-fitness.web.magicline.com',
+          name: c.name,
+          value: c.value,
+          domain: c.domain,
+          path: c.path,
+          secure: c.secure,
+          httpOnly: c.httpOnly,
+          sameSite: c.sameSite,
+          expirationDate: c.expirationDate,
+        });
+      } catch (_) { /* best effort */ }
+    }
+    if (savedCookies.length > 0) {
+      log.info('sessionReset.restoredCookies: ' + savedCookies.length + ' persistent cookies restored');
+    }
 
     // Step 9 — flush cookie DB to disk BEFORE recreating the view so the new
     // view's first navigation sees an empty jar (Assumption A5).

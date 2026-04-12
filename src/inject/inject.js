@@ -176,9 +176,12 @@
     var stable  = (typeof STABLE_SELECTORS  !== 'undefined') ? STABLE_SELECTORS  : [];
     var fragile = (typeof FRAGILE_SELECTORS !== 'undefined') ? FRAGILE_SELECTORS : [];
     var all = stable.concat(fragile);
+    var onCashRegister = /^#\/cash-register(\/|$|\?)/i.test(location.hash);
     for (var i = 0; i < all.length; i++) {
       var entry = all[i];
       if (!entry || !entry.selector) continue;
+      // Skip login-page-only selectors when on the cash register page
+      if (entry.page === 'login' && onCashRegister) continue;
       var count = -1;
       try { count = document.querySelectorAll(entry.selector).length; } catch (e) { count = -1; }
       if (count === 0 && !driftReportedFor[entry.selector]) {
@@ -258,6 +261,93 @@
   }
   window.__bskiosk_detectLogin = detectLogin;
 
+  // --- Register auto-selection ---------------------------------------------
+  // After login, Magicline may show "Verkauf nicht möglich. Bitte Kasse
+  // auswählen." instead of going directly to #/cash-register. This happens
+  // after every session reset because clearStorageData wipes the register
+  // cookie. Auto-select "Self-Checkout" to complete the post-login flow.
+  var registerSelectInProgress = false;
+  function detectAndSelectRegister() {
+    if (registerSelectInProgress) return;
+    try {
+      var buttons = document.querySelectorAll('[data-role="button"]');
+      var kasseBtn = null;
+      for (var i = 0; i < buttons.length; i++) {
+        if (buttons[i].textContent.trim() === 'Kasse auswählen') {
+          kasseBtn = buttons[i];
+          break;
+        }
+      }
+      if (!kasseBtn) return;
+      registerSelectInProgress = true;
+      console.log('[BSK] register-select: found Kasse auswählen, clicking');
+
+      // Step 1: click "Kasse auswählen"
+      kasseBtn.click();
+
+      // Step 2: click the autocomplete input to open the dropdown
+      setTimeout(function () {
+        try {
+          // MUI Autocomplete opens on the popup-indicator (arrow) button click,
+          // or on input focus + ArrowDown. Try the popup indicator first,
+          // fall back to focus + ArrowDown on the input.
+          var popupBtn = document.querySelector('.MuiAutocomplete-popupIndicator');
+          if (popupBtn) {
+            console.log('[BSK] register-select: clicking popup indicator');
+            popupBtn.click();
+          } else {
+            var autoInput = document.querySelector('.MuiAutocomplete-root input');
+            if (autoInput) {
+              console.log('[BSK] register-select: focusing input + ArrowDown');
+              autoInput.focus();
+              autoInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+            } else {
+              console.log('[BSK] register-select: no popup indicator or input found');
+            }
+          }
+        } catch (e) { console.log('[BSK] register-select step 2 error: ' + e); }
+
+        // Step 3: wait for options to render, select "Self-Checkout"
+        setTimeout(function () {
+          try {
+            var options = document.querySelectorAll('[role="option"]');
+            console.log('[BSK] register-select: found ' + options.length + ' options');
+            var target = null;
+            for (var j = 0; j < options.length; j++) {
+              if (options[j].textContent.trim() === 'Self-Checkout') {
+                target = options[j];
+                break;
+              }
+            }
+            if (target) {
+              console.log('[BSK] register-select: clicking Self-Checkout');
+              target.click();
+              // Step 4: wait for selection to settle, click "Speichern"
+              setTimeout(function () {
+                try {
+                  var submitBtns = document.querySelectorAll('[type="submit"][data-role="button"]');
+                  for (var k = 0; k < submitBtns.length; k++) {
+                    if (submitBtns[k].textContent.trim() === 'Speichern') {
+                      submitBtns[k].click();
+                      break;
+                    }
+                  }
+                } catch (e) { /* swallow */ }
+                registerSelectInProgress = false;
+              }, 500);
+            } else {
+              registerSelectInProgress = false;
+            }
+          } catch (e) {
+            registerSelectInProgress = false;
+          }
+        }, 500);
+      }, 500);
+    } catch (e) {
+      registerSelectInProgress = false;
+    }
+  }
+
   // --- Main-process-invoked login submit (Phase 3, D-04) ------------------
   // Called by authFlow.js via executeJavaScript with credentials
   // interpolated through JSON.stringify. Credentials are NEVER persisted
@@ -310,6 +400,7 @@
       hideDynamicElements();
       detectReady();
       detectLogin();
+      detectAndSelectRegister();
     });
   }
 

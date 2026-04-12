@@ -228,6 +228,8 @@
     setPinFieldError(false);
     updateSubmitEnabled();
     if (overlay) {
+      var splash = document.getElementById('splash');
+      if (splash) splash.style.display = 'none';
       overlay.style.display = 'flex';
       overlay.setAttribute('aria-hidden', 'false');
     }
@@ -763,10 +765,16 @@
       var active = payload && payload.active;
       var btn = document.getElementById('admin-btn-dev-mode');
       if (btn) btn.textContent = active ? 'Dev-Modus AUS' : 'Dev-Modus';
+      // Make splash semi-transparent so login flow is visible behind it
       var splash = document.getElementById('splash');
       if (splash) splash.style.opacity = active ? '0.3' : '1';
+      // Make credentials overlay semi-transparent too
       var creds = document.getElementById('credentials-overlay');
       if (creds) creds.style.opacity = active ? '0.5' : '1';
+      // Make magicline-error overlay semi-transparent so Magicline is visible
+      // behind it (e.g. to debug what Magicline is actually showing after login)
+      var mlErr = document.getElementById('magicline-error');
+      if (mlErr) mlErr.style.opacity = active ? '0.4' : '1';
     });
   }
 

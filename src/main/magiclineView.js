@@ -29,14 +29,22 @@ const DRIFT_MESSAGE     = 'Kasse vorübergehend nicht verfügbar — Bitte wende
 
 // --- Load inject files at require-time (read-only, bundled) -----------------
 const INJECT_CSS = fs.readFileSync(path.join(__dirname, '..', 'inject', 'inject.css'),           'utf8');
-// Visibility-hidden wrapper: Magicline view must be at full bounds for
+// Hide-until-ready wrapper: Magicline view must be at full bounds for
 // Chromium to run layout/JS normally (a {0,0,0,0} view throttles everything
 // and breaks the injected auto-login script). But at full bounds it covers
-// the host UI (splash, credentials overlay, PIN modal). Injecting
-// `visibility: hidden` makes the view paint nothing while still running at
-// normal speed — the host UI shows through any composited-transparent area.
+// the host UI (splash, credentials overlay, PIN modal).
+//
+// We use `opacity: 0` NOT `visibility: hidden` — the latter signals Chromium
+// to skip paint work, which triggers aggressive throttling of MutationObserver
+// / setTimeout / requestAnimationFrame on the view's JS context. That
+// throttling broke cash-register-ready detection post-idle-reset (the inject
+// events fire early but the final "ready" signal never arrived within the 30s
+// post-submit watchdog window, while dev mode — which attaches DevTools and
+// disables throttling — worked fine). `opacity: 0` keeps the view composited
+// at alpha 0, so Chromium still paints frames and JS runs at normal speed.
+// Host UI shows through because the view background is transparent.
 // Removed on cash-register-ready so the real cash register becomes visible.
-const HIDE_UNTIL_READY_CSS = 'html, body { visibility: hidden !important; background: transparent !important; }';
+const HIDE_UNTIL_READY_CSS = 'html, body { opacity: 0 !important; background: transparent !important; }';
 const FRAGILE_JS = fs.readFileSync(path.join(__dirname, '..', 'inject', 'fragile-selectors.js'), 'utf8');
 const INJECT_JS  = fs.readFileSync(path.join(__dirname, '..', 'inject', 'inject.js'),            'utf8');
 // Concat order: fragile first so FRAGILE_SELECTORS + STABLE_SELECTORS are in
@@ -66,6 +74,7 @@ let adminHotkeyHandler = null;
 // overlay can show over the splash without Magicline leaking through.
 let revealed      = false;
 let hideCssKey    = null; // handle for removeInsertedCSS on reveal
+let devMode       = false; // dev mode: skip HIDE_UNTIL_READY_CSS + auto-open DevTools
 
 // Whitelist of event types we accept from the untrusted Magicline main world.
 // A compromised Magicline could plant fake events; the worst outcome is a
@@ -131,6 +140,17 @@ function createMagiclineView(mainWindow, store) {
       // through the host preload → ipcMain, never the child view.
     }
   });
+  // Belt-and-suspenders: the constructor flag above sets backgroundThrottling
+  // at creation, but the explicit post-creation call ensures it stays off
+  // even when the view is hidden (the hide-CSS path nearly tipped Chromium
+  // into throttling MutationObserver dispatch post-idle-reset).
+  try {
+    if (typeof magiclineView.webContents.setBackgroundThrottling === 'function') {
+      magiclineView.webContents.setBackgroundThrottling(false);
+    }
+  } catch (e) {
+    log.warn('magicline.setBackgroundThrottling failed: ' + (e && e.message));
+  }
   // Set the view's own background to transparent so that when the injected
   // HIDE_UNTIL_READY_CSS makes body invisible, the host UI behind composites
   // through instead of the default white fill.
@@ -213,7 +233,8 @@ function createMagiclineView(mainWindow, store) {
   }
 
   // D-13: dev mode DevTools on child view (detached, matching host pattern).
-  if (isDev) {
+  // Also re-open on view recreation (post-idle-reset) if admin dev mode is on.
+  if (isDev || devMode) {
     try {
       magiclineView.webContents.openDevTools({ mode: 'detach' });
     } catch (e) {
@@ -249,6 +270,9 @@ function createMagiclineView(mainWindow, store) {
         message = args[2];
       } else if (args[0] && typeof args[0].message === 'string') {
         message = args[0].message;
+      }
+      if (message && message.indexOf('[BSK]') !== -1) {
+        log.info('magicline.console: ' + message);
       }
       if (message && message.indexOf('BSK_AUDIT_SALE_COMPLETED') !== -1) {
         try {
@@ -296,7 +320,7 @@ function wireInjection(wc) {
     if (!isMainFrame) return;
     try {
       await wc.insertCSS(INJECT_CSS);
-      if (!revealed && !hideCssKey) {
+      if (!revealed && !hideCssKey && !devMode) {
         hideCssKey = await wc.insertCSS(HIDE_UNTIL_READY_CSS);
       }
     } catch (err) {
@@ -307,7 +331,7 @@ function wireInjection(wc) {
   wc.on('dom-ready', async () => {
     try {
       await wc.insertCSS(INJECT_CSS);
-      if (!revealed && !hideCssKey) {
+      if (!revealed && !hideCssKey && !devMode) {
         hideCssKey = await wc.insertCSS(HIDE_UNTIL_READY_CSS);
       }
       await wc.executeJavaScript(INJECT_BUNDLE, true);
@@ -320,7 +344,7 @@ function wireInjection(wc) {
   wc.on('did-navigate-in-page', async (_e, url) => {
     try {
       await wc.insertCSS(INJECT_CSS);
-      if (!revealed && !hideCssKey) {
+      if (!revealed && !hideCssKey && !devMode) {
         hideCssKey = await wc.insertCSS(HIDE_UNTIL_READY_CSS);
       }
       await wc.executeJavaScript(INJECT_BUNDLE, true);
@@ -367,7 +391,10 @@ function handleInjectEvent(evt, mainWindow) {
     const category = String(payload.category || 'unknown');
     const purpose  = String(payload.purpose  || '');
     log.warn('magicline.drift: selector=' + selector + ' category=' + category + ' purpose=' + purpose);
-    if (!driftActive) {
+    // Only show the blocking error overlay if the cash register hasn't loaded
+    // yet. Post-ready drift is informational (logged above) — the kiosk is
+    // functional and showing the error overlay would cover a working UI.
+    if (!driftActive && !readyFired) {
       driftActive = true;
       try {
         mainWindow.webContents.send('show-magicline-error', { message: DRIFT_MESSAGE });
@@ -414,6 +441,9 @@ function handleInjectEvent(evt, mainWindow) {
     } catch (e) {
       log.error('magicline.splash-hide.send failed: ' + (e && e.message));
     }
+    try {
+      mainWindow.webContents.send('hide-magicline-error');
+    } catch (_) {}
     return;
   }
 
@@ -542,18 +572,66 @@ function getMagiclineWebContents() {
   return magiclineView ? magiclineView.webContents : null;
 }
 
-// WR-01: main.js calls this once at startup to register the admin hotkey
-// callback. The callback is re-applied inside createMagiclineView so every
-// view recreation (after sessionReset.hardReset) gets a fresh listener on the
-// new webContents instance.
-function setAdminHotkeyHandler(fn) {
-  adminHotkeyHandler = (typeof fn === 'function') ? fn : null;
+// Hide/show the Magicline child view so the host HTML (credentials overlay,
+// admin menu, etc.) can receive keyboard and pointer input. The child
+// WebContentsView sits on top of the host webContents in the compositor and
+// captures all input even when visually transparent. Setting bounds to zero
+// removes it from the input path without destroying the view or its session.
+let savedBounds = null;
+function setMagiclineViewVisible(visible) {
+  if (!magiclineView) return;
+  try {
+    if (!visible) {
+      savedBounds = magiclineView.getBounds();
+      magiclineView.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+    } else if (savedBounds) {
+      magiclineView.setBounds(savedBounds);
+      savedBounds = null;
+    }
+  } catch (e) {
+    log.warn('magicline.view.setVisible failed: ' + (e && e.message));
+  }
 }
 
-// Dev mode: remove the HIDE_UNTIL_READY_CSS so the Magicline login flow is
-// visible behind the semi-transparent splash. Also opens DevTools on the
-// Magicline webContents.
+// Self-heal helper for authFlow: clear the Magicline partition cookies and
+// reload the current view. Used when the boot watchdog expires with a stale
+// preserved cookie — Magicline may be rendering an "access expired" error
+// page that our inject script can't detect as a login form, so we wipe the
+// session and let Magicline redirect to a clean login form.
+async function clearCookiesAndReload() {
+  if (!magiclineView) return;
+  try {
+    const wc = magiclineView.webContents;
+    if (!wc || wc.isDestroyed()) return;
+    // Reset the hide CSS key so wireInjection can re-apply HIDE_UNTIL_READY_CSS
+    // on the reload — otherwise the view stays revealed mid-reload.
+    readyFired = false;
+    revealed   = false;
+    if (hideCssKey) {
+      try { await wc.removeInsertedCSS(hideCssKey); } catch (_) {}
+      hideCssKey = null;
+    }
+    // Self-heal is a "fully clean slate" recovery — clear cookies AND
+    // localStorage/sessionStorage. We keep localStorage on normal idle resets
+    // (to preserve register selection etc.) but here we're already in an
+    // unhealthy state, and Magicline's SPA uses localStorage to remember the
+    // last visited route. Leaving it in place causes the post-self-heal login
+    // to land on e.g. #/customermanagement/search instead of #/cash-register.
+    await wc.session.clearStorageData({
+      storages: ['cookies', 'localstorage', 'sessionstorage', 'indexdb', 'cachestorage'],
+    });
+    log.info('magicline.self-heal: cookies + localStorage cleared, reloading');
+    await wc.loadURL(MAGICLINE_URL);
+  } catch (e) {
+    log.warn('magicline.clearCookiesAndReload failed: ' + (e && e.message));
+  }
+}
+
+// Dev mode: set a module flag so future view recreations (after idle reset)
+// skip HIDE_UNTIL_READY_CSS injection, and immediately remove the CSS on the
+// current view. Also opens DevTools on the Magicline webContents.
 function enableDevMode() {
+  devMode = true;
   if (!magiclineView) return;
   try {
     if (hideCssKey) {
@@ -567,19 +645,35 @@ function enableDevMode() {
 }
 
 function disableDevMode() {
+  devMode = false;
   if (!magiclineView) return;
   try {
     magiclineView.webContents.closeDevTools();
   } catch (_) {}
 }
 
+function isDevMode() {
+  return devMode;
+}
+
+// WR-01: main.js calls this once at startup to register the admin hotkey
+// callback. The callback is re-applied inside createMagiclineView so every
+// view recreation (after sessionReset.hardReset) gets a fresh listener on the
+// new webContents instance.
+function setAdminHotkeyHandler(fn) {
+  adminHotkeyHandler = (typeof fn === 'function') ? fn : null;
+}
+
 module.exports = {
   createMagiclineView,
   destroyMagiclineView,
   getMagiclineWebContents,
+  setMagiclineViewVisible,
   setAdminHotkeyHandler,
   enableDevMode,
   disableDevMode,
+  isDevMode,
+  clearCookiesAndReload,
   // Exported for tests / diagnostics only — do NOT call from main.js:
   _computeDefaultZoom: computeDefaultZoom,
   _DRIFT_MESSAGE: DRIFT_MESSAGE,

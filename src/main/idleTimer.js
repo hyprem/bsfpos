@@ -48,6 +48,10 @@ function onTimeout() {
   if (typeof mainWindow.webContents.isDestroyed === 'function'
       && mainWindow.webContents.isDestroyed()) return;
   try {
+    const { setMagiclineViewVisible } = require('./magiclineView');
+    setMagiclineViewVisible(false);
+  } catch (_) {}
+  try {
     mainWindow.webContents.send('show-idle-overlay');
   } catch (e) {
     log.warn('idleTimer.send failed: ' + (e && e.message));
@@ -77,6 +81,10 @@ function bump() {
 function dismiss() {
   log.info('idleTimer.state: OVERLAY_SHOWING -> IDLE reason=dismissed');
   state = STATES.IDLE;
+  try {
+    const { setMagiclineViewVisible } = require('./magiclineView');
+    setMagiclineViewVisible(true);
+  } catch (_) {}
   start();   // fresh 60s countdown
 }
 

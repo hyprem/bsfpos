@@ -39,7 +39,7 @@ const STATES = Object.freeze({
   CREDENTIALS_UNAVAILABLE: 'CREDENTIALS_UNAVAILABLE',
 });
 
-const POST_SUBMIT_WATCHDOG_MS = 8000;
+const POST_SUBMIT_WATCHDOG_MS = 30000;
 const BOOT_WATCHDOG_MS        = 12000;
 
 // -----------------------------------------------------------------------------
@@ -49,12 +49,16 @@ const BOOT_WATCHDOG_MS        = 12000;
 // D-21: every login failure emits the same side-effect list. Callers pass the
 // reason string so the log line distinguishes text-match vs watchdog.
 function loginFailureSideEffects(reason) {
-  return [
+  // Don't clear credentials on watchdog timeout — the login may just be slow
+  // (e.g. register selection page). Only clear on explicit login failure.
+  const clearCreds = reason !== 'post-submit-watchdog-expired';
+  const effects = [
     { kind: 'log', reason: reason },
     { kind: 'clear-timer', name: 'post-submit' },
-    { kind: 'clear-credentials' },
     { kind: 'show-error', variant: 'credentials-unavailable' },
   ];
+  if (clearCreds) effects.splice(2, 0, { kind: 'clear-credentials' });
+  return effects;
 }
 
 // -----------------------------------------------------------------------------
@@ -125,7 +129,23 @@ function reduce(state, event, ctx) {
         };
       }
       if (event.type === 'timer-expired' && event.name === 'boot') {
-        // D-21: boot watchdog expired = Magicline unreachable or stuck.
+        // Self-heal path: if we haven't tried yet this boot cycle, clear the
+        // Magicline session cookies and reload the view once. Stale cookies
+        // from a preserved idle-reset session can make Magicline render an
+        // "access expired" error page instead of a clean login form, which
+        // looks like a watchdog timeout but is really a dead session. After
+        // one retry, fall through to CREDENTIALS_UNAVAILABLE as before.
+        if (!c.cookieRetryUsed) {
+          return {
+            next: STATES.BOOTING,
+            sideEffects: [
+              { kind: 'log', reason: 'boot-watchdog-expired-self-heal' },
+              { kind: 'clear-session-and-retry' },
+              { kind: 'start-timer', name: 'boot', ms: BOOT_WATCHDOG_MS },
+            ],
+          };
+        }
+        // D-21: boot watchdog expired twice = Magicline genuinely unreachable.
         // Treat as credentials-unavailable so admin can retry via PIN recovery.
         return {
           next: STATES.CREDENTIALS_UNAVAILABLE,
@@ -180,9 +200,16 @@ function reduce(state, event, ctx) {
         };
       }
       if (event.type === 'timer-expired' && event.name === 'post-submit') {
+        // After login-submitted, Magicline may show a register selection page
+        // before reaching the cash register. Go back to BOOTING to keep
+        // waiting for cash-register-ready. The boot watchdog will catch a
+        // genuine failure after another timeout.
         return {
-          next: STATES.CREDENTIALS_UNAVAILABLE,
-          sideEffects: loginFailureSideEffects('post-submit-watchdog-expired'),
+          next: STATES.BOOTING,
+          sideEffects: [
+            { kind: 'log', reason: 'post-submit-watchdog-retry' },
+            { kind: 'start-timer', name: 'boot', ms: 30000 },
+          ],
         };
       }
       if (event.type === 'login-detected') {
@@ -237,7 +264,21 @@ function reduce(state, event, ctx) {
       return { next: state, sideEffects: [] };
     }
 
-    case STATES.CASH_REGISTER_READY:
+    case STATES.CASH_REGISTER_READY: {
+      // After idle reset or session expiry, Magicline may serve the login page
+      // again. Re-enter the login flow if we still have credentials.
+      if (event.type === 'login-detected' && c.hasCreds) {
+        return {
+          next: STATES.LOGIN_DETECTED,
+          sideEffects: [
+            { kind: 'log', reason: 'login-detected-post-reset' },
+            { kind: 'fill-and-submit' },
+            { kind: 'start-timer', name: 'post-submit', ms: POST_SUBMIT_WATCHDOG_MS },
+          ],
+        };
+      }
+      return { next: state, sideEffects: [] };
+    }
     default:
       return { next: state, sideEffects: [] };
   }
@@ -256,6 +297,12 @@ let currentState = STATES.BOOTING;
 let deps = null; // { webContents, store, safeStorage, mainWindow, log }
 const timers = Object.create(null);
 let hasCreds = false;
+// One-shot self-heal: on boot watchdog expiry, clear Magicline cookies and
+// retry once before giving up with CREDENTIALS_UNAVAILABLE. Resets to false
+// when the boot cycle actually succeeds (cash-register-ready) or when the
+// retry itself has run. Prevents infinite reload loops on a truly broken
+// Magicline.
+let cookieRetryUsed = false;
 
 function _sendToOverlay(channel, payload) {
   try {
@@ -312,8 +359,12 @@ function _runSideEffect(effect) {
         const js = 'window.__bskiosk_fillAndSubmitLogin('
           + JSON.stringify(creds.user) + ','
           + JSON.stringify(creds.pass) + ')';
+        // Use the live Magicline webContents — deps.webContents may be stale
+        // after sessionReset destroys and recreates the view.
+        const { getMagiclineWebContents } = require('./magiclineView');
+        const liveWc = getMagiclineWebContents() || deps.webContents;
         try {
-          const p = deps.webContents.executeJavaScript(js);
+          const p = liveWc.executeJavaScript(js);
           if (p && typeof p.catch === 'function') {
             p.catch((e) => deps.log.warn('fill-and-submit failed: ' + (e && e.message)));
           }
@@ -322,21 +373,30 @@ function _runSideEffect(effect) {
         }
         return;
       }
-      case 'show-credentials-overlay':
+      case 'show-credentials-overlay': {
+        const { setMagiclineViewVisible } = require('./magiclineView');
+        setMagiclineViewVisible(false);
         _sendToOverlay('show-credentials-overlay', { firstRun: !!effect.firstRun });
         return;
-      case 'hide-credentials-overlay':
+      }
+      case 'hide-credentials-overlay': {
+        const { setMagiclineViewVisible } = require('./magiclineView');
+        setMagiclineViewVisible(true);
         _sendToOverlay('hide-credentials-overlay');
         return;
+      }
       case 'show-pin-modal':
         _sendToOverlay('show-pin-modal');
         return;
       case 'hide-pin-modal':
         _sendToOverlay('hide-pin-modal');
         return;
-      case 'show-error':
+      case 'show-error': {
+        const { setMagiclineViewVisible: showErrHide } = require('./magiclineView');
+        showErrHide(false);
         _sendToOverlay('show-magicline-error', { variant: effect.variant });
         return;
+      }
       case 'clear-credentials':
         credentialsStore.clearCredentials(deps.store);
         hasCreds = false;
@@ -346,6 +406,25 @@ function _runSideEffect(effect) {
         // with idleTimer. idleTimer.start() is idempotent (Plan 04-01 contract).
         require('./idleTimer').start();
         return;
+      case 'clear-session-and-retry': {
+        // Self-heal: stale cookies are causing Magicline to render an
+        // "access expired" error page instead of a clean login form. Clear
+        // the magicline session cookies and reload. One-shot per boot cycle.
+        cookieRetryUsed = true;
+        try {
+          const { clearCookiesAndReload } = require('./magiclineView');
+          if (typeof clearCookiesAndReload === 'function') {
+            clearCookiesAndReload().catch((e) => {
+              deps.log.warn('clear-session-and-retry failed: ' + (e && e.message));
+            });
+          } else {
+            deps.log.warn('clearCookiesAndReload not exported by magiclineView');
+          }
+        } catch (e) {
+          deps.log.warn('clear-session-and-retry threw: ' + (e && e.message));
+        }
+        return;
+      }
       case 'rerun-boot': {
         const loaded = credentialsStore.loadCredentials(deps.store, deps.safeStorage);
         hasCreds = !!(loaded && loaded !== credentialsStore.DECRYPT_FAILED);
@@ -381,7 +460,7 @@ function notify(event) {
     // Pre-start notify is a no-op (defensive).
     return;
   }
-  const ctx = { hasCreds: hasCreds };
+  const ctx = { hasCreds: hasCreds, cookieRetryUsed: cookieRetryUsed };
   const result = reduce(currentState, event, ctx);
   if (result.next !== currentState) {
     // Phase 5 D-27: structured transition audit event.
@@ -392,6 +471,11 @@ function notify(event) {
     });
   }
   currentState = result.next;
+  // Reset the one-shot self-heal flag when we actually reach a healthy state
+  // so a subsequent idle-reset boot cycle can use it again.
+  if (result.next === STATES.CASH_REGISTER_READY) {
+    cookieRetryUsed = false;
+  }
   for (const sx of result.sideEffects) {
     _runSideEffect(sx);
   }
@@ -410,6 +494,7 @@ function start(opts) {
     log:         opts.log,
   };
   currentState = STATES.BOOTING;
+  cookieRetryUsed = false;
 
   if (!credentialsStore.isStoreAvailable(deps.safeStorage)) {
     notify({ type: 'safestorage-unavailable' });

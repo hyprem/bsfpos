@@ -59,6 +59,10 @@ function openAdminPinModal() {
   if (!mainWindow) return;
   log.info('adminHotkey: Ctrl+Shift+F12 pressed — surfacing admin PIN modal');
   try {
+    const { setMagiclineViewVisible } = require('./magiclineView');
+    setMagiclineViewVisible(false);
+  } catch (_) {}
+  try {
     mainWindow.webContents.send('show-pin-modal', { context: 'admin' });
   } catch (e) {
     log.error('adminHotkey.send failed: ' + (e && e.message));
@@ -668,6 +672,10 @@ app.whenReady().then(() => {
             }
             case 're-enter-credentials': {
               try { mainWindow.webContents.send('hide-admin-menu'); } catch (_) {}
+              try {
+                const { setMagiclineViewVisible } = require('./magiclineView');
+                setMagiclineViewVisible(false);
+              } catch (_) {}
               try { mainWindow.webContents.send('show-credentials-overlay', { firstRun: false }); } catch (_) {}
               adminMenuOpen = false;
               return { ok: true };
@@ -686,12 +694,10 @@ app.whenReady().then(() => {
               log.info('admin.dev-mode: ' + (devModeActive ? 'ON' : 'OFF'));
               const mv = require('./magiclineView');
               if (devModeActive) {
+                // Exit kiosk mode so taskbar/alt-tab work. Do NOT resize the
+                // window — keep Magicline full-size and visible. DevTools is
+                // detached and can be dragged around on top.
                 try { mainWindow.setKiosk(false); } catch (_) {}
-                try {
-                  const { width: sw, height: sh } = require('electron').screen.getPrimaryDisplay().workAreaSize;
-                  mainWindow.setSize(Math.round(sw * 0.65), Math.round(sh * 0.85));
-                  mainWindow.center();
-                } catch (_) {}
                 mv.enableDevMode();
                 try { mainWindow.webContents.openDevTools({ mode: 'detach' }); } catch (_) {}
               } else {
@@ -699,6 +705,7 @@ app.whenReady().then(() => {
                 try { mainWindow.webContents.closeDevTools(); } catch (_) {}
                 try { mainWindow.setKiosk(true); } catch (_) {}
               }
+              // Notify renderer to update button label + fade host overlays
               try {
                 mainWindow.webContents.send('dev-mode-changed', { active: devModeActive });
               } catch (_) {}
@@ -728,6 +735,10 @@ app.whenReady().then(() => {
       ipcMain.handle('close-admin-menu', async () => {
         adminMenuOpen = false;
         try { mainWindow.webContents.send('hide-admin-menu'); } catch (_) {}
+        try {
+          const { setMagiclineViewVisible } = require('./magiclineView');
+          setMagiclineViewVisible(true);
+        } catch (_) {}
         return { ok: true };
       });
 
