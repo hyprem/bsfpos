@@ -62,4 +62,13 @@ contextBridge.exposeInMainWorld('kiosk', {
   adminMenuAction:      (action)  => ipcRenderer.invoke('admin-menu-action',      { action: action }),
   closeAdminMenu:       ()        => ipcRenderer.invoke('close-admin-menu'),
   submitUpdatePat:      (pat)     => ipcRenderer.invoke('submit-update-pat',      { pat: pat }),
+
+  // --- Phase 6 — Welcome screen (D-02) ---------------------------------
+  // Main → renderer: show welcome layer (fires on cold boot and after
+  // welcome-mode hardReset completes).
+  onShowWelcome:   (cb) => ipcRenderer.on('welcome:show', () => cb()),
+  onHideWelcome:   (cb) => ipcRenderer.on('welcome:hide', () => cb()),
+  // Renderer → main: user tapped the welcome layer; main will create
+  // Magicline view + start authFlow.
+  notifyWelcomeTap: () => { ipcRenderer.send('welcome:tap'); },
 });

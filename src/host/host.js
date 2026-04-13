@@ -27,6 +27,34 @@
   }
 
   // =================================================================
+  // Phase 6 — Welcome screen (Layer 150, D-02 / D-04)
+  // =================================================================
+  function showWelcome() {
+    var el = document.getElementById('welcome-screen');
+    if (!el) return;
+    el.style.display = 'flex';
+    el.setAttribute('aria-hidden', 'false');
+  }
+  function hideWelcome() {
+    var el = document.getElementById('welcome-screen');
+    if (!el) return;
+    el.style.display = 'none';
+    el.setAttribute('aria-hidden', 'true');
+  }
+  function handleWelcomeTap(ev) {
+    // D-02: any pointer event anywhere on the welcome layer fires welcome:tap.
+    // Also swallow the event so badge-scan keystrokes arriving concurrently
+    // do not double-fire. Main owns the state transition (hide welcome →
+    // show splash/loading → create Magicline view → authFlow.start).
+    if (ev && ev.stopPropagation) ev.stopPropagation();
+    try {
+      if (window.kiosk && window.kiosk.notifyWelcomeTap) {
+        window.kiosk.notifyWelcomeTap();
+      }
+    } catch (_) { /* ignore */ }
+  }
+
+  // =================================================================
   // Phase 2/3/4 — Magicline error (variant-aware)
   // =================================================================
   // Variant click-target handlers. Phase 3 variants route the PIN button to
@@ -177,8 +205,8 @@
       clearInterval(idleInterval);
       idleInterval = null;
     }
-    var countdown = 30;
-    numEl.textContent = '30';
+    var countdown = 10;
+    numEl.textContent = '10';
     overlay.style.display = 'flex';
     overlay.setAttribute('aria-hidden', 'false');
     idleInterval = setInterval(function () {
@@ -729,6 +757,17 @@
         if (key) handleKeypadKey(key);
       });
     }
+
+    // Phase 6 D-02 — welcome layer tap handler (full-viewport tap target).
+    var welcomeEl = document.getElementById('welcome-screen');
+    if (welcomeEl) {
+      welcomeEl.addEventListener('pointerdown', handleWelcomeTap);
+      welcomeEl.addEventListener('touchstart',  handleWelcomeTap);
+      // NFC-05 (D-02): badge keystrokes arriving while welcome is visible
+      // are ignored — do NOT forward to notifyWelcomeTap. Keys alone never
+      // dismiss welcome; only taps do. The Phase 4 badge-input arbiter
+      // still consumes them at main level.
+    }
   }
 
   // IPC subscriptions
@@ -760,6 +799,9 @@
     if (window.kiosk.onShowAdminUpdateResult) window.kiosk.onShowAdminUpdateResult(showAdminUpdateResult);
     if (window.kiosk.onShowPinLockout)       window.kiosk.onShowPinLockout(showPinLockout);
     if (window.kiosk.onHidePinLockout)       window.kiosk.onHidePinLockout(hidePinLockout);
+    // Phase 6 — Welcome screen
+    if (window.kiosk.onShowWelcome) window.kiosk.onShowWelcome(showWelcome);
+    if (window.kiosk.onHideWelcome) window.kiosk.onHideWelcome(hideWelcome);
     // Dev mode toggle feedback
     if (window.kiosk.onDevModeChanged) window.kiosk.onDevModeChanged(function (payload) {
       var active = payload && payload.active;
