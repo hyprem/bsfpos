@@ -13,6 +13,7 @@
     Z-index ladder (per 01-UI-SPEC.md + 05-UI-SPEC.md):
       0   — #magicline-mount — Phase 2 BrowserView attach point
       100 — #splash — Phase 1 branded splash cover
+      150 — #welcome-screen — Phase 6 welcome/resting layer (D-02)
       200 — #idle-overlay — Phase 4 idle "Noch da?" overlay
       300 — #magicline-error (Phase 2/3 variants + Phase 5 bad-release, update-failed)
       300 — #updating-cover — Phase 5 mutually exclusive with #magicline-error
@@ -34,6 +35,18 @@
     <p class="bsk-status-text">BITTE WARTEN&hellip;</p>
   </div>
 
+  <!-- LAYER 150: Welcome screen (Phase 6 D-02) -->
+  <div id="welcome-screen"
+       class="bsk-layer bsk-layer--welcome"
+       style="display:none;"
+       aria-hidden="true"
+       role="button"
+       tabindex="0"
+       aria-label="Zum Kassieren tippen">
+    <img src="assets/logo-dark.png" class="bsk-logo" alt="Bee Strong Fitness" width="260">
+    <h1 class="bsk-welcome-title">Zum Kassieren tippen</h1>
+  </div>
+
   <!-- LAYER 200: Idle overlay (Phase 4) -->
   <div id="idle-overlay"
        class="bsk-layer bsk-layer--idle"
@@ -44,7 +57,7 @@
     <img src="assets/logo-dark.png" class="bsk-logo" alt="Bee Strong Fitness" width="160">
     <h1 class="bsk-heading bsk-idle-title">Noch da?</h1>
     <div class="bsk-idle-countdown" aria-live="polite">
-      <span id="idle-countdown-number" class="bsk-idle-number">30</span>
+      <span id="idle-countdown-number" class="bsk-idle-number">10</span>
       <span class="bsk-idle-seconds-label">SEKUNDEN</span>
     </div>
     <p class="bsk-idle-subtext">Tippe irgendwo, um fortzufahren.</p>

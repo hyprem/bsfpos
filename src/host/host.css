@@ -85,6 +85,28 @@ body:not([data-dev="true"]) { cursor: none; }
   text-transform: none; /* content is already uppercase in HTML */
 }
 
+/* --- Phase 6: Welcome screen (Layer 150, D-02) --------------------------- */
+
+.bsk-layer--welcome {
+  z-index: 150;
+  background: #1A1A1A;
+  cursor: pointer;
+  /* Full-viewport tap target — no dedicated button (D-02). */
+  pointer-events: auto;
+}
+
+.bsk-welcome-title {
+  font-size: 48px;
+  font-weight: 700;
+  color: #F5C518;
+  text-align: center;
+  margin: 32px 0 0 0;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  max-width: 80vw;
+  line-height: 1.2;
+}
+
 /* --- Magicline error overlay (Phase 2 D-06/D-07) ------------------------- */
 
 .bsk-layer--magicline-error {
