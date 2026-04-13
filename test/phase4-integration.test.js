@@ -96,7 +96,9 @@ test('integration: idleTimer.expired() calls sessionReset.hardReset({reason:"idl
     idleTimer.expired();
 
     assert.ok(captured, 'sessionReset.hardReset was never called');
-    assert.deepStrictEqual(captured, { reason: 'idle-expired' });
+    // Phase 6 D-05: idleTimer.expired() now forwards mode:'welcome' so the
+    // sessionReset path selects the full-logout branch.
+    assert.deepStrictEqual(captured, { reason: 'idle-expired', mode: 'welcome' });
   } finally {
     // Restore cache
     if (origEntry) {

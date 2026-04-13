@@ -46,7 +46,7 @@ const RESET_LOOP_THRESHOLD = 3;        // IDLE-05: 3 in window trips guard
 
 let resetting  = false;
 let loopActive = false;
-const resetTimestamps = []; // Array<{ t: number, reason: string }>
+const resetTimestamps = []; // Array<{ t: number, reason: string, mode: string }>
 
 let mainWindow = null;
 let store      = null;
@@ -70,13 +70,18 @@ function init(opts) {
   store      = opts.store;
 }
 
-async function hardReset({ reason }) {
+async function hardReset({ reason, mode } = {}) {
+  // Phase 6 D-05 / T-06-06: normalize the mode param at entry so any
+  // non-'welcome' value (including undefined) falls back to the safe Phase 4
+  // 'reset' default (preserves persistent cookies, recreates view).
+  mode = (mode === 'welcome') ? 'welcome' : 'reset';
+
   // D-15 step 1 — in-flight / loop-active guard
   if (resetting || loopActive) {
     log.info(
       'sessionReset.suppressed: ' +
       (resetting ? 'in-flight' : 'loop-active') +
-      ' reason=' + reason
+      ' reason=' + reason + ' mode=' + mode
     );
     return;
   }
@@ -86,15 +91,24 @@ async function hardReset({ reason }) {
   }
 
   // D-15 step 2 — rolling-window loop detection (D-17 / D-18 unified counter)
+  // Phase 6 D-06: welcome-mode idle logouts are expected user behavior
+  // (tap welcome, walk away, tap again). Push them into the window for audit
+  // visibility but EXCLUDE them from the countable total via the filter below.
   const now = Date.now();
-  const recent = resetTimestamps.filter((e) => now - e.t < RESET_WINDOW_MS);
+  const windowEntries = resetTimestamps.filter((e) => now - e.t < RESET_WINDOW_MS);
   resetTimestamps.length = 0;
-  resetTimestamps.push(...recent, { t: now, reason: reason });
-  if (recent.length + 1 >= RESET_LOOP_THRESHOLD) {
+  resetTimestamps.push(...windowEntries, { t: now, reason: reason, mode: mode });
+
+  // D-06: exclude welcome-logouts from the loop counter. Crashes, admin-
+  // requested resets, and self-heal-triggered resets all stay countable.
+  const countable = resetTimestamps.filter(
+    (e) => !(e.reason === 'idle-expired' && e.mode === 'welcome')
+  );
+  if (countable.length >= RESET_LOOP_THRESHOLD) {
     loopActive = true;
     log.error(
-      'sessionReset.loop-detected: count=' + (recent.length + 1) +
-      ' reasons=' + JSON.stringify(resetTimestamps.map((x) => x.reason))
+      'sessionReset.loop-detected: count=' + countable.length +
+      ' reasons=' + JSON.stringify(countable.map((x) => x.reason + ':' + x.mode))
     );
     try {
       mainWindow.webContents.send('show-magicline-error', { variant: 'reset-loop' });
@@ -104,10 +118,10 @@ async function hardReset({ reason }) {
     return;
   }
 
-  // Phase 5 D-27: structured audit event for the canonical taxonomy
-  // `idle.reset`. The `reason` field is non-sensitive (idle-expired, crash,
-  // admin-requested); `count` is the rolling-window tally.
-  log.audit('idle.reset', { reason: reason, count: (recent.length + 1) });
+  // Phase 5 D-27 (+ Phase 6): structured audit event for the canonical
+  // taxonomy `idle.reset`. `reason` is non-sensitive, `count` is the filtered
+  // countable total (welcome-logouts excluded), `mode` is the effective mode.
+  log.audit('idle.reset', { reason: reason, count: countable.length, mode: mode });
 
   // WR-08: fire pre-reset subscribers BEFORE teardown so they can clear any
   // per-view timers (e.g. the post-update health watchdog + auth poller)
@@ -140,59 +154,91 @@ async function hardReset({ reason }) {
     // Step 7 — get the persistent Magicline session partition.
     const sess = session.fromPartition('persist:magicline');
 
-    // Step 8 — clear exactly 6 storage types (D-15). filesystem, shadercache,
-    // and websql are deliberately excluded per D-15 / T-04-10 accept.
-    // Save cookies before clearing so we can restore non-session cookies
-    // (e.g. register selection). Session cookies are cleared by the full
-    // clearStorageData, then we restore the persistent ones.
-    let savedCookies = [];
-    try {
-      const allCookies = await sess.cookies.get({ url: 'https://bee-strong-fitness.web.magicline.com' });
-      // Keep only persistent cookies (those with an expiration date).
-      // Session cookies (no expirationDate) are the login tokens we want gone.
-      savedCookies = allCookies.filter(c => c.expirationDate);
-    } catch (e) {
-      log.warn('sessionReset.saveCookies failed: ' + (e && e.message));
-    }
+    if (mode === 'welcome') {
+      // Phase 6 D-07 / T-06-09: fully clean storage wipe. NO cookie
+      // preservation, NO localstorage preservation — the whole point of the
+      // welcome path is a fresh Magicline session on every cycle.
+      await sess.clearStorageData({
+        storages: [
+          'cookies',
+          'localstorage',
+          'sessionstorage',
+          'indexdb',
+          'cachestorage',
+          'serviceworkers',
+        ],
+      });
+      // Flush cookie DB before announcing welcome so a fast next-tap sees an
+      // empty jar (Assumption A5 also applies here).
+      await sess.cookies.flushStore();
 
-    await sess.clearStorageData({
-      storages: [
-        'cookies',
-        'sessionstorage',
-        'serviceworkers',
-        'indexdb',
-        'cachestorage',
-      ],
-    });
-
-    // Restore persistent cookies (register selection, preferences, etc.)
-    for (const c of savedCookies) {
+      // Phase 6 D-05: view stays destroyed until the user taps welcome.
+      // host.js renders the welcome layer in response to this IPC; main.js
+      // recreates the view on 'welcome:tap' (Plan 06-03 wires the tap path).
       try {
-        await sess.cookies.set({
-          url: 'https://bee-strong-fitness.web.magicline.com',
-          name: c.name,
-          value: c.value,
-          domain: c.domain,
-          path: c.path,
-          secure: c.secure,
-          httpOnly: c.httpOnly,
-          sameSite: c.sameSite,
-          expirationDate: c.expirationDate,
-        });
-      } catch (_) { /* best effort */ }
-    }
-    if (savedCookies.length > 0) {
-      log.info('sessionReset.restoredCookies: ' + savedCookies.length + ' persistent cookies restored');
-    }
+        mainWindow.webContents.send('welcome:show');
+      } catch (e) {
+        log.error('sessionReset.welcome-show-ipc-failed: ' + (e && e.message));
+      }
+      log.info('sessionReset.welcome-complete');
+      succeeded = true;
+      lastResetAt = Date.now();
+    } else {
+      // ---- Phase 4 reset-mode path (UNCHANGED) -------------------------
+      // Step 8 — clear 5 storage types (D-15). filesystem, shadercache, and
+      // websql are deliberately excluded per D-15 / T-04-10 accept.
+      // Save cookies before clearing so we can restore non-session cookies
+      // (e.g. register selection). Session cookies are cleared by the full
+      // clearStorageData, then we restore the persistent ones.
+      let savedCookies = [];
+      try {
+        const allCookies = await sess.cookies.get({ url: 'https://bee-strong-fitness.web.magicline.com' });
+        // Keep only persistent cookies (those with an expiration date).
+        // Session cookies (no expirationDate) are the login tokens we want gone.
+        savedCookies = allCookies.filter(c => c.expirationDate);
+      } catch (e) {
+        log.warn('sessionReset.saveCookies failed: ' + (e && e.message));
+      }
 
-    // Step 9 — flush cookie DB to disk BEFORE recreating the view so the new
-    // view's first navigation sees an empty jar (Assumption A5).
-    await sess.cookies.flushStore();
+      await sess.clearStorageData({
+        storages: [
+          'cookies',
+          'sessionstorage',
+          'serviceworkers',
+          'indexdb',
+          'cachestorage',
+        ],
+      });
 
-    // Step 10 — recreate Magicline child view; auto-login will follow.
-    createMagiclineView(mainWindow, store);
-    succeeded = true;
-    lastResetAt = Date.now();
+      // Restore persistent cookies (register selection, preferences, etc.)
+      for (const c of savedCookies) {
+        try {
+          await sess.cookies.set({
+            url: 'https://bee-strong-fitness.web.magicline.com',
+            name: c.name,
+            value: c.value,
+            domain: c.domain,
+            path: c.path,
+            secure: c.secure,
+            httpOnly: c.httpOnly,
+            sameSite: c.sameSite,
+            expirationDate: c.expirationDate,
+          });
+        } catch (_) { /* best effort */ }
+      }
+      if (savedCookies.length > 0) {
+        log.info('sessionReset.restoredCookies: ' + savedCookies.length + ' persistent cookies restored');
+      }
+
+      // Step 9 — flush cookie DB to disk BEFORE recreating the view so the new
+      // view's first navigation sees an empty jar (Assumption A5).
+      await sess.cookies.flushStore();
+
+      // Step 10 — recreate Magicline child view; auto-login will follow.
+      createMagiclineView(mainWindow, store);
+      succeeded = true;
+      lastResetAt = Date.now();
+    }
   } finally {
     // Step 11 — always clear the mutex, even on throw (T-04-11).
     resetting = false;
