@@ -260,6 +260,25 @@ No orphaned requirements. No ROADMAP requirements unclaimed by any plan.
 
 **Phase 5 ordering constraint:** Run P5-21..P5-24 (rollback drill) LAST among Phase 5 rows — it intentionally installs a broken build and latches `autoUpdateDisabled`. Subsequent automated-update rows cannot execute after it without resetting the flag.
 
+#### Phase 6 — Welcome Loop Physical Verification (1) (added 2026-04-13)
+
+**Reason:** Phase 6 replaced the in-place idle-reset re-login with a welcome-screen bookended lifecycle (`cold boot → welcome → tap → register → 60s idle → 10s "Noch da?" → logout → welcome`). Automated coverage is 100% (286/286 green including the new 5-cycle welcome harness `test/sessionReset.welcome-harness.test.js`), but the end-to-end kiosk-hardware regression test must be re-run on the production terminal to confirm the 2026-04-12 third-cycle stale-session bug no longer reproduces.
+
+**Authoritative per-requirement spec:** `.planning/phases/06-welcome-screen-lifecycle-redesign/06-VERIFICATION.md`.
+
+- [ ] **Phase 6 welcome-loop smoke** — on a fresh kiosk cold boot:
+  1. Splash → welcome layer appears with "Zum Kassieren tippen" copy in brand yellow (`#F5C518`) on `#1A1A1A`. Magicline view is NOT pre-warmed in the background.
+  2. Tap the welcome layer → splash loading cover → Magicline cash register renders within ~5s (first-tap pays the full login latency, per D-03).
+  3. Wait 60s without interaction → "Noch da?" overlay appears with countdown starting at **"10"** (not "30" — D-04).
+  4. Let the 10s countdown expire without tapping → overlay dismisses → brief splash → welcome layer reappears (welcome:show emitted by `sessionReset.js` welcome branch; Magicline view stays destroyed).
+  5. Tap welcome again → fresh login → clean cash register (no cart bleed, no prior customer, no stale-session error page).
+  6. **Repeat steps 2–5 FIVE times consecutively.** Expected: every cycle lands on a clean cash register; the "Kiosk muss neu gestartet werden" reset-loop error screen is NEVER shown (D-06 excludes welcome logouts from the 3-in-60s loop counter).
+  7. Optional (Deka reader connected): scan a staging badge while the welcome layer is visible → expect **no effect** (welcome only reacts to tap; badge-on-welcome is explicitly deferred to v1.1 per NFC-05 deferral / D-02).
+
+  **Pass criteria:** 5/5 cycles clean, no error screens, cart never persists across cycles, countdown starts at 10, badge-on-welcome ignored.
+
+**Total next-visit items added for Phase 6: 1** (this single consolidated welcome-loop row covers IDLE-01..05, AUTH-01..04, and NFC-05 in one walk-through — see 06-VERIFICATION.md Acceptance Matrix for the per-requirement mapping).
+
 ### Gaps Summary
 
 **No code/config gaps.** Every SHELL-01..06 requirement has a concrete implementation in the codebase, wired through the expected data path, with no stubs, fabricated claims, or shortcuts around D-03 (splash permanence) or D-06 (correct Phase 1 end state).
