@@ -123,5 +123,18 @@
 - **Coarse granularity calibration:** Adjacent research phases (credentials + auto-login as one, NFC + idle + reset as one, admin + logging + updates + branding as one) have been collapsed to land at 5 phases without creating an unbuildable mega-phase. Phase 4 is the heaviest by requirement count (13) because NFC and idle/reset are tightly coupled through the shared idle-timer / badge-arbiter state in main — splitting them would force artificial re-wiring.
 - **Research flags carried into planning:** `BrowserView` vs `WebContentsView` verification (Phase 2), HID first-character-drop bug port (Phase 4), `clearStorageData` + `flushStore` ordering test harness (Phase 4), code-signing / PAT-embedding decision (Phase 5).
 
+### Phase 6: Welcome-Screen Lifecycle Redesign
+
+**Goal:** Replace the register-as-resting-state model with a welcome-as-resting-state model. Lifecycle becomes `cold-boot → welcome → tap → login → register → 10s "Noch da?" warning → logout → welcome`. Eliminates the third-cycle re-login failure observed during hardware testing (2026-04-12) by fully wiping Magicline session state on every cycle instead of attempting in-place re-login.
+**Requirements**: IDLE-01, IDLE-02, IDLE-03, IDLE-04, IDLE-05, AUTH-01, AUTH-02, AUTH-03, AUTH-04, NFC-05
+**Depends on:** Phase 5
+**Plans:** 4 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — host welcome layer + preload IPC surface + idle countdown text 10s (D-02, D-04 renderer half)
+- [ ] 06-02-PLAN.md — idleTimer 10s overlay + sessionReset mode param + welcome branch + D-06 loop-counter exclusion (D-04, D-05, D-06, D-07)
+- [ ] 06-03-PLAN.md — main.js cold-boot-to-welcome orchestration + welcome:tap IPC handler (D-03, D-05 orchestration half)
+- [ ] 06-04-PLAN.md — 5-cycle welcome harness test + 06-VERIFICATION.md + Phase 1 next-visit batch row
+
 ---
 *Roadmap created: 2026-04-08*

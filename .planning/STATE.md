@@ -45,6 +45,10 @@ Plan: Not started
 
 ## Accumulated Context
 
+### Roadmap Evolution
+
+- Phase 6 added (2026-04-13): Welcome-Screen Lifecycle Redesign — replace in-place idle-reset with welcome→tap→register→idle→logout→welcome loop. Full `session.clearStorageData()` + reload on idle to fix 3rd-cycle re-login bug. New German welcome view. v1.0 milestone status reopened.
+
 ### Decisions
 
 See PROJECT.md "Key Decisions" table for the full list. Roadmap-level highlights:
