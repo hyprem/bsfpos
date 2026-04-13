@@ -407,50 +407,89 @@ app.whenReady().then(() => {
       // sessionReset.hardReset.
       setAdminHotkeyHandler(openAdminPinModal);
 
-      const magiclineView = createMagiclineView(mainWindow, store);
-      log.info('phase2.magicline-view.created');
+      // Phase 6 D-03: cold boot does NOT create the Magicline view. Instead, main
+      // commands the host to show the welcome layer. The Magicline view is created
+      // lazily on the first welcome:tap (see ipcMain.on('welcome:tap') below), and
+      // recreated automatically after any non-welcome hardReset (sessionReset.js
+      // mode:'reset' branch still calls createMagiclineView). Welcome-mode hardReset
+      // (Plan 06-02) keeps the view destroyed and re-shows welcome itself.
 
-      // --- Phase 3 auth-flow wiring ------------------------------------
-      // Per research Pitfall #2: safeStorage.isEncryptionAvailable() must
-      // be called AFTER at least one BrowserWindow exists. createMainWindow
-      // ran before this point, so this is satisfied.
-      //
-      // Timing: start() emits show-credentials-overlay IPC synchronously on
-      // first run. The host renderer's ipcRenderer.on subscribers are only
-      // attached once host.js has loaded, which happens at/after 'did-finish-load'.
-      // Firing start() before the renderer is ready drops the IPC silently.
-      // Defer start() until the host webContents has finished loading.
-      const startAuthFlow = () => {
+      // Helper: starts (or restarts) the login flow. Ensures a Magicline view exists,
+      // then kicks authFlow. Safe to call multiple times — createMagiclineView is
+      // idempotent (returns the existing instance if one is already attached), and
+      // authFlow.start re-seeds currentState to BOOTING and reloads credentials.
+      const startLoginFlow = () => {
         try {
+          const view = createMagiclineView(mainWindow, store);
+          log.info('phase6.login-flow.view-ready');
           authFlow.start({
             mainWindow: mainWindow,
-            webContents: magiclineView.webContents,
+            webContents: view.webContents,
             store: store,
             safeStorage: safeStorage,
             log: log,
           });
           log.info('phase3.authFlow.started');
-
-          // Phase 5 D-14, D-18, D-19: attempt to initialise auto-updater
-          try {
-            const ok = tryInitAutoUpdater(store);
-            if (ok) {
-              // Initial check, then every 6 hours
-              autoUpdater.checkForUpdates();
-              startUpdateCheckInterval();
-            }
-          } catch (err) {
-            log.error('phase5.autoUpdater.init failed: ' + (err && err.message));
-          }
         } catch (err) {
-          log.error('phase3.authFlow.start failed: ' + (err && err.message));
+          log.error('phase6.startLoginFlow failed: ' + (err && err.message));
         }
       };
+
+      // Cold-boot auto-updater init is INDEPENDENT of the Magicline view and still
+      // runs at app.whenReady time (not per welcome:tap). Preserve Phase 5 wiring.
+      const runAutoUpdaterInit = () => {
+        try {
+          const ok = tryInitAutoUpdater(store);
+          if (ok) {
+            autoUpdater.checkForUpdates();
+            startUpdateCheckInterval();
+          }
+        } catch (err) {
+          log.error('phase5.autoUpdater.init failed: ' + (err && err.message));
+        }
+      };
+
+      // Cold-boot welcome command — deferred until the host renderer is ready so
+      // the IPC is not dropped. Same did-finish-load pattern as the old Phase 3
+      // startAuthFlow timing guard. MUST send splash:hide before welcome:show
+      // because the Phase 1 splash layer currently hides only on Magicline
+      // did-finish-load, and no Magicline view exists at cold boot.
+      const showWelcomeOnColdBoot = () => {
+        try {
+          mainWindow.webContents.send('splash:hide');
+          mainWindow.webContents.send('welcome:show');
+          log.info('phase6.cold-boot.welcome-shown');
+        } catch (err) {
+          log.error('phase6.cold-boot.welcome:show failed: ' + (err && err.message));
+        }
+        runAutoUpdaterInit();
+      };
       if (mainWindow.webContents.isLoading()) {
-        mainWindow.webContents.once('did-finish-load', startAuthFlow);
+        mainWindow.webContents.once('did-finish-load', showWelcomeOnColdBoot);
       } else {
-        startAuthFlow();
+        showWelcomeOnColdBoot();
       }
+
+      // Phase 6 D-02 / D-03 — welcome:tap IPC.
+      // User tapped the welcome layer. Hide welcome, show splash as a loading cover
+      // while the ~3-5s login flow runs, create the Magicline view, start authFlow.
+      // Idempotent: if a view already exists (e.g. double-tap), createMagiclineView
+      // returns the existing instance and authFlow.start re-seeds currentState.
+      ipcMain.on('welcome:tap', (ev) => {
+        // Sender validation — only trust the host mainWindow webContents.
+        if (ev.sender !== mainWindow.webContents) {
+          log.warn('phase6.welcome:tap from unknown sender — ignored');
+          return;
+        }
+        log.info('phase6.welcome:tap received — starting login flow');
+        try {
+          mainWindow.webContents.send('welcome:hide');
+          mainWindow.webContents.send('splash:show');
+        } catch (err) {
+          log.error('phase6.welcome:tap send failed: ' + (err && err.message));
+        }
+        startLoginFlow();
+      });
 
       // --- Phase 3 IPC handlers ----------------------------------------
       ipcMain.handle('submit-credentials', async (_e, payload) => {
