@@ -232,11 +232,11 @@ test('resetting flag is cleared in finally block even if clearStorageData reject
   assert.strictEqual(st.resetting, false, 'resetting must be cleared in finally');
 });
 
-test('clearStorageData is called with exactly 6 storage types', async () => {
+test('Phase 4 reset-mode: clearStorageData uses 5 storages (NO localstorage — cookie-preservation path)', async () => {
   resetAll();
   const mw = makeFakeMainWindow();
   sessionReset.init({ mainWindow: mw, store: {} });
-  await sessionReset.hardReset({ reason: 'idle-expired' });
+  await sessionReset.hardReset({ reason: 'idle-expired' }); // default mode='reset'
   const clearCall = callLog.find((e) => e[0] === 'clearStorageData');
   assert.ok(clearCall, 'clearStorageData must have been called');
   const opts = clearCall[1];
@@ -244,11 +244,10 @@ test('clearStorageData is called with exactly 6 storage types', async () => {
     'cachestorage',
     'cookies',
     'indexdb',
-    'localstorage',
     'serviceworkers',
     'sessionstorage',
   ]);
-  assert.strictEqual(opts.storages.length, 6);
+  assert.strictEqual(opts.storages.length, 5);
 });
 
 test('cookies.flushStore() is awaited AFTER clearStorageData and BEFORE createMagiclineView', async () => {
@@ -422,4 +421,210 @@ test('audit event idle.reset fires on each non-suppressed hardReset call (Phase 
     (e) => e.event === 'idle.reset' && e.fields.reason === 'idle-expired' && e.fields.count === 1
   );
   assert.ok(entry, 'expected idle.reset audit event with {reason:idle-expired, count:1}');
+});
+
+// ---------------------------------------------------------------------------
+// Phase 6: welcome-mode hardReset
+// ---------------------------------------------------------------------------
+
+test('Phase 6 Test 1: welcome mode clears all 6 storages including localstorage', async () => {
+  resetAll();
+  const mw = makeFakeMainWindow();
+  sessionReset.init({ mainWindow: mw, store: {} });
+  await sessionReset.hardReset({ reason: 'idle-expired', mode: 'welcome' });
+  const clearCall = callLog.find((e) => e[0] === 'clearStorageData');
+  assert.ok(clearCall, 'clearStorageData must have been called');
+  const opts = clearCall[1];
+  assert.deepStrictEqual(opts.storages.slice().sort(), [
+    'cachestorage',
+    'cookies',
+    'indexdb',
+    'localstorage',
+    'serviceworkers',
+    'sessionstorage',
+  ]);
+  assert.strictEqual(opts.storages.length, 6);
+});
+
+test('Phase 6 Test 2: welcome mode destroys view and does NOT call createMagiclineView', async () => {
+  resetAll();
+  const mw = makeFakeMainWindow();
+  sessionReset.init({ mainWindow: mw, store: {} });
+  await sessionReset.hardReset({ reason: 'idle-expired', mode: 'welcome' });
+  const destroyCount = callLog.filter((e) => e[0] === 'destroyMagiclineView').length;
+  const createCount = callLog.filter((e) => e[0] === 'createMagiclineView').length;
+  assert.strictEqual(destroyCount, 1, 'view destroyed exactly once');
+  assert.strictEqual(createCount, 0, 'view NOT recreated — stays destroyed until next tap');
+});
+
+test('Phase 6 Test 3: welcome mode emits welcome:show IPC AFTER clearStorageData + flushStore', async () => {
+  resetAll();
+  const mw = makeFakeMainWindow();
+  sessionReset.init({ mainWindow: mw, store: {} });
+  await sessionReset.hardReset({ reason: 'idle-expired', mode: 'welcome' });
+  const idxClear = callLog.findIndex((e) => e[0] === 'clearStorageData');
+  const idxFlush = callLog.findIndex((e) => e[0] === 'flushStore');
+  const idxWelcome = callLog.findIndex((e) => e[0] === 'ipc' && e[1] === 'welcome:show');
+  assert.ok(idxWelcome >= 0, 'welcome:show IPC was sent');
+  assert.ok(idxClear < idxWelcome, 'clearStorageData before welcome:show');
+  assert.ok(idxFlush < idxWelcome, 'flushStore before welcome:show');
+});
+
+test('Phase 6 Test 4: welcome mode does NOT save/restore persistent cookies', async () => {
+  resetAll();
+  const mw = makeFakeMainWindow();
+  // Monkey-patch session to record cookies.get / cookies.set calls.
+  const origFromPartition = fakeSession.fromPartition;
+  let getCalled = 0;
+  let setCalled = 0;
+  fakeSession.fromPartition = (p) => {
+    callLog.push(['session.fromPartition', p]);
+    return {
+      clearStorageData: async (opts) => { callLog.push(['clearStorageData', opts]); },
+      cookies: {
+        get: async () => { getCalled++; return []; },
+        set: async () => { setCalled++; },
+        flushStore: async () => { callLog.push(['flushStore']); },
+      },
+    };
+  };
+  try {
+    sessionReset.init({ mainWindow: mw, store: {} });
+    await sessionReset.hardReset({ reason: 'idle-expired', mode: 'welcome' });
+    assert.strictEqual(getCalled, 0, 'welcome mode must NOT call cookies.get');
+    assert.strictEqual(setCalled, 0, 'welcome mode must NOT call cookies.set');
+  } finally {
+    fakeSession.fromPartition = origFromPartition;
+  }
+});
+
+test('Phase 6 Test 5: welcome-mode entries in resetTimestamps carry mode:welcome', async () => {
+  resetAll();
+  const mw = makeFakeMainWindow();
+  sessionReset.init({ mainWindow: mw, store: {} });
+  await sessionReset.hardReset({ reason: 'idle-expired', mode: 'welcome' });
+  const st = sessionReset._getStateForTests();
+  assert.strictEqual(st.resetTimestamps.length, 1);
+  assert.strictEqual(st.resetTimestamps[0].reason, 'idle-expired');
+  assert.strictEqual(st.resetTimestamps[0].mode, 'welcome');
+});
+
+test('Phase 6 Test 6: three welcome-mode resets within 60s do NOT latch loopActive (D-06)', async () => {
+  resetAll();
+  const mw = makeFakeMainWindow();
+  sessionReset.init({ mainWindow: mw, store: {} });
+  await sessionReset.hardReset({ reason: 'idle-expired', mode: 'welcome' });
+  await sessionReset.hardReset({ reason: 'idle-expired', mode: 'welcome' });
+  await sessionReset.hardReset({ reason: 'idle-expired', mode: 'welcome' });
+  await sessionReset.hardReset({ reason: 'idle-expired', mode: 'welcome' });
+  await sessionReset.hardReset({ reason: 'idle-expired', mode: 'welcome' });
+  const st = sessionReset._getStateForTests();
+  assert.strictEqual(st.loopActive, false, 'welcome-logouts must be excluded from loop counter');
+});
+
+test('Phase 6 Test 7: three reset-mode resets still latch loopActive (regression)', async () => {
+  resetAll();
+  const mw = makeFakeMainWindow();
+  sessionReset.init({ mainWindow: mw, store: {} });
+  await sessionReset.hardReset({ reason: 'crash', mode: 'reset' });
+  await sessionReset.hardReset({ reason: 'crash', mode: 'reset' });
+  await sessionReset.hardReset({ reason: 'crash', mode: 'reset' });
+  const st = sessionReset._getStateForTests();
+  assert.strictEqual(st.loopActive, true, 'non-welcome resets still count');
+});
+
+test('Phase 6 Test 8a: 2 welcome + 1 crash does NOT trip loop (only 1 countable)', async () => {
+  resetAll();
+  const mw = makeFakeMainWindow();
+  sessionReset.init({ mainWindow: mw, store: {} });
+  await sessionReset.hardReset({ reason: 'idle-expired', mode: 'welcome' });
+  await sessionReset.hardReset({ reason: 'idle-expired', mode: 'welcome' });
+  await sessionReset.hardReset({ reason: 'crash' });
+  const st = sessionReset._getStateForTests();
+  assert.strictEqual(st.loopActive, false);
+});
+
+test('Phase 6 Test 8b: 2 welcome + 2 crash does NOT trip (only 2 countable)', async () => {
+  resetAll();
+  const mw = makeFakeMainWindow();
+  sessionReset.init({ mainWindow: mw, store: {} });
+  await sessionReset.hardReset({ reason: 'idle-expired', mode: 'welcome' });
+  await sessionReset.hardReset({ reason: 'idle-expired', mode: 'welcome' });
+  await sessionReset.hardReset({ reason: 'crash' });
+  await sessionReset.hardReset({ reason: 'crash' });
+  const st = sessionReset._getStateForTests();
+  assert.strictEqual(st.loopActive, false);
+});
+
+test('Phase 6 Test 8c: 2 welcome + 3 crash DOES trip (3 countable)', async () => {
+  resetAll();
+  const mw = makeFakeMainWindow();
+  sessionReset.init({ mainWindow: mw, store: {} });
+  await sessionReset.hardReset({ reason: 'idle-expired', mode: 'welcome' });
+  await sessionReset.hardReset({ reason: 'idle-expired', mode: 'welcome' });
+  await sessionReset.hardReset({ reason: 'crash' });
+  await sessionReset.hardReset({ reason: 'crash' });
+  await sessionReset.hardReset({ reason: 'crash' });
+  const st = sessionReset._getStateForTests();
+  assert.strictEqual(st.loopActive, true);
+});
+
+test('Phase 6 Test 9: log.audit("idle.reset") includes mode field (default=reset, welcome when set)', async () => {
+  resetAll();
+  const mw = makeFakeMainWindow();
+  sessionReset.init({ mainWindow: mw, store: {} });
+
+  await sessionReset.hardReset({ reason: 'idle-expired' }); // default mode
+  const defaultEntry = fakeLog._lines.audit.find(
+    (e) => e.event === 'idle.reset' && e.fields.mode === 'reset'
+  );
+  assert.ok(defaultEntry, 'default mode in audit must be "reset"');
+
+  await sessionReset.hardReset({ reason: 'idle-expired', mode: 'welcome' });
+  const welcomeEntry = fakeLog._lines.audit.find(
+    (e) => e.event === 'idle.reset' && e.fields.mode === 'welcome'
+  );
+  assert.ok(welcomeEntry, 'welcome mode must appear in audit');
+});
+
+test('Phase 6 Test 10: preReset and postReset listeners both fire for welcome mode on success', async () => {
+  resetAll();
+  const mw = makeFakeMainWindow();
+  sessionReset.init({ mainWindow: mw, store: {} });
+
+  let preFired = 0;
+  let postFired = 0;
+  sessionReset.onPreReset(() => { preFired++; });
+  sessionReset.onPostReset(() => { postFired++; });
+
+  await sessionReset.hardReset({ reason: 'idle-expired', mode: 'welcome' });
+  assert.strictEqual(preFired, 1, 'preReset listener fires in welcome mode');
+  assert.strictEqual(postFired, 1, 'postReset listener fires in welcome mode');
+
+  // Clear post listener to avoid contamination across tests via module-scoped state.
+  sessionReset.onPostReset(null);
+});
+
+test('Phase 6 Test 11: missing mode defaults to "reset" and preserves Phase 4 behavior (recreates view)', async () => {
+  resetAll();
+  const mw = makeFakeMainWindow();
+  sessionReset.init({ mainWindow: mw, store: {} });
+  await sessionReset.hardReset({ reason: 'crash' }); // no mode field
+  const createCount = callLog.filter((e) => e[0] === 'createMagiclineView').length;
+  assert.strictEqual(createCount, 1, 'default path must recreate the view');
+  // And the welcome:show IPC must NOT have been sent
+  const welcomeIpc = callLog.find((e) => e[0] === 'ipc' && e[1] === 'welcome:show');
+  assert.strictEqual(welcomeIpc, undefined, 'default path must NOT send welcome:show');
+});
+
+test('Phase 6 Test 12: welcome mode respects in-flight mutex', async () => {
+  resetAll();
+  const mw = makeFakeMainWindow();
+  sessionReset.init({ mainWindow: mw, store: {} });
+  const p1 = sessionReset.hardReset({ reason: 'idle-expired', mode: 'welcome' });
+  const p2 = sessionReset.hardReset({ reason: 'idle-expired', mode: 'welcome' });
+  await Promise.all([p1, p2]);
+  // Only one destroyMagiclineView should have happened.
+  const destroyCount = callLog.filter((e) => e[0] === 'destroyMagiclineView').length;
+  assert.strictEqual(destroyCount, 1, 'second concurrent welcome-reset was suppressed');
 });

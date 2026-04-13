@@ -23,8 +23,9 @@
 const log = require('./logger');
 
 const IDLE_TIMEOUT_MS    = 60_000;   // NFC-01 / IDLE-01: 60s of no input
-const OVERLAY_TIMEOUT_MS = 30_000;   // IDLE-01: 30s host.js countdown (exported
-                                     // for reference; host owns the countdown)
+const OVERLAY_TIMEOUT_MS = 10_000;   // IDLE-01 / D-04 (Phase 6): 10s "Noch da?"
+                                     // countdown (down from 30s; host.js owns
+                                     // the visual countdown)
 
 const STATES = Object.freeze({
   IDLE: 'IDLE',
@@ -93,7 +94,9 @@ function expired() {
   state = STATES.RESETTING;
   // Lazy require — breaks circular dep (sessionReset will call stop() in Plan 04-02)
   // and allows Plan 04-01 to ship before src/main/sessionReset.js exists in tree.
-  require('./sessionReset').hardReset({ reason: 'idle-expired' });
+  // Phase 6 D-05: welcome-mode logout — full storage wipe, view stays destroyed,
+  // host.js renders the welcome layer until next tap.
+  require('./sessionReset').hardReset({ reason: 'idle-expired', mode: 'welcome' });
 }
 
 module.exports = {

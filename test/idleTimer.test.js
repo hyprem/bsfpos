@@ -156,12 +156,28 @@ test('stop() clears the pending timeout and transitions to IDLE', (t) => {
   resetAll(mw);
 });
 
-test('expired() transitions to RESETTING and calls sessionReset.hardReset({reason:"idle-expired"})', () => {
+test('expired() transitions to RESETTING and calls sessionReset.hardReset({reason:"idle-expired", mode:"welcome"})', () => {
   const mw = makeFakeMainWindow();
   resetAll(mw);
   idleTimer.expired();
   assert.strictEqual(hardResetCalls.length, 1, 'hardReset called exactly once');
   assert.strictEqual(hardResetCalls[0].reason, 'idle-expired');
+  assert.strictEqual(hardResetCalls[0].mode, 'welcome', 'Phase 6 D-05: expired() forwards mode=welcome');
+  resetAll(mw);
+});
+
+// --- Phase 6: welcome-mode idle expiry --------------------------------------
+
+test('Phase 6 D-04: _OVERLAY_TIMEOUT_MS is 10s (shortened from 30s)', () => {
+  assert.strictEqual(idleTimer._OVERLAY_TIMEOUT_MS, 10_000);
+});
+
+test('Phase 6 D-05: expired() forwards exactly { reason, mode } object to hardReset', () => {
+  const mw = makeFakeMainWindow();
+  resetAll(mw);
+  idleTimer.expired();
+  assert.strictEqual(hardResetCalls.length, 1);
+  assert.deepStrictEqual(hardResetCalls[0], { reason: 'idle-expired', mode: 'welcome' });
   resetAll(mw);
 });
 
