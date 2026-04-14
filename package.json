@@ -46,7 +46,7 @@
           ]
         }
       ],
-      "artifactName": "${productName}-Setup-${version}.${ext}"
+      "artifactName": "bee-strong-pos-Setup-${version}.${ext}"
     },
     "nsis": {
       "oneClick": true,

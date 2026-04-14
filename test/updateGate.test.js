@@ -27,10 +27,10 @@ function makeSessionReset() {
   };
 }
 
-test('isMaintenanceWindow: true only for hours 3 and 4', () => {
+test('isMaintenanceWindow: true only for hours 9, 10, and 11', () => {
   for (let h = 0; h < 24; h++) {
     const actual = gate.isMaintenanceWindow(() => h);
-    const expected = (h === 3 || h === 4);
+    const expected = (h === 9 || h === 10 || h === 11);
     assert.strictEqual(actual, expected, 'hour=' + h);
   }
 });
@@ -93,7 +93,7 @@ test('onUpdateDownloaded: maintenance-window trigger fires installFn', () => {
       installFn: () => installed++,
       log,
       sessionResetModule: sr,
-      getHour: () => 3, // maintenance window
+      getHour: () => 9, // maintenance window
     });
     assert.strictEqual(installed, 0, 'install must wait for interval tick');
     // Trigger the polled interval manually
@@ -124,7 +124,7 @@ test('onUpdateDownloaded: first trigger wins (post-reset beats maintenance)', ()
       installFn: () => installed++,
       log,
       sessionResetModule: sr,
-      getHour: () => 3,
+      getHour: () => 9,
     });
     sr._fire(); // post-reset wins
     // Attempting to also fire interval should be no-op

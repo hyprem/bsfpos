@@ -110,9 +110,9 @@ test('ADMIN-06: electron-updater with addAuthHeader + NsisUpdater (no embedded P
   assert.doesNotMatch(pkg, /"token"\s*:/);
 });
 
-test('ADMIN-07: safe-window install gate (post-reset OR 03:00-05:00)', () => {
-  assert.match(updateGate, /MAINTENANCE_HOUR_START\s*=\s*3/);
-  assert.match(updateGate, /MAINTENANCE_HOUR_END\s*=\s*5/);
+test('ADMIN-07: safe-window install gate (post-reset OR 09:00-12:00)', () => {
+  assert.match(updateGate, /MAINTENANCE_HOUR_START\s*=\s*9/);
+  assert.match(updateGate, /MAINTENANCE_HOUR_END\s*=\s*12/);
   assert.match(updateGate, /'post-reset'/);
   assert.match(updateGate, /'maintenance-window'/);
   assert.match(sessionReset, /onPostReset/);

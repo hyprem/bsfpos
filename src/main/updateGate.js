@@ -3,15 +3,15 @@
 //
 // Safe-window gate for electron-updater quitAndInstall. Consumes:
 //   (a) Phase 4 sessionReset post-reset event — Phase 5's "clean slate" signal
-//   (b) Clock-based 03:00–05:00 maintenance window
+//   (b) Clock-based 09:00–12:00 maintenance window
 // Whichever fires first after update-downloaded wins; the other is cleared.
 //
 // NO direct electron import. installFn is dependency-injected so this module
 // is pure-testable with fake clock/fake emitter.
 
 const MAINTENANCE_POLL_MS = 60_000; // check the clock once per minute
-const MAINTENANCE_HOUR_START = 3;   // 03:00 inclusive
-const MAINTENANCE_HOUR_END   = 5;   // 05:00 exclusive → hours 3, 4
+const MAINTENANCE_HOUR_START = 9;   // 09:00 inclusive
+const MAINTENANCE_HOUR_END   = 12;  // 12:00 exclusive → hours 9, 10, 11
 
 // --- Module-scoped gate state ----------------------------------------------
 let maintenanceTimer = null;
