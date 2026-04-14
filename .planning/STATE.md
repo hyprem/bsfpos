@@ -18,7 +18,7 @@ progress:
 
 ## Project Reference
 
-**Core value:** A gym member can walk up, scan their badge, have a product scanned (or self-selected), pay, and walk away — without staff interaction and without being able to break out of the locked Magicline cash register page.
+**Core value:** A gym member can walk up, scan or self-select a product, pay at the card terminal next to the kiosk, and walk away — without staff interaction and without being able to break out of the locked Magicline cash register page. (NFC member identification descoped 2026-04-14, see MILESTONES.md.)
 
 **Current focus:** v1.0 shipped — awaiting next milestone definition (`/gsd-new-milestone`).
 
@@ -49,5 +49,13 @@ Field guide: `docs/runbook/v1.0-KIOSK-VISIT.md`. Authoritative per-requirement s
 
 Run `/gsd-new-milestone` to define v1.1 (or whichever next version) — questioning → research → requirements → roadmap.
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260414-eu9 | Descope NFC member-badge identification from v1.0 | 2026-04-14 | cbc9b59 | [260414-eu9-descope-nfc-member-badge-identification-](./quick/260414-eu9-descope-nfc-member-badge-identification-/) |
+
+**Last activity:** 2026-04-14 — Completed quick task 260414-eu9: Descope NFC member-badge identification from v1.0
+
 ---
-*State initialized: 2026-04-08 · v1.0 archived: 2026-04-14*
+*State initialized: 2026-04-08 · v1.0 archived: 2026-04-14 · NFC descoped: 2026-04-14*
