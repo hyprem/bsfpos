@@ -10,7 +10,7 @@ A gym member can walk up, scan their badge, have a product scanned (or self-sele
 
 ## Current State
 
-**v1.0 MVP shipped 2026-04-14.** 6 phases, 36 plans, 42/42 requirements closed. Audit posture: `tech_debt` — no critical blockers, 19 physical verification items consolidated into the next-kiosk-visit batch (`.planning/phases/01-locked-down-shell-os-hardening/01-VERIFICATION.md`). Detailed accomplishments: see `.planning/MILESTONES.md`. Full archive: `.planning/milestones/v1.0-ROADMAP.md` + `v1.0-REQUIREMENTS.md`.
+**v1.0 MVP shipped 2026-04-14.** 6 phases, 36 plans, 42/42 requirements closed (all code-complete and automated-test-green). Audit posture: `tech_debt` — no critical blockers, 50 row-level physical verification checks consolidated into the next-kiosk-visit batch (`.planning/phases/01-locked-down-shell-os-hardening/01-VERIFICATION.md`); deferral is row-level only, not requirement-level. Field guide: `docs/runbook/v1.0-KIOSK-VISIT.md`. Detailed accomplishments: see `.planning/MILESTONES.md`. Full archive: `.planning/milestones/v1.0-ROADMAP.md` + `v1.0-REQUIREMENTS.md`.
 
 ## Next Milestone Goals
 
@@ -22,7 +22,7 @@ To be defined. Run `/gsd-new-milestone` to start the next version. Likely candid
 
 <!-- Shipped and confirmed valuable. -->
 
-- [x] **v1.0 MVP** (shipped 2026-04-14): fullscreen Electron kiosk on Win 11 Pro, OS-hardened `bsfkiosk` user account, Magicline cash register embedded with drift-isolated CSS+JS injection, DPAPI-encrypted credentials with reactive auto-login state machine, NFC badge capture with first-character-drop fix, welcome-screen lifecycle (cold-boot → welcome → tap → login → 60s idle → 10s "Noch da?" → full-logout → welcome) replacing in-place idle reset, hidden Ctrl+Shift+F12 admin exit with scrypt-hashed PIN + lockout, electron-updater against private GitHub Releases gated by safe-window, rotating redacted logs, branded touch-ready overlays. **Validation gate at next kiosk visit:** the 19 deferred physical-verification items must pass before the v1.0 build is declared field-validated.
+- [x] **v1.0 MVP** (shipped 2026-04-14): fullscreen Electron kiosk on Win 11 Pro, OS-hardened `bsfkiosk` user account, Magicline cash register embedded with drift-isolated CSS+JS injection, DPAPI-encrypted credentials with reactive auto-login state machine, NFC badge capture with first-character-drop fix, welcome-screen lifecycle (cold-boot → welcome → tap → login → 60s idle → 10s "Noch da?" → full-logout → welcome) replacing in-place idle reset, hidden Ctrl+Shift+F12 admin exit with scrypt-hashed PIN + lockout, electron-updater against private GitHub Releases gated by safe-window, rotating redacted logs, branded touch-ready overlays. **Validation gate at next kiosk visit:** the 50 deferred physical-verification rows must pass before the v1.0 build is declared field-validated.
 
 ### Active
 

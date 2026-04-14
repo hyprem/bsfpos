@@ -20,11 +20,12 @@
 
 **Stack delivered:** Electron 41.1.1 + Node 20 LTS · electron-builder 26.8.x NSIS per-user installer · electron-updater 6.8.x against private GitHub Releases · electron-log 5.2.x rotating files · electron-store 10.1.x (CJS) · Electron `safeStorage` (DPAPI) for credentials and update PAT · plain HTML/CSS/JS overlays (no framework). Auto-launch via `app.setLoginItemSettings` + NSIS Startup-folder shortcut. No `keytar`, no `node-hid`, no SaaS dependencies.
 
-**Verification debt rolled to next kiosk visit (19 items, all with automated backstops):**
-- Phase 1 — 5 items: fresh-boot visual, splash permanence, double-launch race, prod-sim chord test, on-device runbook walk-through
-- Phase 3 — 1 item: TabTip manual-button re-verify on actual kiosk terminal
-- Phase 4 — 13 items: NFC-01..06 (Deka reader + test badge) + IDLE-01..07 (touchscreen + Task Manager); IDLE-05 must run LAST (destructive)
-- Phase 6 — 1 item: 5-cycle welcome-loop smoke check (cold boot → 5 × idle-expire-to-welcome cycles)
+**Verification debt rolled to next kiosk visit (50 row-level checks, all with automated backstops):**
+- Phase 1 — 5 rows: fresh-boot visual, splash permanence, double-launch race, prod-sim chord test, on-device runbook walk-through
+- Phase 3 — 1 row: TabTip manual-button re-verify on actual kiosk terminal
+- Phase 4 — 13 rows: NFC-01..06 (Deka reader + test badge) + IDLE-01..07 (touchscreen + Task Manager); IDLE-05 must run LAST (destructive). Several IDLE rows are subsumed by the Phase 6 welcome-loop smoke walk under the new lifecycle.
+- Phase 5 — 30 rows: P5-01..P5-30 covering admin hotkey + PIN modal + lockout (P5-01..P5-09), RDP log spot-checks (P5-10..P5-14), auto-update + safe window (P5-15..P5-20), branded polish visual + touch (P5-25..P5-30), update-failure rollback drill (P5-21..P5-24 — must run LAST in Phase 5; latches `autoUpdateDisabled`).
+- Phase 6 — 1 row: 5-cycle welcome-loop smoke check (cold boot → 5 × welcome-tap-login-idle-logout-welcome cycles); covers IDLE-01..05, AUTH-01..04, NFC-05 in one walk-through.
 
 Field guide for the visit: `docs/runbook/v1.0-KIOSK-VISIT.md`.
 
