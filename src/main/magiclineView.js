@@ -27,6 +27,38 @@ const PARTITION         = 'persist:magicline';   // D-14 — stable across phase
 const DRAIN_INTERVAL_MS = 250;                    // Pattern 5 cadence
 const DRIFT_MESSAGE     = 'Kasse vorübergehend nicht verfügbar — Bitte wenden Sie sich an das Studio-Personal';
 
+// --- Phase 07 SPLASH-01 / LOCALE-01: sentinel parser with allowlisted fields.
+// Source is Magicline main world — treat `step` and `result` as untrusted and
+// clamp to a fixed set (mitigates T-07-04 log-injection). Falls back to
+// 'unknown' rather than 'fail' so a reviewer can distinguish a parse failure
+// from an actual auto-select failure.
+const PHASE07_ALLOWED_RESULTS = new Set(['ok', 'fail', 'timeout']);
+const PHASE07_ALLOWED_STEPS = new Set([
+  'idle',
+  'step1-kasse',
+  'step2-popup',
+  'step3-self-checkout',
+  'step4-speichern',
+  'done',
+  'already-on-register',
+  'unknown'
+]);
+const PHASE07_SENTINEL_PREFIX = 'BSK_AUTO_SELECT_RESULT:';
+
+function parseAutoSelectSentinel(message) {
+  if (typeof message !== 'string') return null;
+  const idx = message.indexOf(PHASE07_SENTINEL_PREFIX);
+  if (idx === -1) return null;
+  const tail = message.substring(idx + PHASE07_SENTINEL_PREFIX.length);
+  const parts = tail.split(':');
+  const rawResult = parts[0] || 'unknown';
+  const rawStep = parts[1] || 'unknown';
+  return {
+    result: PHASE07_ALLOWED_RESULTS.has(rawResult) ? rawResult : 'unknown',
+    step:   PHASE07_ALLOWED_STEPS.has(rawStep)     ? rawStep   : 'unknown'
+  };
+}
+
 // --- Load inject files at require-time (read-only, bundled) -----------------
 const INJECT_CSS = fs.readFileSync(path.join(__dirname, '..', 'inject', 'inject.css'),           'utf8');
 // Hide-until-ready wrapper: Magicline view must be at full bounds for
@@ -277,6 +309,32 @@ function createMagiclineView(mainWindow, store) {
           const { ipcMain } = require('electron');
           ipcMain.emit('audit-sale-completed');
         } catch (_) { /* swallow */ }
+      }
+
+      // Phase 07 SPLASH-01: register-selected sentinels.
+      // DEGRADED must be checked first (else-if) — BSK_REGISTER_SELECTED is a
+      // substring of BSK_REGISTER_SELECTED_DEGRADED and would double-fire
+      // (T-07-07 ordering mitigation).
+      if (message && message.indexOf('BSK_REGISTER_SELECTED_DEGRADED') !== -1) {
+        try {
+          const { ipcMain } = require('electron');
+          ipcMain.emit('register-selected', null, { degraded: true });
+        } catch (_) { /* swallow */ }
+      } else if (message && message.indexOf('BSK_REGISTER_SELECTED') !== -1) {
+        // Note: DEGRADED is checked first so the substring match doesn't
+        // double-fire on the degraded sentinel. Plain BSK_REGISTER_SELECTED
+        // only reaches here when the degraded branch already handled/missed.
+        try {
+          const { ipcMain } = require('electron');
+          ipcMain.emit('register-selected', null, { degraded: false });
+        } catch (_) { /* swallow */ }
+      }
+
+      if (message && message.indexOf(PHASE07_SENTINEL_PREFIX) !== -1) {
+        const parsed = parseAutoSelectSentinel(message);
+        if (parsed) {
+          try { log.audit('auto-select.result', parsed); } catch (_) { /* swallow */ }
+        }
       }
     });
   } catch (e) {
@@ -679,4 +737,6 @@ module.exports = {
   _computeDefaultZoom: computeDefaultZoom,
   _DRIFT_MESSAGE: DRIFT_MESSAGE,
   _PARTITION: PARTITION,
+  // Phase 07 — exported for unit testing (test/magiclineView.sentinel.test.js):
+  parseAutoSelectSentinel,
 };

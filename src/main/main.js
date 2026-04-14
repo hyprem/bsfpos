@@ -36,6 +36,11 @@ const sessionResetMod = require('./sessionReset');
 // reset-loop counter latched until the next Windows logout).
 let resetLoopPending = false;
 
+// Phase 07 SPLASH-01: true between welcome:tap and splash:hide-final (or 5.5s timeout,
+// owned by Plan 05 host-side). Gates forwarding of register-selected so that
+// cold-boot / idle-recovery paths are not affected by the new sentinel.
+let welcomeTapPending = false;
+
 const isDev = process.env.NODE_ENV === 'development';
 
 // --- Phase 5 constants ------------------------------------------------
@@ -358,6 +363,31 @@ app.whenReady().then(() => {
     try { log.audit('sale.completed', {}); } catch (_) {}
   });
 
+  // Phase 07 SPLASH-01: register-selected sentinel relay.
+  // Forwarded by magiclineView.js console-message listener when inject.js emits
+  // BSK_REGISTER_SELECTED or BSK_REGISTER_SELECTED_DEGRADED. Only forwarded to
+  // the host as splash:hide-final when welcomeTapPending is true (T-07-06
+  // spoofing mitigation — cold-boot / idle-recovery paths leave the flag false).
+  try { ipcMain.removeAllListeners('register-selected'); } catch (_) {}
+  ipcMain.on('register-selected', (_ev, payload) => {
+    try {
+      // Only forward to host on the welcome path. Cold-boot / idle-recovery
+      // paths still use cash-register-ready → splash:hide unchanged.
+      if (!welcomeTapPending) {
+        log.info('phase07.register-selected.ignored reason=no-welcome-pending');
+        return;
+      }
+      welcomeTapPending = false;
+      const degraded = !!(payload && payload.degraded);
+      log.info('phase07.register-selected forwarded degraded=' + degraded);
+      if (mainWindow && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
+        mainWindow.webContents.send('splash:hide-final', { degraded: degraded });
+      }
+    } catch (err) {
+      try { log.error('phase07.register-selected failed: ' + (err && err.message)); } catch (_) {}
+    }
+  });
+
   // --- Phase 2: Magicline child view + injection pipeline ---------------
   // createMagiclineView attaches a WebContentsView child to mainWindow, loads
   // the Magicline cash-register URL under the persist:magicline partition,
@@ -413,6 +443,9 @@ app.whenReady().then(() => {
       // unrelated to the update), re-arm from scratch so the next
       // CASH_REGISTER_READY still counts as a healthy post-update boot.
       sessionResetMod.onPreReset(() => {
+        // Phase 07 SPLASH-01: clear welcomeTapPending on any hard reset so a
+        // stale flag from a mid-flow reset does not gate the next welcome path.
+        welcomeTapPending = false;
         if (healthWatchdogTimer || authPollTimer) {
           log.info('phase5.healthWatchdog.cleared-before-reset');
           if (healthWatchdogTimer) { clearTimeout(healthWatchdogTimer); healthWatchdogTimer = null; }
@@ -516,6 +549,7 @@ app.whenReady().then(() => {
           return;
         }
         log.info('phase6.welcome:tap received — starting login flow');
+        welcomeTapPending = true; // Phase 07 SPLASH-01: arm splash:hide-final gate
         try {
           mainWindow.webContents.send('welcome:hide');
           mainWindow.webContents.send('splash:show');
