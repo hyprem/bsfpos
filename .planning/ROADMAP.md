@@ -44,7 +44,7 @@ Dependencies flow: 07 → 08 → 09 → 10 (10 depends on 09's updateGate trigge
   3. After a welcome tap, the splash remains visible and blocks pointer events to the underlying Magicline view until `register-selected` / `splash:hide-final` fires (or a ~5 s safety timeout falls back to the existing `cash-register-ready` path); the splash never sticks forever.
   4. Cold-boot and idle-recovery splash paths preserve their existing behavior and are not regressed by the new welcome-path gating.
 **Plans:** 6 plans
-- [ ] 07-01-PLAN.md — Wave 0: LOCALE_STRINGS.de table + live-kiosk DOM survey
+- [x] 07-01-PLAN.md — Wave 0: LOCALE_STRINGS.de table + live-kiosk DOM survey
 - [ ] 07-02-PLAN.md — Locale enforcement: --lang=de-DE + webRequest Accept-Language override
 - [ ] 07-03-PLAN.md — Sentinel bridge + markRegisterReady helper + host IPC gate
 - [ ] 07-04-PLAN.md — Auto-select state machine rewrite wired to LOCALE_STRINGS

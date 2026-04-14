@@ -2,12 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Field-Operations Polish
-status: planning
-last_updated: "2026-04-14T12:00:00.000Z"
+status: executing
+last_updated: "2026-04-14T12:51:10.932Z"
+last_activity: 2026-04-14
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
+  total_plans: 6
   completed_plans: 0
   percent: 0
 ---
@@ -20,15 +21,18 @@ progress:
 
 **Core value:** A gym member can walk up, scan or self-select a product, pay at the card terminal next to the kiosk, and walk away — without staff interaction and without being able to break out of the locked Magicline cash register page. (NFC member identification descoped 2026-04-14, see MILESTONES.md.)
 
-**Current focus:** v1.1 Field-Operations Polish — roadmap complete, ready to plan Phase 07.
+**Current focus:** Phase 07 — locale-hardening-splash-auto-selection-race
 
 ## Current Position
 
+Phase: 07 (locale-hardening-splash-auto-selection-race) — EXECUTING
+Plan: 1 of 6
+
 - **Milestone:** v1.1 Field-Operations Polish — STARTED 2026-04-14
-- **Status:** Planning (roadmap complete, no phase planned yet)
+- **Status:** Executing Phase 07
 - **Phase:** Not started — next is Phase 07 (Locale Hardening & Splash Auto-Selection Race)
 - **Plan:** —
-- **Last activity:** 2026-04-14 — v1.1 ROADMAP.md created (4 phases: 07 Locale+Splash, 08 Admin Menu Polish+Reload Fix, 09 POS Open/Close+Update Gating, 10 Post-Sale Flow)
+- **Last activity:** 2026-04-14
 
 **Phase numbering note:** v1.1 continues from phase 07 because v1.0 ended at phase 06 and the v1.0 phase directories (`01-..` through `06-..`) are still present in `.planning/phases/` — v1.0 was reconciled manually rather than via `/gsd-complete-milestone`. Do NOT pass `--reset-phase-numbers` to any GSD command on this milestone.
 

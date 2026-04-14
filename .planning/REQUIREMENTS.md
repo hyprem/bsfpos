@@ -13,7 +13,7 @@ For v1.0 archive, see `.planning/milestones/v1.0-REQUIREMENTS.md`.
 
 ### Locale Hardening
 
-- [ ] **LOCALE-01**: Magicline UI is served in German (de-DE) regardless of the host Windows display language. Electron forces `lang=de-DE` via `app.commandLine.appendSwitch` and overrides `Accept-Language: de-DE,de;q=0.9` on the magicline session via `webRequest.onBeforeSendHeaders`. Locale-dependent text matches in the auto-selection click chain are moved to a single locale lookup table in `src/inject/fragile-selectors.js`, and a structured log line is emitted on auto-selection success/failure. — *Source: `2026-04-14-lock-magicline-ui-to-de-de-regardless-of-windows-language.md`* — *Phase 07, pending*
+- [x] **LOCALE-01**: Magicline UI is served in German (de-DE) regardless of the host Windows display language. Electron forces `lang=de-DE` via `app.commandLine.appendSwitch` and overrides `Accept-Language: de-DE,de;q=0.9` on the magicline session via `webRequest.onBeforeSendHeaders`. Locale-dependent text matches in the auto-selection click chain are moved to a single locale lookup table in `src/inject/fragile-selectors.js`, and a structured log line is emitted on auto-selection success/failure. — *Source: `2026-04-14-lock-magicline-ui-to-de-de-regardless-of-windows-language.md`* — *Phase 07, pending*
 
 ### Splash & Auto-Selection Race
 
@@ -50,7 +50,7 @@ REQ-IDs mapped to phases by the `gsd-roadmapper` agent on 2026-04-14. Phase numb
 
 | REQ      | Phase    | Status  |
 |----------|----------|---------|
-| LOCALE-01 | Phase 07 | Pending |
+| LOCALE-01 | Phase 07 | Complete |
 | SPLASH-01 | Phase 07 | Pending |
 | ADMIN-01  | Phase 08 | Pending |
 | ADMIN-03  | Phase 08 | Pending |
