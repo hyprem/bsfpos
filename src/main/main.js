@@ -30,8 +30,7 @@ let resetLoopPending = false;
 const isDev = process.env.NODE_ENV === 'development';
 
 // --- Phase 5 constants ------------------------------------------------
-// TODO(runbook): set GITHUB_OWNER via build-time env var or here before first prod build.
-const GITHUB_OWNER = process.env.BSFPOS_GH_OWNER || 'TODO-set-owner';
+const GITHUB_OWNER = process.env.BSFPOS_GH_OWNER || 'hyprem';
 const GITHUB_REPO  = process.env.BSFPOS_GH_REPO  || 'bsfpos';
 const UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000; // D-14: every 6 hours
 const HEALTH_WATCHDOG_MS       = 2 * 60 * 1000;      // D-29: 2-minute post-update watchdog
