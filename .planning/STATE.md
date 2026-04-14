@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Field-Operations Polish
 status: executing
-last_updated: "2026-04-14T12:51:10.932Z"
+last_updated: "2026-04-14T13:02:36.012Z"
 last_activity: 2026-04-14
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 6
-  completed_plans: 0
-  percent: 0
+  completed_plans: 2
+  percent: 33
 ---
 
 # Project State: Bee Strong POS Kiosk
 
-**Last updated:** 2026-04-14 (v1.1 roadmap created — 4 phases, 7 requirements mapped)
+**Last updated:** 2026-04-14 (07-02 complete — LOCALE-01 layers 1+2 shipped)
 
 ## Project Reference
 
@@ -26,13 +26,19 @@ progress:
 ## Current Position
 
 Phase: 07 (locale-hardening-splash-auto-selection-race) — EXECUTING
-Plan: 1 of 6
+Plan: 3 of 6
 
 - **Milestone:** v1.1 Field-Operations Polish — STARTED 2026-04-14
-- **Status:** Executing Phase 07
-- **Phase:** Not started — next is Phase 07 (Locale Hardening & Splash Auto-Selection Race)
-- **Plan:** —
+- **Status:** Executing Phase 07 — 07-01 and 07-02 complete
+- **Phase:** 07 in progress (2 of 6 plans done)
+- **Plan:** 07-02 complete; next is 07-03
 - **Last activity:** 2026-04-14
+
+## Key Decisions (Phase 07)
+
+- **D-07-01:** appendSwitch('lang','de-DE') placed at top-of-file before app.whenReady() — must not be inside whenReady handler or silently no-ops (Electron #17995/#26185)
+- **D-07-02:** persist:magicline webRequest.onBeforeSendHeaders uses no URL filter — partition already isolated to Magicline traffic, avoids allowlist drift
+- **D-07-03:** Header key uses exact casing 'Accept-Language' (not lowercase) to avoid duplicate-header issue per 07-RESEARCH.md §2
 
 **Phase numbering note:** v1.1 continues from phase 07 because v1.0 ended at phase 06 and the v1.0 phase directories (`01-..` through `06-..`) are still present in `.planning/phases/` — v1.0 was reconciled manually rather than via `/gsd-complete-milestone`. Do NOT pass `--reset-phase-numbers` to any GSD command on this milestone.
 
@@ -42,7 +48,7 @@ Plan: 1 of 6
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 07 | Locale Hardening & Splash Race | LOCALE-01, SPLASH-01 | Not started |
+| 07 | Locale Hardening & Splash Race | LOCALE-01, SPLASH-01 | In progress (2/6 plans) |
 | 08 | Admin Menu Polish & Reload Fix | ADMIN-01, ADMIN-03, FIX-01 | Not started |
 | 09 | POS Open/Close & Update Gating | ADMIN-02 | Not started |
 | 10 | Post-Sale Flow & Print Interception | SALE-01 | Not started |
