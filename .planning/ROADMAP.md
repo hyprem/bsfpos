@@ -48,7 +48,7 @@ Dependencies flow: 07 → 08 → 09 → 10 (10 depends on 09's updateGate trigge
 - [x] 07-02-PLAN.md — Locale enforcement: --lang=de-DE + webRequest Accept-Language override
 - [x] 07-03-PLAN.md — Sentinel bridge + markRegisterReady helper + host IPC gate
 - [x] 07-04-PLAN.md — Auto-select state machine rewrite wired to LOCALE_STRINGS
-- [ ] 07-05-PLAN.md — Welcome-path splash gate + 5500ms safety timeout
+- [x] 07-05-PLAN.md — Welcome-path splash gate + 5500ms safety timeout
 - [ ] 07-06-PLAN.md — Kiosk-visit verification checklist (LOCALE-01 + SPLASH-01)
 **UI hint**: yes
 
