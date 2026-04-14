@@ -1,10 +1,18 @@
 ---
 created: 2026-04-14T09:50:00.000Z
+resolved: 2026-04-14
+resolved_by: quick 260414-iiv (shipped in 0.1.3)
 title: Fix release asset filename mismatch (latest.yml ≠ GitHub asset name)
 area: tooling
 files:
   - package.json
 ---
+
+> **Resolved 2026-04-14 in quick task 260414-iiv (shipped in 0.1.3).**
+> Option A applied: `package.json` `build.win.artifactName` is now
+> `"bee-strong-pos-Setup-${version}.${ext}"`. dist build, latest.yml, and
+> gh upload all agree on the same hyphen-only filename. File migrated to
+> `.planning/todos/completed/`.
 
 ## Problem
 

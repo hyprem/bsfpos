@@ -32,8 +32,9 @@ terminal.
 
 - Local Administrator account (separate from the kiosk account) for running
   the scripts and for maintenance.
-- Bee Strong POS NSIS installer (`Bee Strong POS-Setup-0.1.0.exe`) available
-  locally on the device.
+- Bee Strong POS NSIS installer (`bee-strong-pos-Setup-X.Y.Z.exe` from 0.1.3
+  onward; older builds use `Bee Strong POS-Setup-X.Y.Z.exe` with spaces)
+  available locally on the device.
 - Optional but recommended: **BitLocker enabled** on the system drive before
   running anything below. See §Recommended OS-level hardening.
 

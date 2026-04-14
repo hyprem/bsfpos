@@ -78,6 +78,14 @@ When BOTH conditions are true, `updateGate.fireWith('admin-closed-window')` is a
 
 ## Bundled with this work (not a separate todo)
 
+> **Update 2026-04-14 (quick 260414-iiv, shipped in 0.1.3):** the constant
+> flip portion below is **DONE**. `MAINTENANCE_HOUR_START=9` /
+> `MAINTENANCE_HOUR_END=12` are live in `src/main/updateGate.js`, the test
+> fixture in `test/updateGate.test.js` was updated, and the four
+> `05-VERIFICATION.md` references + the `v1.0-KIOSK-VISIT.md` P5-20 row are
+> flipped to 09:00–12:00. The full POS open/close admin toggle remains as
+> the v1.1 scope of this todo. Treat the section below as historical.
+
 **Flip the safe-window constant from 03:00–05:00 → 09:00–12:00.** Do this AS PART OF this todo's first plan task, not as a separate one-line patch. Two constants in `src/main/updateGate.js`, one test fixture in `test/updateGate.test.js`, four doc references in `.planning/phases/05-admin-exit-logging-auto-update-branded-polish/05-VERIFICATION.md`, one in `docs/runbook/v1.0-KIOSK-VISIT.md`. The constant flip alone (without the open/close toggle) is acceptable as a stop-gap if this todo is not picked up immediately — the user has agreed to bundle it with whatever next 0.1.x patch ships, so it can land before the toggle work without invalidating this todo.
 
 **Practical impact:** medium-high. The kiosk is unattended 24/7 and Bee Strong has real night traffic — installing an update during peak night hours is a real user-facing risk. The constant flip alone gives you a daytime window. The full open/close toggle is the right v1.1 polish so that updates only fire when an admin has explicitly confirmed the POS is closed.
