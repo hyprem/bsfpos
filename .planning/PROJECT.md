@@ -8,33 +8,27 @@ A self-service POS kiosk app for Bee Strong Fitness gym. It runs on a single Win
 
 A gym member can walk up, scan their badge, have a product scanned (or self-selected), pay, and walk away — without any staff interaction and without ever seeing or being able to break out of the locked Magicline cash register page.
 
+## Current State
+
+**v1.0 MVP shipped 2026-04-14.** 6 phases, 36 plans, 42/42 requirements closed. Audit posture: `tech_debt` — no critical blockers, 19 physical verification items consolidated into the next-kiosk-visit batch (`.planning/phases/01-locked-down-shell-os-hardening/01-VERIFICATION.md`). Detailed accomplishments: see `.planning/MILESTONES.md`. Full archive: `.planning/milestones/v1.0-ROADMAP.md` + `v1.0-REQUIREMENTS.md`.
+
+## Next Milestone Goals
+
+To be defined. Run `/gsd-new-milestone` to start the next version. Likely candidates parked from v1.0 deferrals: badge-scan-on-welcome shortcut, attract loop animation, configurable idle timeouts, OPS-* observability surfaces.
+
 ## Requirements
 
 ### Validated
 
 <!-- Shipped and confirmed valuable. -->
 
-(None yet — ship to validate)
+- [x] **v1.0 MVP** (shipped 2026-04-14): fullscreen Electron kiosk on Win 11 Pro, OS-hardened `bsfkiosk` user account, Magicline cash register embedded with drift-isolated CSS+JS injection, DPAPI-encrypted credentials with reactive auto-login state machine, NFC badge capture with first-character-drop fix, welcome-screen lifecycle (cold-boot → welcome → tap → login → 60s idle → 10s "Noch da?" → full-logout → welcome) replacing in-place idle reset, hidden Ctrl+Shift+F12 admin exit with scrypt-hashed PIN + lockout, electron-updater against private GitHub Releases gated by safe-window, rotating redacted logs, branded touch-ready overlays. **Validation gate at next kiosk visit:** the 19 deferred physical-verification items must pass before the v1.0 build is declared field-validated.
 
 ### Active
 
 <!-- Current scope. Building toward these. -->
 
-- [ ] Electron Windows app that loads `https://bee-strong-fitness.web.magicline.com/#/cash-register` in a fullscreen kiosk window with no chrome, no menu, no escape via keyboard shortcuts
-- [ ] Permanent CSS injection via `webContents.insertCSS` hides all Magicline UI elements not needed for self-checkout (sidebar, topbar, global search, categories, customer search box, three-dot menu, Rabatt button group, discount icon, fragile MUI class elements)
-- [ ] Permanent JS injection via `executeJavaScript` ports the existing badge-capture, MUI-input-setter, and dynamic-element-hiding logic from the Android prototype
-- [ ] Auto-login on app start and after every session reset: detect login page → fill `[data-role="username"]` and `[data-role="password"]` via React-native value setter → click `[data-role="login-button"]` (no key/tab simulation)
-- [ ] Magicline credentials stored encrypted on disk using Electron `safeStorage` (Windows DPAPI), set during install or via admin menu — never plaintext
-- [ ] NFC badge handling: USB HID keyboard wedge input is buffered using <50ms inter-key timing, then injected into `[data-role="customer-search"] input` via React-native setter — except when product search field is focused (so staff product scans pass through naturally)
-- [ ] Post-sale reset: 3 seconds after `Jetzt verkaufen` is clicked, clear the customer field
-- [ ] Idle behavior: 60 seconds without input → show fullscreen translucent "Are you still there?" overlay with Bee Strong branding and visible countdown (e.g. 30s) and a "Tap to continue" button
-- [ ] Idle hard reset: if the overlay countdown expires without interaction → clear the Electron session (cookies, storage) so the cart is dropped, reload the app, auto-login fires
-- [ ] Hidden admin exit: secret hotkey combo (e.g. Ctrl+Shift+F12) opens a PIN prompt; correct PIN drops kiosk mode for maintenance
-- [ ] Auto-update from GitHub Releases via `electron-updater` — kiosk checks on boot and applies updates automatically
-- [ ] Crash recovery: on render-process-gone, automatically reload the window
-- [ ] Auto-start on Windows boot via `app.setLoginItemSettings` (or NSIS installer config)
-- [ ] Local rotating log files capturing: errors, badge scans, completed sales, idle resets, login events, update events — accessible via RDP for diagnosis
-- [ ] Bee Strong branded UI on all overlays we own (idle "still there" overlay, login-in-progress screen, error screen) — Magicline content area itself is not re-themed
+(None — awaiting next milestone definition.)
 
 ### Out of Scope
 
@@ -115,4 +109,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-08 after initialization*
+*Last updated: 2026-04-14 after v1.0 milestone archival*
