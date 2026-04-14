@@ -43,10 +43,10 @@ Dependencies flow: 07 → 08 → 09 → 10 (10 depends on 09's updateGate trigge
   2. Locale-dependent text matches used by the auto-selection chain live in a single lookup table in `src/inject/fragile-selectors.js`, and a structured `auto-select.result=ok|fail` log line is emitted on every chain run.
   3. After a welcome tap, the splash remains visible and blocks pointer events to the underlying Magicline view until `register-selected` / `splash:hide-final` fires (or a ~5 s safety timeout falls back to the existing `cash-register-ready` path); the splash never sticks forever.
   4. Cold-boot and idle-recovery splash paths preserve their existing behavior and are not regressed by the new welcome-path gating.
-**Plans:** 1/6 plans executed
+**Plans:** 3/6 plans executed
 - [x] 07-01-PLAN.md — Wave 0: LOCALE_STRINGS.de table + live-kiosk DOM survey
 - [x] 07-02-PLAN.md — Locale enforcement: --lang=de-DE + webRequest Accept-Language override
-- [ ] 07-03-PLAN.md — Sentinel bridge + markRegisterReady helper + host IPC gate
+- [x] 07-03-PLAN.md — Sentinel bridge + markRegisterReady helper + host IPC gate
 - [ ] 07-04-PLAN.md — Auto-select state machine rewrite wired to LOCALE_STRINGS
 - [ ] 07-05-PLAN.md — Welcome-path splash gate + 5500ms safety timeout
 - [ ] 07-06-PLAN.md — Kiosk-visit verification checklist (LOCALE-01 + SPLASH-01)
@@ -96,7 +96,7 @@ Dependencies flow: 07 → 08 → 09 → 10 (10 depends on 09's updateGate trigge
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 07. Locale Hardening & Splash Race | 1/6 | In Progress|  |
+| 07. Locale Hardening & Splash Race | 3/6 | In Progress|  |
 | 08. Admin Menu Polish & Reload Fix | 0/0 | Not started | - |
 | 09. POS Open/Close & Update Gating | 0/0 | Not started | - |
 | 10. Post-Sale Flow & Print Interception | 0/0 | Not started | - |

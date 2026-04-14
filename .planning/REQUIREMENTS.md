@@ -17,7 +17,7 @@ For v1.0 archive, see `.planning/milestones/v1.0-REQUIREMENTS.md`.
 
 ### Splash & Auto-Selection Race
 
-- [ ] **SPLASH-01**: The post-tap splash remains visible until the register auto-selection click chain completes (or fails after bounded retry), preventing member taps from derailing the chain. A new `register-selected` / `splash:hide-final` IPC gates `splash:hide` on the welcome path; cold-boot and idle-recovery paths preserve existing behavior; a ~5 s safety timeout falls back to the existing `cash-register-ready` path so the splash can never stick. Splash blocks pointer events to the underlying view during the auto-select window. — *Source: `2026-04-14-keep-splash-visible-until-auto-selection-completes.md`* — *Phase 07, pending*
+- [x] **SPLASH-01**: The post-tap splash remains visible until the register auto-selection click chain completes (or fails after bounded retry), preventing member taps from derailing the chain. A new `register-selected` / `splash:hide-final` IPC gates `splash:hide` on the welcome path; cold-boot and idle-recovery paths preserve existing behavior; a ~5 s safety timeout falls back to the existing `cash-register-ready` path so the splash can never stick. Splash blocks pointer events to the underlying view during the auto-select window. — *Source: `2026-04-14-keep-splash-visible-until-auto-selection-completes.md`* — *Phase 07, pending*
 
 ### Admin Menu Polish
 
@@ -51,7 +51,7 @@ REQ-IDs mapped to phases by the `gsd-roadmapper` agent on 2026-04-14. Phase numb
 | REQ      | Phase    | Status  |
 |----------|----------|---------|
 | LOCALE-01 | Phase 07 | Complete |
-| SPLASH-01 | Phase 07 | Pending |
+| SPLASH-01 | Phase 07 | Complete |
 | ADMIN-01  | Phase 08 | Pending |
 | ADMIN-03  | Phase 08 | Pending |
 | FIX-01    | Phase 08 | Pending |
