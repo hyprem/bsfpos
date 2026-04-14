@@ -13,6 +13,10 @@ contextBridge.exposeInMainWorld('kiosk', {
   // Phase 1 — splash
   onHideSplash: (cb) => ipcRenderer.on('splash:hide', () => cb()),
   onShowSplash: (cb) => ipcRenderer.on('splash:show', () => cb()),
+  // Phase 07 SPLASH-01 — welcome-path-only splash hide. Payload is { degraded: bool }.
+  // Cold-boot and idle-recovery paths continue to use onHideSplash (splash:hide)
+  // unchanged.
+  onHideSplashFinal: (cb) => ipcRenderer.on('splash:hide-final', (_e, payload) => cb(payload || {})),
 
   // Phase 2 — magicline-error (now variant-aware; payload shape extended)
   onShowMagiclineError: (cb) => ipcRenderer.on('show-magicline-error', (_e, payload) => cb(payload)),

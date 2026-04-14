@@ -50,6 +50,18 @@ body:not([data-dev="true"]) { cursor: none; }
   pointer-events: none;  /* splash is informational, not interactive */
 }
 
+/* Phase 07 SPLASH-01: during the welcome-tap → register-selected window, the
+   splash temporarily accepts pointer events so member taps cannot reach the
+   underlying Magicline DOM and derail the synthetic auto-select click chain.
+   inject.js synthesizes clicks via element.click() inside the Magicline main
+   world, not host-level PointerEvents, so flipping pointer-events on the
+   splash blocks the derail path without breaking the chain itself. Class is
+   toggled by host.js on welcome:tap and cleared on splash:hide-final OR on the
+   5500 ms safety timeout OR on splash:hide (defensive clear). */
+.bsk-layer--splash.auto-select-pending {
+  pointer-events: auto;
+}
+
 /* --- Splash contents ----------------------------------------------------- */
 
 .bsk-logo {
