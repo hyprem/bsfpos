@@ -345,6 +345,49 @@
     }
   }
 
+  // --- Phase 07 SPLASH-01 / LOCALE-01: sentinel bridge helpers -----------
+  // Clone of readyEmitted (§209-229) and BSK_AUDIT_SALE_COMPLETED (§91-108)
+  // patterns. The console.log sentinel is caught in src/main/magiclineView.js
+  // console-message listener and relayed via ipcMain.
+  //
+  // Call sites (wired in Plan 04):
+  //   (a) Successful chain end — after Speichern click resolves.
+  //   (b) "Already on cash register, no selection needed" branch.
+  //   (c) Bounded-retry exhaustion — with degraded:true.
+  //
+  // Across welcome cycles: the Magicline view is destroyed and recreated on
+  // hardReset, which re-runs the IIFE from scratch, so registerReadyEmitted
+  // is naturally reset to false per page load. No manual reset needed.
+  var registerReadyEmitted = false;
+  function markRegisterReady(opts) {
+    if (registerReadyEmitted) return;
+    registerReadyEmitted = true;
+    var degraded = !!(opts && opts.degraded);
+    try {
+      console.log(degraded ? 'BSK_REGISTER_SELECTED_DEGRADED' : 'BSK_REGISTER_SELECTED');
+    } catch (e) { /* swallow */ }
+  }
+
+  // Structured auto-select result emitter. Format:
+  //   BSK_AUTO_SELECT_RESULT:<result>:<step>
+  // Allowed result ∈ {ok, fail, timeout}.
+  // Allowed step   ∈ {idle, step1-kasse, step2-popup, step3-self-checkout,
+  //                   step4-speichern, done, already-on-register, unknown}.
+  // The magiclineView.js catch-side parser re-validates against the allowlist
+  // and falls back to 'unknown' on any other value — do not rely on this
+  // side for security, inject.js runs in the untrusted Magicline main world.
+  function emitAutoSelectResult(result, step) {
+    try {
+      console.log('BSK_AUTO_SELECT_RESULT:' + String(result || 'unknown') + ':' + String(step || 'unknown'));
+    } catch (e) { /* swallow */ }
+  }
+
+  // Dev-mode handles so kiosk-visit testers can force states from DevTools.
+  try {
+    window.__bskiosk_markRegisterReady = markRegisterReady;
+    window.__bskiosk_emitAutoSelectResult = emitAutoSelectResult;
+  } catch (e) { /* swallow */ }
+
   // --- Main-process-invoked login submit (Phase 3, D-04) ------------------
   // Called by authFlow.js via executeJavaScript with credentials
   // interpolated through JSON.stringify. Credentials are NEVER persisted
