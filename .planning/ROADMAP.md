@@ -96,7 +96,7 @@ Dependencies flow: 07 → 08 → 09 → 10 (10 depends on 09's updateGate trigge
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 07. Locale Hardening & Splash Race | 6/6 | Complete   | 2026-04-14 |
+| 07. Locale Hardening & Splash Race | 6/6 | Complete    | 2026-04-14 |
 | 08. Admin Menu Polish & Reload Fix | 0/0 | Not started | - |
 | 09. POS Open/Close & Update Gating | 0/0 | Not started | - |
 | 10. Post-Sale Flow & Print Interception | 0/0 | Not started | - |
