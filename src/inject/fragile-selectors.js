@@ -53,6 +53,22 @@ var FRAGILE_SELECTORS = [
 // (Phase 5 Plan 06 D-27).
 var JETZT_VERKAUFEN_TEXT = 'Jetzt verkaufen';
 
+// --- Auto-select locale strings (Phase 07, D-21 / LOCALE-01) -------------
+// German text content matched by detectAndSelectRegister() in inject.js.
+// When Magicline serves the cash-register UI in de-DE (enforced by
+// app.commandLine --lang=de-DE + Accept-Language header override in main.js),
+// these are the exact textContent.trim() values of the three buttons in the
+// register-selection click chain. Drift-isolated here per D-21 — NO other
+// source file may hard-code these strings. Nested under `de` so a future
+// second locale can be added without renaming the table.
+var LOCALE_STRINGS = {
+  de: {
+    KASSE_AUSWAEHLEN:     'Kasse auswählen',
+    SELF_CHECKOUT_OPTION: 'Self-Checkout',
+    SPEICHERN:            'Speichern'
+  }
+};
+
 var STABLE_SELECTORS = [
   { category: 'stable', selector: '[data-role="topbar"]',                      purpose: 'Topbar' },
   { category: 'stable', selector: '[data-role="global-search-button"]',        purpose: 'Global search button' },
