@@ -29,4 +29,18 @@
 
 Field guide for the visit: `docs/runbook/v1.0-KIOSK-VISIT.md`.
 
+### Post-ship scope adjustment (2026-04-14)
+
+During the first physical verification at the kiosk, a permission-policy issue surfaced: translating NFC badge IDs to Magicline members requires a Magicline staff account with member-lookup permissions, which the gym owner does not want to grant to the kiosk's headless account. A card terminal next to the kiosk already handles payment via Magicline's "Jetzt verkaufen" → "Kartenzahlung" flow, so member identification at the kiosk is no longer required for v1.0.
+
+**Decision (2026-04-14):** Descope NFC member-badge identification from v1.0. Requirements **NFC-01, NFC-02, NFC-03, NFC-04, NFC-05, NFC-06** are DESCOPED. The implementing code (`src/main/badgeInput.js`, the `customer-search` injection path, the fragile-selector entry, and the 14-test unit suite) has been removed in quick task `260414-eu9`. The HID reader still emits keystrokes — they now land directly in the Magicline product-search input, focused by the kiosk on `cash-register-ready`, so staff scanning a product via the reader still works.
+
+**Effective shipped count:** 36 / 42 v1 requirements.
+
+**Git tag:** The `v1.0` git tag is **unchanged** (still on commit `403f860`) as a historical marker. The descope lives in new commits past the tag so future blame still traces back to "v1.0 as originally shipped, then post-ship trimmed".
+
+**Verification debt impact:** Phase 4 next-visit rows drop from 13 to 7 (NFC-01..06 removed; IDLE-01..07 remain). The Phase 6 5-cycle welcome smoke row no longer covers NFC-05. Total next-visit batch drops from 50 to 44.
+
+**Future:** `.planning/todos/pending/2026-04-14-reintroduce-nfc-member-identification.md` captures the option of reintroducing badge-based identification later (requires either a Magicline role with member-lookup permissions, or an alternative mechanism like manual member ID / QR).
+
 ---

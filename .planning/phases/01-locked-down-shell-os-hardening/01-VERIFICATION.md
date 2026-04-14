@@ -144,7 +144,7 @@ No orphaned requirements. No ROADMAP requirements unclaimed by any plan.
 
 ### Human Verification Required (Next Kiosk Visit — consolidated batch)
 
-**This is the single source-of-truth checklist for the next physical kiosk visit.** Phase 3 (03-09 TabTip manual-button re-check) and Phase 4 (all 13 NFC + idle requirements) have been folded into this file so the tester works through one document, not three.
+**This is the single source-of-truth checklist for the next physical kiosk visit.** Phase 3 (03-09 TabTip manual-button re-check) and Phase 4 (7 idle requirements, post NFC descope) have been folded into this file so the tester works through one document, not three. **2026-04-14: NFC-01..06 DESCOPED** (quick 260414-eu9) — the Phase 4 section dropped from 13 to 7 rows.
 
 #### Phase 1 — Original deferred items
 
@@ -164,14 +164,7 @@ No orphaned requirements. No ROADMAP requirements unclaimed by any plan.
 
 **Authoritative per-requirement spec:** `.planning/phases/04-nfc-input-idle-session-lifecycle/04-VERIFICATION.md` (expected-behavior text, PASS conditions, FAIL conditions, log-line assertions for each row).
 
-**NFC requirements (Deka USB HID + test badge required):**
-
-- [ ] **NFC-01** — First scan after cold boot writes to customer-search input (member name visible within 1s; no first-character drop)
-- [ ] **NFC-02** — Rapid 5-badge burst de-bounces correctly, all 5 commit, no stuck buffer
-- [ ] **NFC-03** — First-character-drop regression fixed (sentinel-null arbitration) — scan immediately after a 90s idle-expired hard reset
-- [ ] **NFC-04** — Badge input triggers Magicline React state update (MUI React-native value setter + input/change dispatch)
-- [ ] **NFC-05** — Badge scanned while idle overlay visible is absorbed as dismiss, never leaks to customer field
-- [ ] **NFC-06** — Badge scan during product-search focus passes through to product-search, bypasses coalesce buffer
+**NFC requirements:** DESCOPED 2026-04-14 (quick 260414-eu9). NFC-01..06 are no longer part of v1.0 — member identification at the kiosk is not performed; the card terminal next to the kiosk handles payment. HID-wedge keystrokes still work: they land in the Magicline product-search input (focused on cash-register-ready) so staff can still scan product barcodes during a session. See `.planning/MILESTONES.md` Post-ship scope adjustment section for the full rationale.
 
 **Idle/lifecycle requirements (touchscreen + Task Manager required):**
 
@@ -185,7 +178,6 @@ No orphaned requirements. No ROADMAP requirements unclaimed by any plan.
 
 **Log spot-checks to validate in `%AppData%\Bee Strong POS\logs\main.log`:**
 
-- `badgeInput.commit: length=N` (length only — badge content must NEVER appear)
 - `idleTimer.state: IDLE -> OVERLAY_SHOWING reason=timeout`
 - `idleTimer.state: OVERLAY_SHOWING -> IDLE reason=dismissed`
 - `sessionReset.hardReset: reason=idle-expired count=1`
@@ -273,11 +265,11 @@ No orphaned requirements. No ROADMAP requirements unclaimed by any plan.
   4. Let the 10s countdown expire without tapping → overlay dismisses → brief splash → welcome layer reappears (welcome:show emitted by `sessionReset.js` welcome branch; Magicline view stays destroyed).
   5. Tap welcome again → fresh login → clean cash register (no cart bleed, no prior customer, no stale-session error page).
   6. **Repeat steps 2–5 FIVE times consecutively.** Expected: every cycle lands on a clean cash register; the "Kiosk muss neu gestartet werden" reset-loop error screen is NEVER shown (D-06 excludes welcome logouts from the 3-in-60s loop counter).
-  7. Optional (Deka reader connected): scan a staging badge while the welcome layer is visible → expect **no effect** (welcome only reacts to tap; badge-on-welcome is explicitly deferred to v1.1 per NFC-05 deferral / D-02).
+  7. ~~Optional (Deka reader connected): scan a staging badge while the welcome layer is visible → expect **no effect**~~ **N/A under NFC descope (2026-04-14):** the badge input path is removed entirely.
 
-  **Pass criteria:** 5/5 cycles clean, no error screens, cart never persists across cycles, countdown starts at 10, badge-on-welcome ignored.
+  **Pass criteria:** 5/5 cycles clean, no error screens, cart never persists across cycles, countdown starts at 10.
 
-**Total next-visit items added for Phase 6: 1** (this single consolidated welcome-loop row covers IDLE-01..05, AUTH-01..04, and NFC-05 in one walk-through — see 06-VERIFICATION.md Acceptance Matrix for the per-requirement mapping).
+**Total next-visit items added for Phase 6: 1** (this single consolidated welcome-loop row covers IDLE-01..05 and AUTH-01..04 in one walk-through — see 06-VERIFICATION.md Acceptance Matrix for the per-requirement mapping. NFC-05 facet DESCOPED 2026-04-14 with the rest of NFC-01..06).
 
 ### Gaps Summary
 

@@ -1,5 +1,9 @@
 # Phase 4 Verification: NFC Input, Idle & Session Lifecycle
 
+> ⚠️ **DESCOPED 2026-04-14 — NFC-01..06 no longer part of v1.0.**
+>
+> *Quick task `260414-eu9` descoped NFC member-badge identification from v1.0 post-ship. Magicline staff account would need member-lookup permissions the gym owner does not want to grant to the kiosk's headless account; a card terminal next to the kiosk handles payment via Magicline's "Jetzt verkaufen" → "Kartenzahlung" flow. The badge capture code (`src/main/badgeInput.js`), the `customer-search` injection path, and the 14-test unit suite have been removed. HID-wedge keystrokes still land in the Magicline product-search input (focused on cash-register-ready). **NFC-01 through NFC-06 in this document are historical only** — do not execute them on the next kiosk visit. IDLE-01..07 rows remain active. See `.planning/MILESTONES.md` "Post-ship scope adjustment (2026-04-14)" for the full rationale.*
+
 **Phase:** 04-nfc-input-idle-session-lifecycle
 **Plan:** 04-05 (acceptance)
 **Status:** human_needed — automated PASS, physical verification DEFERRED to next kiosk visit

@@ -28,20 +28,20 @@ progress:
 - **Phases:** 6 / 6 complete
 - **Plans:** 36 / 36 complete
 - **Progress:** [██████████] 100%
-- **Audit posture:** `tech_debt` (no critical blockers; 50 physical verification rows in next-kiosk-visit batch — all 42 requirements code-complete and automated-test-green, deferral is row-level only)
+- **Audit posture:** `tech_debt` (no critical blockers; 44 physical verification rows in next-kiosk-visit batch — 36 / 42 requirements code-complete and automated-test-green after NFC-01..06 descope on 2026-04-14, deferral is row-level only)
 
 For accomplishments, see `.planning/MILESTONES.md`.
 For full archive, see `.planning/milestones/v1.0-ROADMAP.md` and `v1.0-REQUIREMENTS.md`.
 
 ## Outstanding Field Work
 
-**Next kiosk visit batch (50 rows, all with automated backstops):**
+**Next kiosk visit batch (44 rows, all with automated backstops):**
 
 - Phase 1: 5 rows — fresh-boot visual, splash permanence, double-launch race, prod-sim chord test, on-device runbook walk-through
 - Phase 3: 1 row — TabTip manual-button re-verify on actual kiosk terminal
-- Phase 4: 13 rows — NFC-01..06 + IDLE-01..07 (IDLE-05 must run LAST, destructive). Several IDLE rows are subsumed by the Phase 6 welcome-loop walk; see `docs/runbook/v1.0-KIOSK-VISIT.md`.
+- Phase 4: 7 rows — IDLE-01..07 (IDLE-05 must run LAST, destructive). NFC-01..06 **DESCOPED 2026-04-14** (quick 260414-eu9). Several IDLE rows are subsumed by the Phase 6 welcome-loop walk; see `docs/runbook/v1.0-KIOSK-VISIT.md`.
 - Phase 5: 30 rows — P5-01..P5-30 covering admin hotkey + PIN + lockout, RDP log spot-checks, auto-update + safe window, rollback drill, branded polish (P5-21..P5-24 rollback drill must run LAST)
-- Phase 6: 1 row — 5-cycle welcome-loop smoke check (covers IDLE-01..05, AUTH-01..04, NFC-05 in one walk)
+- Phase 6: 1 row — 5-cycle welcome-loop smoke check (covers IDLE-01..05, AUTH-01..04 in one walk; NFC-05 facet N/A under descope)
 
 Field guide: `docs/runbook/v1.0-KIOSK-VISIT.md`. Authoritative per-requirement specs in each phase's VERIFICATION.md, consolidated under `.planning/phases/01-locked-down-shell-os-hardening/01-VERIFICATION.md` "Human Verification Required (Next Kiosk Visit — consolidated batch)".
 

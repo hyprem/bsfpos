@@ -3,9 +3,9 @@
 
 **Bee Strong POS Kiosk**
 
-A self-service POS kiosk app for Bee Strong Fitness gym. It runs on a single Windows-based POS terminal and wraps the Magicline cloud cash register web UI in a locked-down Electron shell, so gym members can buy products themselves by scanning their NFC badge — using Magicline's existing web interface as the backend without any custom POS logic of our own.
+A self-service POS kiosk app for Bee Strong Fitness gym. It runs on a single Windows-based POS terminal and wraps the Magicline cloud cash register web UI in a locked-down Electron shell, so gym members can buy products themselves — using Magicline's existing web interface as the backend without any custom POS logic of our own.
 
-**Core Value:** A gym member can walk up, scan their badge, have a product scanned (or self-selected), pay, and walk away — without any staff interaction and without ever seeing or being able to break out of the locked Magicline cash register page.
+**Core Value:** A gym member can walk up, scan or self-select a product, pay at the card terminal next to the kiosk, and walk away — without any staff interaction and without ever seeing or being able to break out of the locked Magicline cash register page.
 
 ### Constraints
 

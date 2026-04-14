@@ -2,11 +2,11 @@
 
 ## What This Is
 
-A self-service POS kiosk app for Bee Strong Fitness gym. It runs on a single Windows-based POS terminal and wraps the Magicline cloud cash register web UI in a locked-down Electron shell, so gym members can buy products themselves by scanning their NFC badge — using Magicline's existing web interface as the backend without any custom POS logic of our own.
+A self-service POS kiosk app for Bee Strong Fitness gym. It runs on a single Windows-based POS terminal and wraps the Magicline cloud cash register web UI in a locked-down Electron shell, so gym members can buy products themselves — using Magicline's existing web interface as the backend without any custom POS logic of our own.
 
 ## Core Value
 
-A gym member can walk up, scan their badge, have a product scanned (or self-selected), pay, and walk away — without any staff interaction and without ever seeing or being able to break out of the locked Magicline cash register page.
+A gym member can walk up, scan or self-select a product, pay at the card terminal next to the kiosk, and walk away — without any staff interaction and without ever seeing or being able to break out of the locked Magicline cash register page.
 
 ## Current State
 
@@ -90,6 +90,7 @@ To be defined. Run `/gsd-new-milestone` to start the next version. Likely candid
 | NFC reader as USB HID keyboard wedge, no Deka SDK | Confirmed working in prototype; SDK adds platform coupling for zero benefit | — Pending |
 | Local log files only, no remote crash reporting | Single device, RDP available, no need for Sentry infra/cost | — Pending |
 | Branded overlays only; Magicline content area unchanged | Restyling Magicline content compounds the fragile-CSS problem on every Magicline update | — Pending |
+| Drop NFC member identification from v1.0 (post-ship adjustment 2026-04-14) | Magicline staff account would need member-lookup permissions we don't want to grant. Card terminal next to kiosk handles all payment via Magicline's Jetzt verkaufen → Kartenzahlung flow. | Descoped — v1.1 may revisit |
 
 ## Evolution
 
