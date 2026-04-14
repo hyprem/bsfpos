@@ -1,8 +1,10 @@
 # Phase 07 Verification — Locale Hardening & Splash Auto-Selection Race
 
 **Phase:** 07-locale-hardening-splash-auto-selection-race
-**Status:** Pending kiosk visit
+**Status:** Code complete — live-kiosk UAT deferred
 **Requirements:** LOCALE-01, SPLASH-01
+
+> **Deferral note (2026-04-14):** Kiosk will continue running Windows in German (production default). L1 (English-Windows locale proof) is not needed for current deployment. L2–R2 behavioural checks deferred to the next scheduled kiosk maintenance visit. Tracked in `07-HUMAN-UAT.md` so they surface in `/gsd-progress` and `/gsd-audit-uat`.
 
 ## Automated verification (runs on every CI / local `node --test`)
 
