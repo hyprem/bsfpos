@@ -5,7 +5,16 @@
 // lock, and globalShortcut registrations are added by plan 03 (REPLACES the
 // ORCHESTRATION block below — do NOT move createMainWindow).
 
-const { app, BrowserWindow, Menu, globalShortcut, ipcMain, safeStorage, shell } = require('electron');
+const { app, BrowserWindow, Menu, globalShortcut, ipcMain, safeStorage, shell, session } = require('electron');
+
+// Phase 07 LOCALE-01 (belt-and-suspenders layer 1 of 2):
+// Force Chromium to de-DE BEFORE app.whenReady(). Electron historical issues
+// #17995 / #26185 show that appendSwitch('lang', ...) MUST run at top-of-file,
+// not inside the whenReady handler, or it silently no-ops. This affects
+// navigator.language, app.getLocale(), and default Accept-Language on document
+// loads. Layer 2 is the webRequest header override below, which catches the
+// cases where the --lang switch has historically been flaky for HTTP headers.
+app.commandLine.appendSwitch('lang', 'de-DE');
 const path = require('path');
 const child_process = require('child_process');
 const log = require('./logger');
@@ -366,6 +375,31 @@ app.whenReady().then(() => {
       // Phase 4 (D-07): idleTimer needs the host wc so it can send
       // 'show-idle-overlay' / 'hide-idle-overlay' IPCs to host.html.
       require('./idleTimer').init(mainWindow);
+
+      // Phase 07 LOCALE-01 (belt-and-suspenders layer 2 of 2):
+      // Force Accept-Language on every request issued by the Magicline
+      // partition. Registered HERE (inside whenReady, before welcome:tap is
+      // ever dispatched) so the FIRST document request from createMagiclineView
+      // already carries the German header — otherwise the Magicline SPA may
+      // cache an English locale decision in localStorage for persist:magicline.
+      // See 07-RESEARCH.md §2 and §9 item 1.
+      try {
+        const magicSession = session.fromPartition('persist:magicline');
+        magicSession.webRequest.onBeforeSendHeaders((details, callback) => {
+          try {
+            details.requestHeaders['Accept-Language'] = 'de-DE,de;q=0.9';
+          } catch (_) { /* swallow — never drop the request */ }
+          callback({ requestHeaders: details.requestHeaders });
+        });
+        log.info('phase07.locale.accept-language-override-installed partition=persist:magicline');
+      } catch (err) {
+        log.error('phase07.locale.accept-language-override-failed: ' + (err && err.message));
+      }
+
+      // Phase 07 LOCALE-01: record effective locale for kiosk-visit greps.
+      try {
+        log.audit('startup.locale', { lang: app.getLocale() });
+      } catch (_) {}
 
       // Phase 5 D-29: post-update health watchdog (runs before authFlow.start so
       // the auth-state poller picks up CASH_REGISTER_READY when it arrives).
