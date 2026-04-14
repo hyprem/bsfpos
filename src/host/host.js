@@ -17,13 +17,62 @@
   // =================================================================
   // Phase 1 — Splash
   // =================================================================
+
+  // Phase 07 SPLASH-01 — welcome-path splash gate state.
+  // splashPendingMode is true only between a welcome:tap and the subsequent
+  // splash:hide-final OR the 5500 ms safety timer firing OR any splash:hide
+  // (which acts as a defensive force-clear). The 5500 ms budget gives
+  // inject.js's 4800 ms chain worst case 700 ms of drain headroom through
+  // console-message → ipcMain → webContents.send (see 07-RESEARCH.md §9#6).
+  var splashPendingMode = false;
+  var splashSafetyTimer = null;
+  var SPLASH_SAFETY_TIMEOUT_MS = 5500;
+
   function hideSplash() {
+    // Defensive clear: whether this fires on cold-boot, idle-recovery, or
+    // as the fallback of the 5500 ms safety timeout, always leave the
+    // pending state clean so the next welcome:tap starts fresh.
+    if (splashSafetyTimer) {
+      try { clearTimeout(splashSafetyTimer); } catch (_) {}
+      splashSafetyTimer = null;
+    }
+    splashPendingMode = false;
     var el = document.getElementById('splash');
-    if (el) el.style.display = 'none';
+    if (el) {
+      el.classList.remove('auto-select-pending');
+      el.style.display = 'none';
+    }
   }
   function showSplash() {
     var el = document.getElementById('splash');
-    if (el) el.style.display = 'flex';
+    if (el) {
+      el.classList.remove('auto-select-pending');
+      el.style.display = 'flex';
+    }
+    // Do NOT clear splashPendingMode here — welcome:tap sends splash:show
+    // BEFORE the subsequent enterSplashPendingMode() call below, so clearing
+    // here would stomp the pending state we're about to set.
+  }
+
+  function enterSplashPendingMode() {
+    if (splashPendingMode) return; // re-entry guard
+    splashPendingMode = true;
+    var el = document.getElementById('splash');
+    if (el) el.classList.add('auto-select-pending');
+    splashSafetyTimer = setTimeout(function () {
+      // Safety fallback — the auto-select chain has not emitted a sentinel
+      // within 5500 ms. Hide the splash anyway so the kiosk never sticks.
+      try { console.warn('[BSK] splash safety timeout — auto-select did not emit in 5500ms'); } catch (_) {}
+      splashSafetyTimer = null;
+      hideSplash();
+    }, SPLASH_SAFETY_TIMEOUT_MS);
+  }
+
+  function hideSplashFinal(payload) {
+    // payload: { degraded: bool } — currently unused by host (audit log has
+    // already been written on the main side); accept for future use.
+    try { void payload; } catch (_) {}
+    hideSplash(); // clears timer + pending class + display:none
   }
 
   // =================================================================
@@ -47,6 +96,11 @@
     // do not double-fire. Main owns the state transition (hide welcome →
     // show splash/loading → create Magicline view → authFlow.start).
     if (ev && ev.stopPropagation) ev.stopPropagation();
+    // Enter pending mode BEFORE notifying main. The subsequent splash:show
+    // IPC (sent from main in response to welcome:tap) goes through the
+    // showSplash handler, which preserves the pending class via the
+    // re-application below.
+    enterSplashPendingMode();
     try {
       if (window.kiosk && window.kiosk.notifyWelcomeTap) {
         window.kiosk.notifyWelcomeTap();
@@ -773,7 +827,20 @@
   // IPC subscriptions
   if (window.kiosk) {
     if (window.kiosk.onHideSplash)           window.kiosk.onHideSplash(hideSplash);
-    if (window.kiosk.onShowSplash)           window.kiosk.onShowSplash(showSplash);
+    if (window.kiosk.onShowSplash) {
+      window.kiosk.onShowSplash(function () {
+        showSplash();
+        if (splashPendingMode) {
+          var el = document.getElementById('splash');
+          if (el) el.classList.add('auto-select-pending');
+        }
+      });
+    }
+    // Phase 07 SPLASH-01 — welcome-path-only final hide (gated by the auto-select
+    // click chain's terminal sentinel, forwarded by main only while welcomeTapPending).
+    if (window.kiosk.onHideSplashFinal) {
+      window.kiosk.onHideSplashFinal(hideSplashFinal);
+    }
     if (window.kiosk.onShowMagiclineError)   window.kiosk.onShowMagiclineError(showMagiclineError);
     if (window.kiosk.onHideMagiclineError)   window.kiosk.onHideMagiclineError(hideMagiclineError);
     if (window.kiosk.onShowCredentialsOverlay) window.kiosk.onShowCredentialsOverlay(showCredentialsOverlay);
