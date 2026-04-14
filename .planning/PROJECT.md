@@ -12,9 +12,25 @@ A gym member can walk up, scan or self-select a product, pay at the card termina
 
 **v1.0 MVP shipped 2026-04-14.** 6 phases, 36 plans, 42/42 requirements closed (all code-complete and automated-test-green). Audit posture: `tech_debt` — no critical blockers, 50 row-level physical verification checks consolidated into the next-kiosk-visit batch (`.planning/phases/01-locked-down-shell-os-hardening/01-VERIFICATION.md`); deferral is row-level only, not requirement-level. Field guide: `docs/runbook/v1.0-KIOSK-VISIT.md`. Detailed accomplishments: see `.planning/MILESTONES.md`. Full archive: `.planning/milestones/v1.0-ROADMAP.md` + `v1.0-REQUIREMENTS.md`.
 
-## Next Milestone Goals
+## Current Milestone: v1.1 Field-Operations Polish
 
-To be defined. Run `/gsd-new-milestone` to start the next version. Likely candidates parked from v1.0 deferrals: badge-scan-on-welcome shortcut, attract loop animation, configurable idle timeouts, OPS-* observability surfaces.
+**Goal:** Mature the v1.0 kiosk into a hands-off, unattended deployment by closing the small UX gaps and operational bugs surfaced during real-hardware testing on 2026-04-14.
+
+**Target features:**
+- Lock Magicline UI to de-DE regardless of Windows display language
+- Keep splash visible until register auto-selection completes (prevent customer interference)
+- Admin POS open/close toggle gating updates to a daytime window
+- Close-admin-menu button (Zurück / X — non-destructive dismiss)
+- Fix Kasse nachladen wedging the kiosk on splash from welcome state
+- Post-sale "Vielen Dank" overlay + print interception + auto-logout to welcome
+- Fix Anmeldedaten ändern showing first-run mode with editable PIN fields
+
+**Out of scope for v1.1 (deferred to v1.2+):**
+- Reintroduce NFC member identification — requires fresh permission/identification design
+- Receipt PDF archiving for accounting (depends on print interception landing first)
+- Items deferred from v1.0 visit pending RustDesk install (IDLE-05/07 physical, log RDP spot-checks, P5-21..P5-24 rollback drill)
+
+**Theme:** All 7 v1.1 features were captured as todos during the 2026-04-14 hardware visit (`.planning/todos/pending/`). No new ambition — the goal is a mature, validated, hands-off kiosk before any new feature work.
 
 ## Requirements
 
@@ -28,7 +44,7 @@ To be defined. Run `/gsd-new-milestone` to start the next version. Likely candid
 
 <!-- Current scope. Building toward these. -->
 
-(None — awaiting next milestone definition.)
+- [ ] **v1.1 Field-Operations Polish** — see "Current Milestone" above. 7 features bundled from the 2026-04-14 hardware-visit todos. REQ-IDs assigned during the requirements phase of `/gsd-new-milestone`.
 
 ### Out of Scope
 
@@ -110,4 +126,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-14 after v1.0 milestone archival*
+*Last updated: 2026-04-14 — v1.1 milestone started (Field-Operations Polish)*

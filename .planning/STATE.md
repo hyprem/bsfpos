@@ -1,37 +1,36 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: shipped
-last_updated: "2026-04-14T00:00:00.000Z"
+milestone: v1.1
+milestone_name: Field-Operations Polish
+status: defining_requirements
+last_updated: "2026-04-14T11:30:00.000Z"
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 36
-  completed_plans: 36
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State: Bee Strong POS Kiosk
 
-**Last updated:** 2026-04-14 (v1.0 archived)
+**Last updated:** 2026-04-14 (v1.1 milestone started — defining requirements)
 
 ## Project Reference
 
 **Core value:** A gym member can walk up, scan or self-select a product, pay at the card terminal next to the kiosk, and walk away — without staff interaction and without being able to break out of the locked Magicline cash register page. (NFC member identification descoped 2026-04-14, see MILESTONES.md.)
 
-**Current focus:** v1.0 shipped — awaiting next milestone definition (`/gsd-new-milestone`).
+**Current focus:** v1.1 Field-Operations Polish — defining requirements.
 
 ## Current Position
 
-- **Milestone:** v1.0 — SHIPPED 2026-04-14
-- **Phases:** 6 / 6 complete
-- **Plans:** 36 / 36 complete
-- **Progress:** [██████████] 100%
-- **Audit posture:** `tech_debt` (no critical blockers; 44 physical verification rows in next-kiosk-visit batch — 36 / 42 requirements code-complete and automated-test-green after NFC-01..06 descope on 2026-04-14, deferral is row-level only)
+- **Milestone:** v1.1 Field-Operations Polish — STARTED 2026-04-14
+- **Status:** Defining requirements
+- **Phase:** Not started (gathering requirements from 7 v1.1 todos captured during 2026-04-14 hardware visit)
+- **Plan:** —
+- **Last activity:** 2026-04-14 — v1.1 milestone started
 
-For accomplishments, see `.planning/MILESTONES.md`.
-For full archive, see `.planning/milestones/v1.0-ROADMAP.md` and `v1.0-REQUIREMENTS.md`.
+**v1.0 (SHIPPED 2026-04-14):** 6 phases, 36 plans, 36 / 42 effective requirements (NFC-01..06 descoped post-ship). For accomplishments, see `.planning/MILESTONES.md`. For full archive, see `.planning/milestones/v1.0-ROADMAP.md` and `v1.0-REQUIREMENTS.md`.
 
 ## Outstanding Field Work
 
