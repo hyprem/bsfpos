@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Field-Operations Polish
 status: executing
-last_updated: "2026-04-14T13:10:11.076Z"
+last_updated: "2026-04-14T13:14:19.367Z"
 last_activity: 2026-04-14
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 6
-  completed_plans: 3
-  percent: 50
+  completed_plans: 4
+  percent: 67
 ---
 
 # Project State: Bee Strong POS Kiosk
 
-**Last updated:** 2026-04-14 (07-03 complete — sentinel bridge infrastructure shipped)
+**Last updated:** 2026-04-14 (07-04 complete — bounded state machine detectAndSelectRegister + LOCALE_STRINGS wiring)
 
 ## Project Reference
 
@@ -29,9 +29,9 @@ Phase: 07 (locale-hardening-splash-auto-selection-race) — EXECUTING
 Plan: 4 of 6
 
 - **Milestone:** v1.1 Field-Operations Polish — STARTED 2026-04-14
-- **Status:** Executing Phase 07 — 07-01, 07-02, and 07-03 complete
-- **Phase:** 07 in progress (3 of 6 plans done)
-- **Plan:** 07-03 complete; next is 07-04
+- **Status:** Executing Phase 07 — 07-01, 07-02, 07-03, and 07-04 complete
+- **Phase:** 07 in progress (4 of 6 plans done)
+- **Plan:** 07-04 complete; next is 07-05
 - **Last activity:** 2026-04-14
 
 ## Key Decisions (Phase 07)
@@ -41,6 +41,7 @@ Plan: 4 of 6
 - **D-07-03:** Header key uses exact casing 'Accept-Language' (not lowercase) to avoid duplicate-header issue per 07-RESEARCH.md §2
 - **D-07-04:** BSK_REGISTER_SELECTED_DEGRADED checked before plain BSK_REGISTER_SELECTED (else-if) to prevent substring double-fire (T-07-07)
 - **D-07-05:** welcomeTapPending flag gates splash:hide-final forward — cold-boot/idle-recovery paths unaffected by the new sentinel (T-07-06)
+- **D-07-06:** detectAndSelectRegister replaced with bounded state machine — 1200 ms per-step timeout, 4800 ms worst-case, all German strings via LOCALE_STRINGS.de, chainFinish() always emits both markRegisterReady + emitAutoSelectResult on every terminal outcome
 
 **Phase numbering note:** v1.1 continues from phase 07 because v1.0 ended at phase 06 and the v1.0 phase directories (`01-..` through `06-..`) are still present in `.planning/phases/` — v1.0 was reconciled manually rather than via `/gsd-complete-milestone`. Do NOT pass `--reset-phase-numbers` to any GSD command on this milestone.
 
@@ -50,7 +51,7 @@ Plan: 4 of 6
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 07 | Locale Hardening & Splash Race | LOCALE-01, SPLASH-01 | In progress (3/6 plans) |
+| 07 | Locale Hardening & Splash Race | LOCALE-01, SPLASH-01 | In progress (4/6 plans) |
 | 08 | Admin Menu Polish & Reload Fix | ADMIN-01, ADMIN-03, FIX-01 | Not started |
 | 09 | POS Open/Close & Update Gating | ADMIN-02 | Not started |
 | 10 | Post-Sale Flow & Print Interception | SALE-01 | Not started |
