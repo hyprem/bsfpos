@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-last_updated: "2026-04-12T13:01:04.651Z"
+status: executing
+last_updated: "2026-04-13T20:16:11.926Z"
 progress:
-  total_phases: 5
+  total_phases: 6
   completed_phases: 5
-  total_plans: 32
+  total_plans: 36
   completed_plans: 32
-  percent: 100
+  percent: 89
 ---
 
 # Project State: Bee Strong POS Kiosk
@@ -20,12 +20,12 @@ progress:
 
 **Core value:** A gym member can walk up, scan their badge, have a product scanned (or self-selected), pay, and walk away — without staff interaction and without being able to break out of the locked Magicline cash register page.
 
-**Current focus:** Phase 05 — admin-exit-logging-auto-update-branded-polish
+**Current focus:** Phase 06 — welcome-screen-lifecycle-redesign
 
 ## Current Position
 
-Phase: 05
-Plan: Not started
+Phase: 06 (welcome-screen-lifecycle-redesign) — EXECUTING
+Plan: 1 of 4
 
 - **Milestone:** v1.0
 - **Phase 01** (locked-down-shell-os-hardening): ✓ COMPLETE (6/6 plans; visual debt in next-visit batch)
@@ -33,7 +33,7 @@ Plan: Not started
 - **Phase 03** (credentials-auto-login-state-machine): ✓ COMPLETE (10/10 plans; TabTip soft re-check in next-visit batch)
 - **Phase 04** (nfc-input-idle-session-lifecycle): ✓ COMPLETE (5/5 plans; 13 physical rows deferred to next-visit batch)
 - **Phase 05** (admin-exit-logging-auto-update-branded-polish): ✓ COMPLETE (6/6 plans)
-- **Status:** v1.0 milestone complete
+- **Status:** Executing Phase 06
 - **Progress:** [██████████] 100%
 - **Last completed:** Plan 05-06 (log migration + verification) at 2026-04-10 — commits a7604de, 93b2f7e, 10b9a5f. 265/265 tests green. ADMIN-04 / ADMIN-05 / BRAND-02 closed.
 
@@ -108,12 +108,14 @@ Hardware testing session on new Win 11 Pro kiosk PC (replaced China OEM). Built 
 5. Tests: added two new cases covering `BOOTING + timer-expired(boot)` both paths (self-heal and fallthrough). 268/269 green (1 pre-existing sessionReset localstorage test still fails — unrelated, uncommitted change from earlier bug fix #9).
 
 **The diagnosis journey (for posterity, so it's not repeated):**
+
 - **Symptom 1:** "Anmeldedaten nicht verfügbar" after idle reset. Initially thought it was decrypt-failed → wasn't. Log showed `LOGIN_SUBMITTED → post-submit-watchdog expired → CREDENTIALS_UNAVAILABLE`, meaning credentials submitted fine but `cash-register-ready` never fired.
 - **Symptom 2:** In dev mode, the reset cycle worked reliably. Without dev mode, it failed. Hypothesised Chromium throttling of the `visibility: hidden` view (DevTools attachment disables throttling) → pushed fix #3 above.
 - **Symptom 3:** The throttling fix didn't help. User eventually saw the actual Magicline page in dev mode: *"Du bist nicht berechtigt dich anzumelden oder dein Zugang ist abgelaufen. Bitte versuche die Anmeldung erneut."* No reCAPTCHA, just an "expired session" error page with a retry prompt — which inject.js's login-form selectors don't match, so `login-detected` never fires for that DOM. The real root cause: **preserved cookies from bug fix #9 were stale server-side, Magicline showed a retry page instead of a clean login form, our inject script had no pattern to detect it**.
 - **Fix:** self-heal (#4) — clear the partition on boot watchdog expiry and reload. Two test cycles confirmed it works; the third cycle revealed the localStorage routing bug (Magicline's SPA landed on `#/customermanagement/search` because localStorage remembered the last view) → final tweak: self-heal path now clears localStorage too (the normal idle reset path still preserves it for the register selection optimization).
 
 **Kiosk testing status when session paused:**
+
 - Second run survived successfully
 - Third run hit the self-heal + landed on wrong Magicline view (localStorage routing) → fix pushed in new build (`dist2\Bee Strong POS-Setup-0.1.0.exe`)
 - **NEXT SESSION:** flash the latest `dist2` installer, clear the Partitions folder manually one more time for a clean baseline, let it run through multiple reset cycles, confirm self-heal lands on `#/cash-register` not `#/customermanagement/search`.
@@ -121,6 +123,7 @@ Hardware testing session on new Win 11 Pro kiosk PC (replaced China OEM). Built 
 Found and fixed 9 bugs during physical kiosk testing — **all the source-code changes are being committed at the end of this session** (previously all uncommitted across 9 source files + 1 test file). 268/269 tests green on dev machine (1 pre-existing sessionReset localstorage test failure from bug fix #9).
 
 **Bugs fixed:**
+
 1. Splash blocking credentials input (host.js)
 2. Magicline WebContentsView stealing all input from host overlays — added setMagiclineViewVisible() (magiclineView.js, authFlow.js, idleTimer.js, main.js)
 3. Auto-login not firing after idle reset — CASH_REGISTER_READY now handles login-detected (authFlow.js)
@@ -143,6 +146,7 @@ Found and fixed 9 bugs during physical kiosk testing — **all the source-code c
    Get-Process "Bee Strong POS" -ErrorAction SilentlyContinue | Stop-Process -Force
    Remove-Item -Recurse -Force "C:\Users\bsfkiosk\AppData\Roaming\bee-strong-pos\Partitions" -ErrorAction SilentlyContinue
    ```
+
 3. **Let it cycle through multiple idle resets** (≥3) without intervention. Watch for:
    - Normal path: `cash-register-ready` within 1s of login-submitted
    - Self-heal path: `boot-watchdog-expired-self-heal` → `magicline.self-heal: cookies + localStorage cleared, reloading` → clean login → `cash-register-ready`
