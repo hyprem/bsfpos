@@ -258,91 +258,155 @@
   }
   window.__bskiosk_detectLogin = detectLogin;
 
-  // --- Register auto-selection ---------------------------------------------
-  // After login, Magicline may show "Verkauf nicht möglich. Bitte Kasse
-  // auswählen." instead of going directly to #/cash-register. This happens
-  // after every session reset because clearStorageData wipes the register
-  // cookie. Auto-select "Self-Checkout" to complete the post-login flow.
-  var registerSelectInProgress = false;
-  function detectAndSelectRegister() {
-    if (registerSelectInProgress) return;
-    try {
-      var buttons = document.querySelectorAll('[data-role="button"]');
-      var kasseBtn = null;
-      for (var i = 0; i < buttons.length; i++) {
-        if (buttons[i].textContent.trim() === 'Kasse auswählen') {
-          kasseBtn = buttons[i];
-          break;
-        }
-      }
-      if (!kasseBtn) return;
-      registerSelectInProgress = true;
-      console.log('[BSK] register-select: found Kasse auswählen, clicking');
+  // --- Register auto-selection (Phase 07 SPLASH-01 / LOCALE-01) ------------
+  // State machine replaces the pre-Phase-07 nested setTimeout chain. Each step
+  // has a 1200 ms DOM-appearance budget; total worst-case wall time 4 steps ×
+  // 1200 ms = 4800 ms, which stays under the 5500 ms host-side safety timeout
+  // owned by Plan 05 (07-RESEARCH.md §7, §9 item 6). Every terminal state
+  // routes through markRegisterReady() + emitAutoSelectResult() so the splash
+  // gate in Plan 05 always clears.
+  var CHAIN_IDLE = 'idle';
+  var CHAIN_STEP1 = 'step1-kasse';
+  var CHAIN_STEP2 = 'step2-popup';
+  var CHAIN_STEP3 = 'step3-self-checkout';
+  var CHAIN_STEP4 = 'step4-speichern';
+  var CHAIN_DONE = 'done';
 
-      // Step 1: click "Kasse auswählen"
-      kasseBtn.click();
+  var chainState = CHAIN_IDLE;
+  var chainStepStartedAt = 0;
+  var CHAIN_STEP_TIMEOUT_MS = 1200;
+  var chainFallbackTimer = null;
+  var alreadyOnRegisterEmitted = false;
 
-      // Step 2: click the autocomplete input to open the dropdown
-      setTimeout(function () {
-        try {
-          // MUI Autocomplete opens on the popup-indicator (arrow) button click,
-          // or on input focus + ArrowDown. Try the popup indicator first,
-          // fall back to focus + ArrowDown on the input.
-          var popupBtn = document.querySelector('.MuiAutocomplete-popupIndicator');
-          if (popupBtn) {
-            console.log('[BSK] register-select: clicking popup indicator');
-            popupBtn.click();
-          } else {
-            var autoInput = document.querySelector('.MuiAutocomplete-root input');
-            if (autoInput) {
-              console.log('[BSK] register-select: focusing input + ArrowDown');
-              autoInput.focus();
-              autoInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
-            } else {
-              console.log('[BSK] register-select: no popup indicator or input found');
-            }
-          }
-        } catch (e) { console.log('[BSK] register-select step 2 error: ' + e); }
-
-        // Step 3: wait for options to render, select "Self-Checkout"
-        setTimeout(function () {
-          try {
-            var options = document.querySelectorAll('[role="option"]');
-            console.log('[BSK] register-select: found ' + options.length + ' options');
-            var target = null;
-            for (var j = 0; j < options.length; j++) {
-              if (options[j].textContent.trim() === 'Self-Checkout') {
-                target = options[j];
-                break;
-              }
-            }
-            if (target) {
-              console.log('[BSK] register-select: clicking Self-Checkout');
-              target.click();
-              // Step 4: wait for selection to settle, click "Speichern"
-              setTimeout(function () {
-                try {
-                  var submitBtns = document.querySelectorAll('[type="submit"][data-role="button"]');
-                  for (var k = 0; k < submitBtns.length; k++) {
-                    if (submitBtns[k].textContent.trim() === 'Speichern') {
-                      submitBtns[k].click();
-                      break;
-                    }
-                  }
-                } catch (e) { /* swallow */ }
-                registerSelectInProgress = false;
-              }, 500);
-            } else {
-              registerSelectInProgress = false;
-            }
-          } catch (e) {
-            registerSelectInProgress = false;
-          }
-        }, 500);
-      }, 500);
-    } catch (e) {
-      registerSelectInProgress = false;
+  function chainFinish(result, step, degraded) {
+    if (chainState === CHAIN_DONE) return;
+    chainState = CHAIN_DONE;
+    try { emitAutoSelectResult(result, step); } catch (_) {}
+    try { markRegisterReady({ degraded: !!degraded }); } catch (_) {}
+    if (chainFallbackTimer) {
+      try { clearInterval(chainFallbackTimer); } catch (_) {}
+      chainFallbackTimer = null;
     }
+  }
+
+  function findKasseBtn() {
+    var buttons = document.querySelectorAll('[data-role="button"]');
+    for (var i = 0; i < buttons.length; i++) {
+      if (buttons[i].textContent && buttons[i].textContent.trim() === LOCALE_STRINGS.de.KASSE_AUSWAEHLEN) {
+        return buttons[i];
+      }
+    }
+    return null;
+  }
+
+  function findPopupIndicator() {
+    // MUI Autocomplete exposes a popup indicator button. Stable class across
+    // MUI versions used by Magicline to date; if this drifts the Step 2
+    // timeout will fire and the chain will degrade gracefully.
+    return document.querySelector('.MuiAutocomplete-popupIndicator');
+  }
+
+  function findSelfCheckoutOption() {
+    var options = document.querySelectorAll('[role="option"]');
+    for (var j = 0; j < options.length; j++) {
+      if (options[j].textContent && options[j].textContent.trim() === LOCALE_STRINGS.de.SELF_CHECKOUT_OPTION) {
+        return options[j];
+      }
+    }
+    return null;
+  }
+
+  function findSpeichernBtn() {
+    var submitBtns = document.querySelectorAll('[type="submit"][data-role="button"]');
+    for (var k = 0; k < submitBtns.length; k++) {
+      if (submitBtns[k].textContent && submitBtns[k].textContent.trim() === LOCALE_STRINGS.de.SPEICHERN) {
+        return submitBtns[k];
+      }
+    }
+    return null;
+  }
+
+  function chainAdvanceTo(nextState) {
+    chainState = nextState;
+    chainStepStartedAt = 0; // reset per-step timer on transition
+  }
+
+  function chainTick() {
+    if (chainState === CHAIN_DONE) return;
+    var now = Date.now();
+    if (chainStepStartedAt === 0) chainStepStartedAt = now;
+
+    if (chainState === CHAIN_IDLE) {
+      // Only enter the chain when the Kasse auswählen page is actually
+      // rendered. If we're on #/cash-register with the product search input
+      // present (i.e. detectReady has fired) but no Kasse button, we are on
+      // the already-on-register branch — emit once and exit.
+      var kasse = findKasseBtn();
+      if (kasse) {
+        try { kasse.click(); } catch (_) {}
+        try { console.log('[BSK] register-select: step1 clicked'); } catch (_) {}
+        chainAdvanceTo(CHAIN_STEP2);
+        return;
+      }
+      // Already-on-register branch — only fire once per page, and only after
+      // detectReady has confirmed we are on the cash-register hash with the
+      // product search input present (see §6 and §9 item 4 of research).
+      if (!alreadyOnRegisterEmitted && readyEmitted) {
+        alreadyOnRegisterEmitted = true;
+        chainFinish('ok', 'already-on-register', false);
+      }
+      return;
+    }
+
+    if (chainState === CHAIN_STEP2) {
+      var popup = findPopupIndicator();
+      if (popup) {
+        try { popup.click(); } catch (_) {}
+        try { console.log('[BSK] register-select: step2 clicked'); } catch (_) {}
+        chainAdvanceTo(CHAIN_STEP3);
+        return;
+      }
+    } else if (chainState === CHAIN_STEP3) {
+      var opt = findSelfCheckoutOption();
+      if (opt) {
+        try { opt.click(); } catch (_) {}
+        try { console.log('[BSK] register-select: step3 clicked'); } catch (_) {}
+        chainAdvanceTo(CHAIN_STEP4);
+        return;
+      }
+    } else if (chainState === CHAIN_STEP4) {
+      var save = findSpeichernBtn();
+      if (save) {
+        try { save.click(); } catch (_) {}
+        try { console.log('[BSK] register-select: step4 clicked — success'); } catch (_) {}
+        chainFinish('ok', 'done', false);
+        return;
+      }
+    }
+
+    // Step did not advance — check per-step timeout
+    if (now - chainStepStartedAt > CHAIN_STEP_TIMEOUT_MS) {
+      try { console.log('[BSK] register-select: step timeout at ' + chainState); } catch (_) {}
+      chainFinish('fail', chainState, true);
+    }
+  }
+
+  function detectAndSelectRegister() {
+    // Tick from the rAF-debounced schedule(). Also ensure the fallback
+    // setInterval is running so we keep progressing when the Magicline DOM
+    // is quiet between synthetic clicks.
+    if (chainState !== CHAIN_DONE && !chainFallbackTimer) {
+      try {
+        chainFallbackTimer = setInterval(function () {
+          try { chainTick(); } catch (_) {}
+          if (chainState === CHAIN_DONE && chainFallbackTimer) {
+            try { clearInterval(chainFallbackTimer); } catch (_) {}
+            chainFallbackTimer = null;
+          }
+        }, 100);
+      } catch (_) {}
+    }
+    try { chainTick(); } catch (_) {}
   }
 
   // --- Phase 07 SPLASH-01 / LOCALE-01: sentinel bridge helpers -----------
