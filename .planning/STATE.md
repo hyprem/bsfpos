@@ -54,8 +54,9 @@ Run `/gsd-new-milestone` to define v1.1 (or whichever next version) — question
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260414-eu9 | Descope NFC member-badge identification from v1.0 | 2026-04-14 | cbc9b59 | [260414-eu9-descope-nfc-member-badge-identification-](./quick/260414-eu9-descope-nfc-member-badge-identification-/) |
+| 260414-iiv | Ship 0.1.3 patch — fix release asset filename mismatch + flip update window to 09:00–12:00 | 2026-04-14 | 34cb20a | [260414-iiv-ship-0-1-3-patch-fix-release-asset-filen](./quick/260414-iiv-ship-0-1-3-patch-fix-release-asset-filen/) |
 
-**Last activity:** 2026-04-14 — Completed quick task 260414-eu9: Descope NFC member-badge identification from v1.0
+**Last activity:** 2026-04-14 — Completed quick task 260414-iiv: 0.1.3 patch (artifact rename + maintenance window 09–12)
 
 ---
 *State initialized: 2026-04-08 · v1.0 archived: 2026-04-14 · NFC descoped: 2026-04-14*
