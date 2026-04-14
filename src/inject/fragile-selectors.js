@@ -48,16 +48,20 @@ var FRAGILE_SELECTORS = [
 // radius inside this single file (D-21).
 //
 // JETZT_VERKAUFEN_TEXT: German label on the primary "sell now" button inside
-// the cash-register <button data-role="button">. Used by inject.js Phase 4
-// post-sale clear (IDLE-06) to detect the click that ends a sale and schedule
-// the 3s customer-search clear.
+// the cash-register <button data-role="button">. Used by inject.js to detect
+// the click that ends a sale and emit the BSK_AUDIT_SALE_COMPLETED sentinel
+// (Phase 5 Plan 06 D-27).
 var JETZT_VERKAUFEN_TEXT = 'Jetzt verkaufen';
 
 var STABLE_SELECTORS = [
   { category: 'stable', selector: '[data-role="topbar"]',                      purpose: 'Topbar' },
   { category: 'stable', selector: '[data-role="global-search-button"]',        purpose: 'Global search button' },
   { category: 'stable', selector: '[data-role="categories"]',                  purpose: 'Category tree' },
-  { category: 'stable', selector: '[data-role="customer-search"]',             purpose: 'Customer search container' },
+  // NFC descope (2026-04-14, quick 260414-eu9): customer-search selector
+  // removed from the self-check list. The container remains hidden by
+  // inject.css (defense-in-depth) but the kiosk no longer depends on its
+  // presence, so a future Magicline rename of this data-role should not
+  // trigger a drift event.
   { category: 'stable', selector: '[data-role="toolbar"] [data-role="icon-button"]', purpose: 'Toolbar three-dot icon button' },
   // Phase 3 — login page selectors (D-05). page:'login' excludes them from
   // the cash-register-page self-check (they legitimately don't exist there).

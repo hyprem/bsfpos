@@ -317,13 +317,14 @@ app.whenReady().then(() => {
   // via the same attachLockdown export — see Pitfall 1 in RESEARCH.md.
   if (mainWindow) {
     attachLockdown(mainWindow.webContents);
-    // Phase 4 (D-01, D-02, research Pattern 1): two-attach pattern — badge
-    // input arbiter must see keystrokes on BOTH the host wc and the Magicline
-    // child wc. Lockdown first, badgeInput second (D-02).
-    const { attachBadgeInput } = require('./badgeInput');
-    attachBadgeInput(mainWindow.webContents);
+    // NFC descope (2026-04-14, quick 260414-eu9): badgeInput wiring removed.
+    // The HID reader now sends keystrokes directly into the Magicline
+    // product-search input (focused on cash-register-ready in magiclineView.js);
+    // no main-process buffering / arbiter is needed.
 
     // Phase 5 D-08: before-input-event fallback on host webContents
+    // (admin hotkey only — idle activity tracking lives in inject.js `activity`
+    // emitter, unrelated to this listener).
     mainWindow.webContents.on('before-input-event', (_event, input) => {
       if (input.type !== 'keyDown') return;
       const { canonical: canon } = require('./keyboardLockdown');
@@ -333,7 +334,7 @@ app.whenReady().then(() => {
     });
 
     // Phase 5 D-28 / Plan 06: mark the startup sequence as complete once the
-    // host wc has lockdown + badge input + admin-hotkey wiring attached.
+    // host wc has lockdown + admin-hotkey wiring attached.
     try { log.audit('startup.complete', {}); } catch (_) {}
   }
 

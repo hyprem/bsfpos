@@ -3,7 +3,8 @@
 // Phase 4 integration tests — cross-module wiring proof.
 //
 // These tests do NOT duplicate unit-level assertions (those live in the
-// individual Phase 4 suites: idleTimer, badgeInput, sessionReset, authFlow).
+// individual Phase 4 suites: idleTimer, sessionReset, authFlow).
+// NFC descope (2026-04-14, quick 260414-eu9): badgeInput module + suite deleted.
 // They exercise the CONTRACTS between modules that Plan 04-03 introduced:
 //   - authFlow reducer emits start-idle-timer side-effect on CASH_REGISTER_READY
 //   - magiclineView KNOWN_EVENT_TYPES whitelist contains Phase 4 entries

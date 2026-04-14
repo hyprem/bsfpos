@@ -23,7 +23,7 @@ const adminPinLockout   = read('src/main/adminPinLockout.js');
 const logger            = read('src/main/logger.js');
 const sessionReset      = read('src/main/sessionReset.js');
 const authFlow          = read('src/main/authFlow.js');
-const badgeInput        = read('src/main/badgeInput.js');
+// NFC descope (2026-04-14, quick 260414-eu9): src/main/badgeInput.js deleted.
 const hostHtml          = read('src/host/host.html');
 const hostCss           = read('src/host/host.css');
 const hostJs            = read('src/host/host.js');
@@ -60,8 +60,11 @@ test('ADMIN-04: Structured rotating logs + taxonomy events', () => {
   assert.match(logger, /log\.audit = function/);
   assert.match(logger, /archiveLogFn/);
   // Canonical taxonomy sampling — all 5 must appear somewhere under src/main/.
-  const events = ["'startup'", "'startup.complete'", "'auth.state'", "'idle.reset'", "'sale.completed'", "'badge.scanned'"];
-  const bundle = mainJs + sessionReset + authFlow + badgeInput;
+  // NFC descope (2026-04-14, quick 260414-eu9): 'badge.scanned' removed — no
+  // badge input path exists anymore. The redactor for the `badge` field is
+  // still tested in logger.audit.test.js as defense-in-depth.
+  const events = ["'startup'", "'startup.complete'", "'auth.state'", "'idle.reset'", "'sale.completed'"];
+  const bundle = mainJs + sessionReset + authFlow;
   for (const e of events) {
     assert.ok(bundle.includes(e), 'missing log.audit event: ' + e);
   }
@@ -76,7 +79,6 @@ test('ADMIN-05: 5-file rotation + redactor (no raw secrets in log.info/warn/erro
   // the main-process modules touched by Plan 06.
   const files = [
     'src/main/authFlow.js',
-    'src/main/badgeInput.js',
     'src/main/credentialsStore.js',
     'src/main/main.js',
     'src/main/autoUpdater.js',

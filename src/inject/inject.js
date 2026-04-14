@@ -98,14 +98,11 @@
         // console.log sentinel that magiclineView.js matches on the
         // console-message listener and relays as `audit-sale-completed`.
         try { console.log('BSK_AUDIT_SALE_COMPLETED'); } catch (e) { /* swallow */ }
-        setTimeout(function () {
-          try {
-            var input = document.querySelector('[data-role="customer-search"] input');
-            if (input && window.__bskiosk_setMuiValue) {
-              window.__bskiosk_setMuiValue(input, '');
-            }
-          } catch (err) { /* swallow */ }
-        }, 3000);
+        // NFC descope (2026-04-14, quick 260414-eu9): previously cleared the
+        // customer-search input 3s after sale to wipe the last badge ID.
+        // Member identification is no longer done at the kiosk, so there is
+        // nothing to clear. The customer-search container remains hidden via
+        // inject.css so members never see the field.
       }
     } catch (err) { /* swallow */ }
   });

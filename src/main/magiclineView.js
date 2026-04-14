@@ -195,12 +195,10 @@ function createMagiclineView(mainWindow, store) {
   // D-02: reuse Phase 1 lockdown on the child view's webContents.
   // attachLockdown is a no-op in dev mode per Phase 1 D-07.
   attachLockdown(magiclineView.webContents);
-  // Phase 4 (D-01, D-02, research Pattern 1): two-attach pattern mirror of
-  // attachLockdown — badge input arbiter must see keystrokes on both the host
-  // wc AND the Magicline child wc. Lockdown first, badgeInput second so the
-  // global-shortcut no-ops are installed before the keydown listener runs.
-  const { attachBadgeInput } = require('./badgeInput');
-  attachBadgeInput(magiclineView.webContents);
+  // NFC descope (2026-04-14, quick 260414-eu9): the two-attach badge input
+  // arbiter is gone. HID reader keystrokes now reach the Magicline
+  // product-search input directly because cash-register-ready focuses it
+  // (see handleInjectEvent branch below).
 
   // WR-01: re-attach Ctrl+Shift+F12 admin hotkey listener to the newly-created
   // child webContents. This must run on EVERY createMagiclineView invocation
@@ -444,6 +442,20 @@ function handleInjectEvent(evt, mainWindow) {
     try {
       mainWindow.webContents.send('hide-magicline-error');
     } catch (_) {}
+    // NFC descope (2026-04-14, quick 260414-eu9): focus the Magicline
+    // product-search input so HID-wedge keystrokes from the reader land
+    // there naturally (no main-process buffering). Per EMBED-06 the inner
+    // <input> is query-selectable even though its container is display:none
+    // for customer-search; product-search is visibly present on the cash
+    // register page. Idempotent — safe to call repeatedly.
+    try {
+      magiclineView.webContents.executeJavaScript(
+        '(function(){try{var el=document.querySelector(\'[data-role="product-search"] input\');if(el)el.focus();}catch(e){}})();',
+        true
+      ).catch((e) => log.warn('magicline.product-search.focus failed: ' + (e && e.message)));
+    } catch (e) {
+      log.warn('magicline.product-search.focus exec failed: ' + (e && e.message));
+    }
     return;
   }
 
@@ -472,23 +484,12 @@ function handleInjectEvent(evt, mainWindow) {
     return;
   }
 
-  // Phase 4 (D-06, D-09 #3): badge-input arbitration — product search focus
-  // toggles the badgeInput "staff product scan passthrough" flag so NFC scans
-  // hit the customer-search field except when staff is scanning a product.
-  if (type === 'product-search-focused') {
-    try {
-      require('./badgeInput').setProductSearchFocused(true);
-    } catch (e) {
-      log.error('magicline.badgeInput.setProductSearchFocused(true) failed: ' + (e && e.message));
-    }
-    return;
-  }
-  if (type === 'product-search-blurred') {
-    try {
-      require('./badgeInput').setProductSearchFocused(false);
-    } catch (e) {
-      log.error('magicline.badgeInput.setProductSearchFocused(false) failed: ' + (e && e.message));
-    }
+  // NFC descope (2026-04-14, quick 260414-eu9): product-search-focused /
+  // product-search-blurred events are still emitted by inject.js (cheap, no
+  // listener churn) but the kiosk no longer has a badge arbiter to notify,
+  // so we simply accept and drop them here. Keeping the whitelist entries
+  // avoids a "unknown event type" warning on every focus change.
+  if (type === 'product-search-focused' || type === 'product-search-blurred') {
     return;
   }
 
