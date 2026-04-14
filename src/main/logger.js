@@ -90,10 +90,13 @@ function redactValue(key, value) {
 }
 
 // --- Phase 5 D-25: log.audit helper -------------------------------------
-// Canonical taxonomy (D-28): startup, startup.complete, auth.state, auth.submit,
-// auth.failure, idle.reset, badge.scanned, sale.completed, update.check,
-// update.downloaded, update.install, update.failed, pin.verify, pin.lockout,
-// admin.open, admin.exit, crash.
+// Canonical taxonomy (D-28): startup, startup.complete,
+//   startup.locale,          ← NEW (Phase 07 LOCALE-01)
+//   auth.state, auth.submit,
+//   auth.failure, idle.reset, badge.scanned, sale.completed, update.check,
+//   update.downloaded, update.install, update.failed, pin.verify, pin.lockout,
+//   admin.open, admin.exit, crash,
+//   auto-select.result        ← NEW (Phase 07 LOCALE-01)
 //
 // Emits a stable `event=<name> k=v k=v at=<ISO>` line via log.info — every
 // existing call site using log.info/warn/error keeps working unchanged.
