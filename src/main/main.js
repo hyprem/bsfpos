@@ -150,6 +150,7 @@ function armUpdateGate(store, info) {
     },
     log: log,
     sessionResetModule: sessionResetMod,
+    getPosOpen: function() { return store.get('posOpen', true); },
   });
 }
 
@@ -220,6 +221,7 @@ function buildAdminDiagnostics(store) {
     lastResetAt: lastResetAt,
     updateStatus: updateStatus,
     patConfigured: !!store.get('githubUpdatePat'),
+    posOpen: store.get('posOpen', true),
   };
 }
 
@@ -542,6 +544,8 @@ app.whenReady().then(() => {
         try {
           mainWindow.webContents.send('splash:hide');
           mainWindow.webContents.send('welcome:show');
+          var posOpen = store.get('posOpen', true);
+          mainWindow.webContents.send('pos-state-changed', { posOpen: posOpen });
           log.info('phase6.cold-boot.welcome-shown');
         } catch (err) {
           log.error('phase6.cold-boot.welcome:show failed: ' + (err && err.message));
@@ -868,6 +872,16 @@ app.whenReady().then(() => {
               adminMenuOpen = false;
               try { mainWindow.webContents.send('hide-admin-menu'); } catch (_) {}
               return { ok: true, devMode: devModeActive };
+            }
+            case 'toggle-pos-open': {
+              var current = store.get('posOpen', true);
+              var next = !current;
+              store.set('posOpen', next);
+              log.audit('pos.state-changed', { open: next, reason: 'admin' });
+              try {
+                mainWindow.webContents.send('pos-state-changed', { posOpen: next });
+              } catch (_) {}
+              return { ok: true, posOpen: next };
             }
             case 'exit-to-windows': {
               // WR-03: canonical admin.exit event reserved for actual exit.

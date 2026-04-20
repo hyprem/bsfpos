@@ -177,6 +177,8 @@ async function hardReset({ reason, mode } = {}) {
       // recreates the view on 'welcome:tap' (Plan 06-03 wires the tap path).
       try {
         mainWindow.webContents.send('welcome:show');
+        var posOpen = store.get('posOpen', true);
+        mainWindow.webContents.send('pos-state-changed', { posOpen: posOpen });
       } catch (e) {
         log.error('sessionReset.welcome-show-ipc-failed: ' + (e && e.message));
       }

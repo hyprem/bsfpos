@@ -81,4 +81,7 @@ contextBridge.exposeInMainWorld('kiosk', {
   onHidePinChangeOverlay: (cb) => ipcRenderer.on('hide-pin-change-overlay', () => cb()),
   submitPinChange: (payload) => ipcRenderer.invoke('submit-pin-change', payload),
   cancelPinChange: () => ipcRenderer.invoke('cancel-pin-change'),
+
+  // --- Phase 09 — POS open/close state -----------------------------------
+  onPosStateChanged: (cb) => ipcRenderer.on('pos-state-changed', (_e, payload) => cb(payload)),
 });
