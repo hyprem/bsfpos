@@ -1,7 +1,8 @@
 ---
 phase: 9
 slug: pos-open-close-toggle-with-update-window-gating
-status: draft
+status: approved
+reviewed_at: 2026-04-20
 shadcn_initialized: false
 preset: none
 created: 2026-04-20
@@ -55,7 +56,7 @@ Exceptions:
 
 Source: host.css — locked palette established Phases 1–5. Phase 09 adds no new type roles.
 
-Exactly 4 sizes and 2 weights are declared for this phase.
+Exactly 4 sizes and 2 weights are declared for this phase. (48px `.bsk-welcome-title` is inherited from Phase 6 — not counted against this phase's 4-size contract.)
 
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
