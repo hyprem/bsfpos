@@ -172,6 +172,10 @@
        role="dialog"
        aria-label="Admin-Menü">
     <div class="bsk-card bsk-card--admin">
+      <button type="button"
+              id="admin-btn-close"
+              class="bsk-btn bsk-admin-close"
+              aria-label="Admin-Men&uuml; schlie&szlig;en">&times;</button>
       <img src="assets/logo-dark.png" class="bsk-logo" alt="Bee Strong Fitness" width="160">
       <h2 class="bsk-card-title">Admin-Men&uuml;</h2>
       <div class="bsk-admin-diagnostics" aria-label="Systemstatus">
@@ -186,11 +190,40 @@
         <button type="button" class="bsk-btn bsk-btn--admin-action" id="admin-btn-logs">Protokolle anzeigen</button>
         <button type="button" class="bsk-btn bsk-btn--admin-action" id="admin-btn-reload">Kasse nachladen</button>
         <button type="button" class="bsk-btn bsk-btn--admin-action" id="admin-btn-credentials">Anmeldedaten &auml;ndern</button>
+        <button type="button" class="bsk-btn bsk-btn--admin-action" id="admin-btn-pin-change">PIN &auml;ndern</button>
         <button type="button" class="bsk-btn bsk-btn--admin-action" id="admin-btn-update-config">Auto-Update einrichten</button>
         <button type="button" class="bsk-btn bsk-btn--admin-action" id="admin-btn-dev-mode">Dev-Modus</button>
         <button type="button" class="bsk-btn bsk-btn--admin-action bsk-btn--admin-exit" id="admin-btn-exit">Beenden</button>
       </div>
       <p id="admin-update-result" class="bsk-admin-update-result" style="display:none;"></p>
+    </div>
+  </div>
+
+  <!-- Phase 08: PIN change overlay (layer 400, mutually exclusive with #credentials-overlay and #pin-modal) -->
+  <div id="pin-change-overlay"
+       class="bsk-layer bsk-layer--credentials"
+       style="display:none;"
+       aria-hidden="true"
+       role="dialog"
+       aria-label="PIN &auml;ndern">
+    <div class="bsk-card">
+      <img src="assets/logo-dark.png" class="bsk-logo" alt="Bee Strong Fitness" width="160">
+      <h2 class="bsk-card-title">PIN &auml;ndern</h2>
+      <label class="bsk-field">
+        <span class="bsk-field-label">Aktuelle PIN</span>
+        <input type="password" id="pin-chg-current" class="bsk-input" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="6" autocomplete="off">
+      </label>
+      <label class="bsk-field">
+        <span class="bsk-field-label">Neue PIN</span>
+        <input type="password" id="pin-chg-new" class="bsk-input" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="6" autocomplete="off">
+      </label>
+      <label class="bsk-field">
+        <span class="bsk-field-label">PIN best&auml;tigen</span>
+        <input type="password" id="pin-chg-confirm" class="bsk-input" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="6" autocomplete="off">
+      </label>
+      <p id="pin-change-error" class="bsk-field-error" style="display:none;"></p>
+      <button type="button" id="pin-change-save" class="bsk-btn bsk-btn--primary" disabled>Speichern</button>
+      <button type="button" id="pin-change-cancel" class="bsk-btn">Abbrechen</button>
     </div>
   </div>
 
