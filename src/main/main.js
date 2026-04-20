@@ -696,16 +696,19 @@ app.whenReady().then(() => {
           return { ok: false, error: 'not-windows' };
         }
         return await new Promise((resolve) => {
-          const cmd = '"C:\\\\Program Files\\\\Common Files\\\\microsoft shared\\\\ink\\\\TabTip.exe"';
-          child_process.exec(cmd, (err) => {
-            if (err) {
-              log.warn('ipc.launch-touch-keyboard exec failed: ' + (err && err.message));
-              resolve({ ok: false, error: String(err && err.message) });
-            } else {
-              log.info('ipc.launch-touch-keyboard: tabtip launched');
-              resolve({ ok: true });
+          child_process.execFile(
+            'C:\\Program Files\\Common Files\\microsoft shared\\ink\\TabTip.exe',
+            [],
+            (err) => {
+              if (err) {
+                log.warn('ipc.launch-touch-keyboard execFile failed: ' + (err && err.message));
+                resolve({ ok: false, error: String(err && err.message) });
+              } else {
+                log.info('ipc.launch-touch-keyboard: tabtip launched');
+                resolve({ ok: true });
+              }
             }
-          });
+          );
         });
       });
 
