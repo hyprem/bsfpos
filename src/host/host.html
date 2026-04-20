@@ -191,6 +191,7 @@
         <button type="button" class="bsk-btn bsk-btn--admin-action" id="admin-btn-reload">Kasse nachladen</button>
         <button type="button" class="bsk-btn bsk-btn--admin-action" id="admin-btn-credentials">Anmeldedaten &auml;ndern</button>
         <button type="button" class="bsk-btn bsk-btn--admin-action" id="admin-btn-pin-change">PIN &auml;ndern</button>
+        <button type="button" class="bsk-btn bsk-btn--admin-action bsk-btn--admin-action--caution" id="admin-btn-pos-toggle" aria-label="POS schliessen &mdash; Best&auml;tigung erforderlich">POS schliessen</button>
         <button type="button" class="bsk-btn bsk-btn--admin-action" id="admin-btn-update-config">Auto-Update einrichten</button>
         <button type="button" class="bsk-btn bsk-btn--admin-action" id="admin-btn-dev-mode">Dev-Modus</button>
         <button type="button" class="bsk-btn bsk-btn--admin-action bsk-btn--admin-exit" id="admin-btn-exit">Beenden</button>
@@ -224,6 +225,23 @@
       <p id="pin-change-error" class="bsk-field-error" style="display:none;"></p>
       <button type="button" id="pin-change-save" class="bsk-btn bsk-btn--primary" disabled>Speichern</button>
       <button type="button" id="pin-change-cancel" class="bsk-btn">Abbrechen</button>
+    </div>
+  </div>
+
+  <!-- Phase 09: POS close confirm overlay (layer 400, mutually exclusive with other z-400 overlays) -->
+  <div id="pos-close-confirm"
+       class="bsk-layer bsk-layer--credentials"
+       style="display:none;"
+       aria-hidden="true"
+       role="dialog"
+       aria-label="POS schlie&szlig;en best&auml;tigen">
+    <div class="bsk-card">
+      <h2 class="bsk-card-title">POS wirklich schliessen?</h2>
+      <p class="bsk-confirm-body">Mitglieder sehen einen geschlossen-Hinweis.</p>
+      <div class="bsk-card-actions">
+        <button type="button" id="pos-confirm-yes" class="bsk-btn bsk-btn--primary">Ja, schliessen</button>
+        <button type="button" id="pos-confirm-cancel" class="bsk-btn">Abbrechen</button>
+      </div>
     </div>
   </div>
 

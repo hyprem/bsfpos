@@ -504,6 +504,50 @@ body:not([data-dev="true"]) { cursor: none; }
   background: rgba(255, 107, 107, 0.12);
 }
 
+/* Phase 09 — "POS schliessen" caution variant (yellow) */
+.bsk-btn--admin-action--caution {
+  background: #F5C518;
+  color: #1A1A1A;
+  border-color: #F5C518;
+}
+
+.bsk-btn--admin-action--caution:active {
+  background: #D9AD10;
+}
+
+/* Phase 09 — "POS offnen" safe variant (green) */
+.bsk-btn--admin-action--safe {
+  background: #4CAF50;
+  color: #1A1A1A;
+  border-color: #4CAF50;
+}
+
+.bsk-btn--admin-action--safe:active {
+  background: #3D8B40;
+}
+
+/* Phase 09 — welcome closed-state subtext */
+.bsk-welcome-subtext {
+  font-size: 16px;
+  font-weight: 400;
+  color: #9CA3AF;
+  text-align: center;
+  margin: 8px 0 0 0;
+  line-height: 1.5;
+  max-width: 80vw;
+}
+
+/* Phase 09 — confirm overlay body text */
+.bsk-confirm-body {
+  font-size: 16px;
+  font-weight: 400;
+  color: #9CA3AF;
+  text-align: center;
+  line-height: 1.5;
+  padding: 0 8px;
+  margin: 0 0 16px 0;
+}
+
 .bsk-admin-update-result {
   font-size: 14px;
   font-weight: 700;
