@@ -46,7 +46,7 @@ Declared values (must be multiples of 4). Confirmed against host.css patterns.
 Exceptions:
 - Close button tap target: **44x44px minimum** (ADMIN-01, D-01). This is an ARIA/touch-target exception to the 8-point scale — the visual button may be smaller but the hit area must be at least 44x44px.
 - Admin action buttons: **min-height 64px** (`.bsk-btn--admin-action`) — enlarged for touchscreen fat-finger safety.
-- Card inner gap: **18px** for `.bsk-card` (non-admin), **16px** for `.bsk-card--admin` — both established values; do not change.
+- Card inner gap: **16px** for both `.bsk-card` and `.bsk-card--admin` — unified to the nearest standard value; prior 18px gap consolidated to 16px.
 
 ---
 
@@ -54,12 +54,22 @@ Exceptions:
 
 Source: host.css — established across Phases 1–5. Phase 08 adds no new type roles.
 
+Exactly 4 sizes and 2 weights are declared for this phase.
+
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body / subtext | 16px | 400 | 1.5 |
-| Label / diag label | 14px | 700 | 1.4 |
+| Label / diag label / field error | 14px | 700 | 1.4 |
 | Card heading (`.bsk-card-title`) | 24px | 700 | 1.2 |
-| Field error (`.bsk-field-error`) | 13px | 400 | 1.4 |
+| X close button glyph | 20px | 700 | 1.0 |
+
+**Sizes declared: 14px, 16px, 20px, 24px — exactly 4.**
+
+**Weights declared: 400 (regular), 700 (bold) — exactly 2.**
+
+Notes:
+- Field error (`.bsk-field-error`) uses 14px / weight 400. The prior 13px size is consolidated to 14px — no new size token introduced.
+- Field label (`.bsk-field-label`) uses 14px / weight 700. The prior 600 weight is consolidated to 700 to stay within the two-weight limit.
 
 New elements this phase:
 
@@ -67,10 +77,8 @@ New elements this phase:
 |---------|------|--------|-------------|--------|
 | X close button glyph | 20px | 700 | 1.0 | Default — matches `.bsk-btn` base (16px) upgraded for touch clarity |
 | PIN change overlay title | 24px | 700 | 1.2 | Reuses `.bsk-card-title` |
-| PIN change field labels | 14px | 600 | 1.4 | Reuses `.bsk-field-label` |
-| PIN change field errors | 13px | 400 | 1.4 | Reuses `.bsk-field-error` |
-
-**Max weights in use: 400 (regular) and 700 (bold).** The 600 weight on `.bsk-field-label` is an existing exception — do not introduce new intermediate weights.
+| PIN change field labels | 14px | 700 | 1.4 | Reuses `.bsk-field-label` (weight consolidated to 700) |
+| PIN change field errors | 14px | 400 | 1.4 | Reuses `.bsk-field-error` (size consolidated from 13px to 14px) |
 
 ---
 
