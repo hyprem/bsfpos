@@ -77,7 +77,9 @@ Dependencies flow: 07 → 08 → 09 → 10 (10 depends on 09's updateGate trigge
   3. `updateGate` fires installation via a new `admin-closed-window` trigger when `posOpen=false` AND time is within the daytime maintenance window (09:00–12:00 as shipped in 0.1.3); existing `post-reset` and `maintenance-window` triggers remain as first-trigger-wins fall-throughs.
   4. Audit log line `update.install trigger=admin-closed-window posOpen=false hour=N` is emitted when the new trigger fires, and `pos.state-changed open=true|false reason=admin` is emitted on every toggle.
   5. `test/updateGate.test.js` covers: `posOpen=false` in-window fires, `posOpen=false` out-of-window does not, `posOpen=true` in-window falls through to `maintenance-window`, and first-trigger-wins between `admin-closed-window` and `post-reset`.
-**Plans:** TBD
+**Plans:** 2 plans
+- [ ] 09-01-PLAN.md — Main-process backbone: updateGate getPosOpen + admin-closed-window trigger, toggle-pos-open IPC, diagnostics, startup broadcast, preload channel, 4 new tests
+- [ ] 09-02-PLAN.md — Host-side UI: POS toggle button + confirm overlay + welcome closed-state + IPC subscriber + diagnostics row + human verification
 **UI hint**: yes
 
 ### Phase 10: Post-Sale Flow with Print Interception
@@ -100,7 +102,7 @@ Dependencies flow: 07 → 08 → 09 → 10 (10 depends on 09's updateGate trigge
 |-------|----------------|--------|-----------|
 | 07. Locale Hardening & Splash Race | 6/6 | Complete    | 2026-04-14 |
 | 08. Admin Menu Polish & Reload Fix | 2/2 | Complete   | 2026-04-20 |
-| 09. POS Open/Close & Update Gating | 0/0 | Not started | - |
+| 09. POS Open/Close & Update Gating | 0/2 | Planned | - |
 | 10. Post-Sale Flow & Print Interception | 0/0 | Not started | - |
 
 ## Coverage
