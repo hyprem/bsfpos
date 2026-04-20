@@ -29,7 +29,7 @@ Dependencies flow: 07 → 08 → 09 → 10 (10 depends on 09's updateGate trigge
 
 - [x] **Phase 07: Locale Hardening & Splash Auto-Selection Race** — Force Magicline to de-DE and gate splash on register-selected, not cash-register-ready. (completed 2026-04-14)
 - [x] **Phase 08: Admin Menu Polish & Reload Fix** — Close button, re-entry credentials mode, and welcome-state-aware Kasse nachladen. (completed 2026-04-20)
-- [ ] **Phase 09: POS Open/Close Toggle with Update-Window Gating** — Admin-controlled POS state gates auto-update installation to a daytime window.
+- [x] **Phase 09: POS Open/Close Toggle with Update-Window Gating** — Admin-controlled POS state gates auto-update installation to a daytime window. (completed 2026-04-20)
 - [ ] **Phase 10: Post-Sale Flow with Print Interception** — Branded "Vielen Dank" overlay, Electron print interception, and auto-logout to welcome after sale.
 
 ## Phase Details
@@ -77,9 +77,9 @@ Dependencies flow: 07 → 08 → 09 → 10 (10 depends on 09's updateGate trigge
   3. `updateGate` fires installation via a new `admin-closed-window` trigger when `posOpen=false` AND time is within the daytime maintenance window (09:00–12:00 as shipped in 0.1.3); existing `post-reset` and `maintenance-window` triggers remain as first-trigger-wins fall-throughs.
   4. Audit log line `update.install trigger=admin-closed-window posOpen=false hour=N` is emitted when the new trigger fires, and `pos.state-changed open=true|false reason=admin` is emitted on every toggle.
   5. `test/updateGate.test.js` covers: `posOpen=false` in-window fires, `posOpen=false` out-of-window does not, `posOpen=true` in-window falls through to `maintenance-window`, and first-trigger-wins between `admin-closed-window` and `post-reset`.
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 - [x] 09-01-PLAN.md — Main-process backbone: updateGate getPosOpen + admin-closed-window trigger, toggle-pos-open IPC, diagnostics, startup broadcast, preload channel, 4 new tests
-- [ ] 09-02-PLAN.md — Host-side UI: POS toggle button + confirm overlay + welcome closed-state + IPC subscriber + diagnostics row + human verification
+- [x] 09-02-PLAN.md — Host-side UI: POS toggle button + confirm overlay + welcome closed-state + IPC subscriber + diagnostics row + human verification
 **UI hint**: yes
 
 ### Phase 10: Post-Sale Flow with Print Interception
@@ -102,7 +102,7 @@ Dependencies flow: 07 → 08 → 09 → 10 (10 depends on 09's updateGate trigge
 |-------|----------------|--------|-----------|
 | 07. Locale Hardening & Splash Race | 6/6 | Complete    | 2026-04-14 |
 | 08. Admin Menu Polish & Reload Fix | 2/2 | Complete   | 2026-04-20 |
-| 09. POS Open/Close & Update Gating | 1/2 | In Progress|  |
+| 09. POS Open/Close & Update Gating | 2/2 | Complete   | 2026-04-20 |
 | 10. Post-Sale Flow & Print Interception | 0/0 | Not started | - |
 
 ## Coverage
