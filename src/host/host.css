@@ -537,6 +537,9 @@ body:not([data-dev="true"]) { cursor: none; }
   max-width: 80vw;
 }
 
+/* Phase 09 — POS close confirm overlay sits ABOVE admin menu (z-500) */
+#pos-close-confirm { z-index: 600; }
+
 /* Phase 09 — confirm overlay body text */
 .bsk-confirm-body {
   font-size: 16px;
