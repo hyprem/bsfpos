@@ -75,4 +75,10 @@ contextBridge.exposeInMainWorld('kiosk', {
   // Renderer → main: user tapped the welcome layer; main will create
   // Magicline view + start authFlow.
   notifyWelcomeTap: () => { ipcRenderer.send('welcome:tap'); },
+
+  // --- Phase 08 — PIN change overlay -----------------------------------
+  onShowPinChangeOverlay: (cb) => ipcRenderer.on('show-pin-change-overlay', () => cb()),
+  onHidePinChangeOverlay: (cb) => ipcRenderer.on('hide-pin-change-overlay', () => cb()),
+  submitPinChange: (payload) => ipcRenderer.invoke('submit-pin-change', payload),
+  cancelPinChange: () => ipcRenderer.invoke('cancel-pin-change'),
 });

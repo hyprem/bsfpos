@@ -891,6 +891,45 @@ app.whenReady().then(() => {
         return { ok: true };
       });
 
+      // --- Phase 08: PIN change submission (D-10, D-11) ---
+      ipcMain.handle('submit-pin-change', async (_e, payload) => {
+        if (!payload || typeof payload.currentPin !== 'string' || typeof payload.newPin !== 'string') {
+          return { ok: false, error: 'invalid-payload' };
+        }
+        // D-10: re-verify current PIN using raw adminPin (NOT lockout wrapper)
+        const ok = adminPin.verifyPin(store, payload.currentPin);
+        if (!ok) {
+          log.audit('pin.verify', { result: 'fail', via: 'pin-change' });
+          return { ok: false, error: 'wrong-pin' };
+        }
+        try {
+          adminPin.setPin(store, payload.newPin);
+          log.audit('admin.action', { action: 'pin-changed' });
+          // Return to admin menu after successful PIN change
+          adminMenuOpen = true;
+          try { mainWindow.webContents.send('hide-pin-change-overlay'); } catch (_) {}
+          try {
+            const d = buildAdminDiagnostics(store);
+            mainWindow.webContents.send('show-admin-menu', d);
+          } catch (_) {}
+          return { ok: true };
+        } catch (e) {
+          log.error('ipc.submit-pin-change failed: ' + (e && e.message));
+          return { ok: false, error: String(e && e.message) };
+        }
+      });
+
+      // --- Phase 08: PIN change cancel — return to admin menu
+      ipcMain.handle('cancel-pin-change', async () => {
+        adminMenuOpen = true;
+        try { mainWindow.webContents.send('hide-pin-change-overlay'); } catch (_) {}
+        try {
+          const d = buildAdminDiagnostics(store);
+          mainWindow.webContents.send('show-admin-menu', d);
+        } catch (_) {}
+        return { ok: true };
+      });
+
       // --- submit-update-pat: save PAT, re-initialise updater
       ipcMain.handle('submit-update-pat', async (_e, payload) => {
         try {
