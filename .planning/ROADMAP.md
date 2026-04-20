@@ -27,7 +27,7 @@ Dependencies flow: 07 → 08 → 09 → 10 (10 depends on 09's updateGate trigge
 
 ## Phases
 
-- [x] **Phase 07: Locale Hardening & Splash Auto-Selection Race** — Force Magicline to de-DE and gate splash on register-selected, not cash-register-ready. (completed 2026-04-14)
+- [x] **Phase 07: Locale Hardening & Splash Auto-Selection Race** — Force Magicline to de-DE and gate splash on register-selected, not cash-register-ready. (completed 2026-04-14)
 - [ ] **Phase 08: Admin Menu Polish & Reload Fix** — Close button, re-entry credentials mode, and welcome-state-aware Kasse nachladen.
 - [ ] **Phase 09: POS Open/Close Toggle with Update-Window Gating** — Admin-controlled POS state gates auto-update installation to a daytime window.
 - [ ] **Phase 10: Post-Sale Flow with Print Interception** — Branded "Vielen Dank" overlay, Electron print interception, and auto-logout to welcome after sale.
@@ -62,7 +62,9 @@ Dependencies flow: 07 → 08 → 09 → 10 (10 depends on 09's updateGate trigge
   3. Tapping "Anmeldedaten ändern" from the admin menu opens the credentials overlay in `re-entry` mode with Magicline username + password fields only; PIN setup fields are absent from the DOM. First-boot flow still dispatches `mode='first-run'` with all 4 fields.
   4. Tapping "Kasse nachladen" from the welcome layer (no Magicline view in memory) starts a fresh welcome-tap session rather than calling `reload()` against null; the kiosk never wedges on the BITTE WARTEN splash from this path.
   5. A public `magiclineView.exists()` method exists and is used by the `admin:reload-magicline` IPC handler to branch on view existence.
-**Plans:** TBD
+**Plans:** 2 plans
+- [ ] 08-01-PLAN.md — Main-process: magiclineView.exists(), closeAdminMenu helper, toggle, reload fix, PIN change IPC
+- [ ] 08-02-PLAN.md — Host-side: X close button, Esc handler, credentials title fix, PIN change overlay
 **UI hint**: yes
 
 ### Phase 09: POS Open/Close Toggle with Update-Window Gating
@@ -97,7 +99,7 @@ Dependencies flow: 07 → 08 → 09 → 10 (10 depends on 09's updateGate trigge
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 07. Locale Hardening & Splash Race | 6/6 | Complete    | 2026-04-14 |
-| 08. Admin Menu Polish & Reload Fix | 0/0 | Not started | - |
+| 08. Admin Menu Polish & Reload Fix | 0/2 | Planning complete | - |
 | 09. POS Open/Close & Update Gating | 0/0 | Not started | - |
 | 10. Post-Sale Flow & Print Interception | 0/0 | Not started | - |
 
