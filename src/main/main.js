@@ -69,6 +69,11 @@ let mainWindow = null;
  * is an admin PIN attempt (NOT a reset-loop recovery).
  */
 function openAdminPinModal() {
+  if (adminMenuOpen) {
+    // D-03: second press closes the admin menu
+    closeAdminMenu();
+    return;
+  }
   if (!mainWindow) return;
   log.info('adminHotkey: Ctrl+Shift+F12 pressed — surfacing admin PIN modal');
   try {
@@ -79,6 +84,18 @@ function openAdminPinModal() {
     mainWindow.webContents.send('show-pin-modal', { context: 'admin' });
   } catch (e) {
     log.error('adminHotkey.send failed: ' + (e && e.message));
+  }
+}
+
+function closeAdminMenu() {
+  adminMenuOpen = false;
+  log.audit('admin.action', { action: 'close-menu' });
+  try { mainWindow.webContents.send('hide-admin-menu'); } catch (_) {}
+  const { exists: mvExists, setMagiclineViewVisible } = require('./magiclineView');
+  if (mvExists()) {
+    try { setMagiclineViewVisible(true); } catch (_) {}
+  } else {
+    try { mainWindow.webContents.send('welcome:show'); } catch (_) {}
   }
 }
 
@@ -774,7 +791,29 @@ app.whenReady().then(() => {
             case 'reload': {
               adminMenuOpen = false;
               try { mainWindow.webContents.send('hide-admin-menu'); } catch (_) {}
-              try { mainWindow.webContents.reload(); } catch (_) {}
+              const { exists: mvExists, getMagiclineWebContents } = require('./magiclineView');
+              if (mvExists()) {
+                // D-14: Active session — reload Magicline view (NOT host window) + restart authFlow
+                try {
+                  const wc = getMagiclineWebContents();
+                  if (wc && !wc.isDestroyed()) {
+                    mainWindow.webContents.send('splash:show');
+                    authFlow.start({
+                      mainWindow: mainWindow,
+                      webContents: wc,
+                      store: store,
+                      safeStorage: safeStorage,
+                      log: log,
+                    });
+                    wc.reload();
+                  }
+                } catch (e) { log.error('admin reload failed: ' + (e && e.message)); }
+              } else {
+                // D-13: Welcome state — start fresh session (Layer 2 behavior)
+                try { mainWindow.webContents.send('welcome:hide'); } catch (_) {}
+                try { mainWindow.webContents.send('splash:show'); } catch (_) {}
+                startLoginFlow();
+              }
               return { ok: true };
             }
             case 're-enter-credentials': {
@@ -784,6 +823,14 @@ app.whenReady().then(() => {
                 setMagiclineViewVisible(false);
               } catch (_) {}
               try { mainWindow.webContents.send('show-credentials-overlay', { firstRun: false }); } catch (_) {}
+              adminMenuOpen = false;
+              log.audit('admin.action', { action: 'credentials-changed' }); // D-07
+              return { ok: true };
+            }
+            case 'pin-change': {
+              // D-08/D-09: hide admin menu, show PIN change overlay
+              try { mainWindow.webContents.send('hide-admin-menu'); } catch (_) {}
+              try { mainWindow.webContents.send('show-pin-change-overlay'); } catch (_) {}
               adminMenuOpen = false;
               return { ok: true };
             }
@@ -838,14 +885,9 @@ app.whenReady().then(() => {
         }
       });
 
-      // --- close-admin-menu: PAT config cancel / explicit close
+      // --- close-admin-menu: PAT config cancel / explicit close / X button / Esc
       ipcMain.handle('close-admin-menu', async () => {
-        adminMenuOpen = false;
-        try { mainWindow.webContents.send('hide-admin-menu'); } catch (_) {}
-        try {
-          const { setMagiclineViewVisible } = require('./magiclineView');
-          setMagiclineViewVisible(true);
-        } catch (_) {}
+        closeAdminMenu();
         return { ok: true };
       });
 

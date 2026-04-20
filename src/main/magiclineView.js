@@ -723,6 +723,10 @@ function setAdminHotkeyHandler(fn) {
   adminHotkeyHandler = (typeof fn === 'function') ? fn : null;
 }
 
+function exists() {
+  return magiclineView !== null;
+}
+
 module.exports = {
   createMagiclineView,
   destroyMagiclineView,
@@ -733,6 +737,7 @@ module.exports = {
   disableDevMode,
   isDevMode,
   clearCookiesAndReload,
+  exists,  // Phase 08 FIX-01
   // Exported for tests / diagnostics only — do NOT call from main.js:
   _computeDefaultZoom: computeDefaultZoom,
   _DRIFT_MESSAGE: DRIFT_MESSAGE,
