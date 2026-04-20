@@ -15,23 +15,23 @@ progress:
 
 # Project State: Bee Strong POS Kiosk
 
-**Last updated:** 2026-04-20 (08-01 complete — magiclineView.exists, closeAdminMenu helper, Ctrl+Shift+F12 toggle, reload fix, submit-pin-change IPC, credentials-changed audit)
+**Last updated:** 2026-04-20 (Phase 08 complete — admin menu polish: X close button, Esc handler, Ctrl+Shift+F12 toggle, credentials title fix, PIN change flow, reload fix FIX-01, 6 human UAT items pending)
 
 ## Project Reference
 
 **Core value:** A gym member can walk up, scan or self-select a product, pay at the card terminal next to the kiosk, and walk away — without staff interaction and without being able to break out of the locked Magicline cash register page. (NFC member identification descoped 2026-04-14, see MILESTONES.md.)
 
-**Current focus:** Phase 08 — admin-menu-polish-reload-fix
+**Current focus:** Phase 09 — pos-open-close-update-gating
 
 ## Current Position
 
-Phase: 08 (admin-menu-polish-reload-fix) — EXECUTING
+Phase: 08 (admin-menu-polish-reload-fix) — COMPLETE (human UAT pending)
 Plan: 2 of 2 complete
 
 - **Milestone:** v1.1 Field-Operations Polish — STARTED 2026-04-14
-- **Status:** Ready to execute
-- **Phase:** 08 of 6 (admin menu polish & reload fix)
-- **Plan:** 2 of 2 complete
+- **Status:** Phase 08 verified, advancing to Phase 09
+- **Phase:** 09 of 10 (POS open/close & update gating)
+- **Plan:** Not started
 - **Last activity:** 2026-04-20
 
 ## Key Decisions (Phase 07)
@@ -53,8 +53,8 @@ Plan: 2 of 2 complete
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 07 | Locale Hardening & Splash Race | LOCALE-01, SPLASH-01 | In progress (5/6 plans) |
-| 08 | Admin Menu Polish & Reload Fix | ADMIN-01, ADMIN-03, FIX-01 | Not started |
+| 07 | Locale Hardening & Splash Race | LOCALE-01, SPLASH-01 | Complete (6/6 plans) |
+| 08 | Admin Menu Polish & Reload Fix | ADMIN-01, ADMIN-03, FIX-01 | Complete (2/2 plans, human UAT pending) |
 | 09 | POS Open/Close & Update Gating | ADMIN-02 | Not started |
 | 10 | Post-Sale Flow & Print Interception | SALE-01 | Not started |
 
@@ -74,7 +74,7 @@ Field guide: `docs/runbook/v1.0-KIOSK-VISIT.md`. Authoritative per-requirement s
 
 ## Next Action
 
-Run `/gsd-plan-phase 07` to decompose Phase 07 (Locale Hardening & Splash Auto-Selection Race) into executable plans. Phase 07 is the right first phase because LOCALE-01 removes the German-text fragility that SPLASH-01's auto-selection click chain depends on; doing it first means every subsequent phase runs against a locale-resilient baseline.
+Run `/gsd-discuss-phase 09` to start Phase 09 (POS Open/Close Toggle with Update-Window Gating). Phase 08 admin menu polish is complete with 6 human UAT items pending next kiosk visit.
 
 ### Quick Tasks Completed
 
