@@ -21,15 +21,15 @@ For v1.0 archive, see `.planning/milestones/v1.0-REQUIREMENTS.md`.
 
 ### Admin Menu Polish
 
-- [ ] **ADMIN-01**: The admin menu has a discreet close control (top-right "X" / "Zurück", ≥44×44 px tap target) that hides the admin overlay and returns to the prior layer (welcome OR cash register) without reload, exit, or destructive action. Hardware `Esc` key (host-side `keydown`, not OS-level) and a second press of `Ctrl+Shift+F12` route through the same `admin:close` handler. Closing during PAT lockout dismisses the panel without resetting the lockout countdown. Audit log line `admin.action action=close-menu`. — *Source: `2026-04-14-admin-menu-close-button.md`* — *Phase 08, pending*
+- [x] **ADMIN-01**: The admin menu has a discreet close control (top-right "X" / "Zurück", ≥44×44 px tap target) that hides the admin overlay and returns to the prior layer (welcome OR cash register) without reload, exit, or destructive action. Hardware `Esc` key (host-side `keydown`, not OS-level) and a second press of `Ctrl+Shift+F12` route through the same `admin:close` handler. Closing during PAT lockout dismisses the panel without resetting the lockout countdown. Audit log line `admin.action action=close-menu`. — *Source: `2026-04-14-admin-menu-close-button.md`* — *Phase 08, pending*
 
 - [ ] **ADMIN-02**: An admin-controlled POS open/close toggle gates auto-update installation. New persisted `posOpen` boolean (default `true`) in electron-store. Admin menu exposes a "POS schließen" / "POS öffnen" button (yellow with confirm modal when closing; green no-confirm when opening). When `posOpen=false`, the welcome layer renders a branded "POS derzeit geschlossen" message with `welcome:tap` suppressed. `updateGate` gains a new `admin-closed-window` trigger that fires when `posOpen=false` AND the time is within the daytime maintenance window (09:00–12:00 already shipped in 0.1.3). Existing `post-reset` and `maintenance-window` triggers remain as fall-throughs with first-trigger-wins semantics. Audit log line `update.install trigger=admin-closed-window posOpen=false hour=N`. — *Source: `2026-04-14-admin-pos-open-close-toggle-with-update-window-gating.md`* — *Phase 09, pending*
 
-- [ ] **ADMIN-03**: The "Anmeldedaten ändern" admin button opens the credentials overlay in `re-entry` mode — Magicline username + password fields ONLY, with NO PIN setup fields rendered. The existing first-boot path continues to dispatch `mode='first-run'` (all 4 fields). Audit log differentiates `admin.action action=credentials-changed` from any future PIN change path. (PIN change via a separate "PIN ändern" admin path is OUT OF SCOPE for v1.1 — captured as a stretch idea; this requirement covers only the re-entry mode split.) — *Source: `2026-04-14-anmeldedaten-andern-shows-first-run-mode.md`* — *Phase 08, pending*
+- [x] **ADMIN-03**: The "Anmeldedaten ändern" admin button opens the credentials overlay in `re-entry` mode — Magicline username + password fields ONLY, with NO PIN setup fields rendered. The existing first-boot path continues to dispatch `mode='first-run'` (all 4 fields). Audit log differentiates `admin.action action=credentials-changed` from any future PIN change path. (PIN change via a separate "PIN ändern" admin path is OUT OF SCOPE for v1.1 — captured as a stretch idea; this requirement covers only the re-entry mode split.) — *Source: `2026-04-14-anmeldedaten-andern-shows-first-run-mode.md`* — *Phase 08, pending*
 
 ### Bug Fixes
 
-- [ ] **FIX-01**: Tapping admin menu's "Kasse nachladen" from the welcome state no longer wedges the kiosk on the BITTE WARTEN splash. The `admin:reload-magicline` IPC handler checks Magicline view existence via a new `magiclineView.exists()` method; when no view exists (welcome state), the handler triggers a fresh welcome-tap session start (Layer 2 interpretation) rather than calling `reload()` against null. — *Source: `2026-04-14-kasse-nachladen-from-welcome-leaves-kiosk-stuck.md`* — *Phase 08, pending*
+- [x] **FIX-01**: Tapping admin menu's "Kasse nachladen" from the welcome state no longer wedges the kiosk on the BITTE WARTEN splash. The `admin:reload-magicline` IPC handler checks Magicline view existence via a new `magiclineView.exists()` method; when no view exists (welcome state), the handler triggers a fresh welcome-tap session start (Layer 2 interpretation) rather than calling `reload()` against null. — *Source: `2026-04-14-kasse-nachladen-from-welcome-leaves-kiosk-stuck.md`* — *Phase 08, pending*
 
 ### Post-Sale Flow
 
@@ -52,9 +52,9 @@ REQ-IDs mapped to phases by the `gsd-roadmapper` agent on 2026-04-14. Phase numb
 |----------|----------|---------|
 | LOCALE-01 | Phase 07 | Complete |
 | SPLASH-01 | Phase 07 | Complete |
-| ADMIN-01  | Phase 08 | Pending |
-| ADMIN-03  | Phase 08 | Pending |
-| FIX-01    | Phase 08 | Pending |
+| ADMIN-01  | Phase 08 | Complete |
+| ADMIN-03  | Phase 08 | Complete |
+| FIX-01    | Phase 08 | Complete |
 | ADMIN-02  | Phase 09 | Pending |
 | SALE-01   | Phase 10 | Pending |
 

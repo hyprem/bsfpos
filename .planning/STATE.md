@@ -2,37 +2,37 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Field-Operations Polish
-status: planning
-last_updated: "2026-04-14T13:50:31.928Z"
-last_activity: 2026-04-14
+status: executing
+last_updated: "2026-04-20T17:55:55.729Z"
+last_activity: 2026-04-20
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_plans: 8
+  completed_plans: 7
+  percent: 88
 ---
 
 # Project State: Bee Strong POS Kiosk
 
-**Last updated:** 2026-04-14 (07-05 complete — host-side splash gate: onHideSplashFinal bridge, auto-select-pending CSS, enterSplashPendingMode + 5500ms safety timeout)
+**Last updated:** 2026-04-20 (08-01 complete — magiclineView.exists, closeAdminMenu helper, Ctrl+Shift+F12 toggle, reload fix, submit-pin-change IPC, credentials-changed audit)
 
 ## Project Reference
 
 **Core value:** A gym member can walk up, scan or self-select a product, pay at the card terminal next to the kiosk, and walk away — without staff interaction and without being able to break out of the locked Magicline cash register page. (NFC member identification descoped 2026-04-14, see MILESTONES.md.)
 
-**Current focus:** Phase 07 — locale-hardening-splash-auto-selection-race
+**Current focus:** Phase 08 — admin-menu-polish-reload-fix
 
 ## Current Position
 
-Phase: 07 (locale-hardening-splash-auto-selection-race) — EXECUTING
-Plan: 5 of 6
+Phase: 08 (admin-menu-polish-reload-fix) — EXECUTING
+Plan: 2 of 2
 
 - **Milestone:** v1.1 Field-Operations Polish — STARTED 2026-04-14
-- **Status:** Ready to plan
+- **Status:** Executing Phase 08
 - **Phase:** 08 of 6 (admin menu polish & reload fix)
-- **Plan:** Not started
-- **Last activity:** 2026-04-14
+- **Plan:** 1 of 2 complete
+- **Last activity:** 2026-04-20
 
 ## Key Decisions (Phase 07)
 
