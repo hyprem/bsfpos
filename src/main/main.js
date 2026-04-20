@@ -797,6 +797,7 @@ app.whenReady().then(() => {
                 try {
                   const wc = getMagiclineWebContents();
                   if (wc && !wc.isDestroyed()) {
+                    welcomeTapPending = true; // arm Phase 07 splash gate for reload path
                     mainWindow.webContents.send('splash:show');
                     authFlow.start({
                       mainWindow: mainWindow,
@@ -810,6 +811,7 @@ app.whenReady().then(() => {
                 } catch (e) { log.error('admin reload failed: ' + (e && e.message)); }
               } else {
                 // D-13: Welcome state — start fresh session (Layer 2 behavior)
+                welcomeTapPending = true; // arm Phase 07 splash gate for reload-from-welcome path
                 try { mainWindow.webContents.send('welcome:hide'); } catch (_) {}
                 try { mainWindow.webContents.send('splash:show'); } catch (_) {}
                 startLoginFlow();
