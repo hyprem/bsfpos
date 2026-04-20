@@ -56,18 +56,18 @@ function onUpdateDownloaded(opts) {
   clearGate();
   fired = false;
 
-  const { installFn, log, sessionResetModule, getHour } = opts;
+  const { installFn, log, sessionResetModule, getHour, getPosOpen } = opts;
 
   log.audit('update.downloaded', { gateState: 'waiting' });
 
-  function fireWith(trigger) {
+  function fireWith(trigger, extra) {
     if (fired) return;
     fired = true;
     clearGate();
     // Explicitly unregister the post-reset listener so a subsequent reset
     // doesn't re-trigger anything.
     try { sessionResetModule.onPostReset(null); } catch (_) { /* ignore */ }
-    log.audit('update.install', { trigger: trigger });
+    log.audit('update.install', Object.assign({ trigger: trigger }, extra || {}));
     try {
       installFn();
     } catch (e) {
@@ -75,9 +75,17 @@ function onUpdateDownloaded(opts) {
     }
   }
 
-  // Arm (a): maintenance-window polling
+  // Arm (a): maintenance-window polling (Phase 09: admin-closed-window check first)
   maintenanceTimer = setInterval(() => {
-    if (isMaintenanceWindow(getHour)) {
+    var inWindow = isMaintenanceWindow(getHour);
+    // D-08: admin-closed-window fires when posOpen=false AND in maintenance window
+    if (typeof getPosOpen === 'function' && getPosOpen() === false && inWindow) {
+      var hour = typeof getHour === 'function' ? getHour() : new Date().getHours();
+      fireWith('admin-closed-window', { posOpen: false, hour: hour });
+      return;
+    }
+    // D-09: maintenance-window falls through regardless of posOpen
+    if (inWindow) {
       fireWith('maintenance-window');
     }
   }, MAINTENANCE_POLL_MS);

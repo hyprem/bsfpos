@@ -165,6 +165,131 @@ test('onUpdateDownloaded: throws clearly on missing args', () => {
   }), /sessionResetModule/);
 });
 
+// --- Phase 09: getPosOpen / admin-closed-window tests -------------------------
+
+function makeGetPosOpen(value) {
+  return function() { return value; };
+}
+
+test('admin-closed-window: posOpen=false in window fires trigger', () => {
+  gate._resetForTests();
+  const origSetInterval = global.setInterval;
+  const origClearInterval = global.clearInterval;
+  let intervalFn = null;
+  global.setInterval = (fn) => { intervalFn = fn; return 'fake-timer-acw1'; };
+  global.clearInterval = () => {};
+  try {
+    const log = makeLog();
+    const sr = makeSessionReset();
+    let installed = 0;
+    gate.onUpdateDownloaded({
+      installFn: () => installed++,
+      log,
+      sessionResetModule: sr,
+      getHour: () => 10,
+      getPosOpen: makeGetPosOpen(false),
+    });
+    intervalFn();
+    assert.strictEqual(installed, 1);
+    const audit = log.calls.find(c => c.event === 'update.install');
+    assert.strictEqual(audit.fields.trigger, 'admin-closed-window');
+    assert.strictEqual(audit.fields.posOpen, false);
+    assert.strictEqual(audit.fields.hour, 10);
+  } finally {
+    global.setInterval = origSetInterval;
+    global.clearInterval = origClearInterval;
+    gate._resetForTests();
+  }
+});
+
+test('admin-closed-window: posOpen=false out of window does NOT fire', () => {
+  gate._resetForTests();
+  const origSetInterval = global.setInterval;
+  const origClearInterval = global.clearInterval;
+  let intervalFn = null;
+  global.setInterval = (fn) => { intervalFn = fn; return 'fake-timer-acw2'; };
+  global.clearInterval = () => {};
+  try {
+    const log = makeLog();
+    const sr = makeSessionReset();
+    let installed = 0;
+    gate.onUpdateDownloaded({
+      installFn: () => installed++,
+      log,
+      sessionResetModule: sr,
+      getHour: () => 14,
+      getPosOpen: makeGetPosOpen(false),
+    });
+    intervalFn();
+    assert.strictEqual(installed, 0);
+  } finally {
+    global.setInterval = origSetInterval;
+    global.clearInterval = origClearInterval;
+    gate._resetForTests();
+  }
+});
+
+test('admin-closed-window: posOpen=true in window falls through to maintenance-window', () => {
+  gate._resetForTests();
+  const origSetInterval = global.setInterval;
+  const origClearInterval = global.clearInterval;
+  let intervalFn = null;
+  global.setInterval = (fn) => { intervalFn = fn; return 'fake-timer-acw3'; };
+  global.clearInterval = () => {};
+  try {
+    const log = makeLog();
+    const sr = makeSessionReset();
+    let installed = 0;
+    gate.onUpdateDownloaded({
+      installFn: () => installed++,
+      log,
+      sessionResetModule: sr,
+      getHour: () => 10,
+      getPosOpen: makeGetPosOpen(true),
+    });
+    intervalFn();
+    assert.strictEqual(installed, 1);
+    const audit = log.calls.find(c => c.event === 'update.install');
+    assert.strictEqual(audit.fields.trigger, 'maintenance-window');
+  } finally {
+    global.setInterval = origSetInterval;
+    global.clearInterval = origClearInterval;
+    gate._resetForTests();
+  }
+});
+
+test('first-trigger-wins: admin-closed-window vs post-reset', () => {
+  gate._resetForTests();
+  const origSetInterval = global.setInterval;
+  const origClearInterval = global.clearInterval;
+  let intervalFn = null;
+  global.setInterval = (fn) => { intervalFn = fn; return 'fake-timer-acw4'; };
+  global.clearInterval = () => {};
+  try {
+    const log = makeLog();
+    const sr = makeSessionReset();
+    let installed = 0;
+    gate.onUpdateDownloaded({
+      installFn: () => installed++,
+      log,
+      sessionResetModule: sr,
+      getHour: () => 10,
+      getPosOpen: makeGetPosOpen(false),
+    });
+    // post-reset fires first
+    sr._fire();
+    // then interval ticks
+    intervalFn();
+    assert.strictEqual(installed, 1, 'only one install — first trigger wins');
+    const audit = log.calls.find(c => c.event === 'update.install');
+    assert.strictEqual(audit.fields.trigger, 'post-reset');
+  } finally {
+    global.setInterval = origSetInterval;
+    global.clearInterval = origClearInterval;
+    gate._resetForTests();
+  }
+});
+
 test('onUpdateDownloaded: installFn throw is logged not propagated', () => {
   gate._resetForTests();
   const log = makeLog();
