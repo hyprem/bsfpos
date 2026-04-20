@@ -109,6 +109,66 @@
   }
 
   // =================================================================
+  // Phase 9 — POS open/close state rendering
+  // =================================================================
+
+  function applyPosState(posOpen) {
+    var el = document.getElementById('welcome-screen');
+    if (!el) return;
+    var h1 = el.querySelector('.bsk-welcome-title');
+    var sub = el.querySelector('.bsk-welcome-subtext');
+    if (posOpen) {
+      if (h1) h1.textContent = 'Zum Kassieren tippen';
+      if (sub) sub.remove();
+      el.style.pointerEvents = '';
+      el.style.cursor = '';
+      el.setAttribute('role', 'button');
+      el.setAttribute('tabindex', '0');
+      el.setAttribute('aria-label', 'Zum Kassieren tippen');
+    } else {
+      if (h1) h1.textContent = 'POS derzeit geschlossen';
+      if (!sub) {
+        sub = document.createElement('p');
+        sub.className = 'bsk-welcome-subtext';
+        el.appendChild(sub);
+      }
+      sub.textContent = 'Bitte Studio-Personal verst\u00E4ndigen';
+      el.style.pointerEvents = 'none';
+      el.style.cursor = 'default';
+      el.removeAttribute('role');
+      el.removeAttribute('tabindex');
+      el.setAttribute('aria-label', 'POS geschlossen');
+    }
+    posOpenState = posOpen;
+  }
+
+  function updatePosToggleButton(posOpen) {
+    var btn = document.getElementById('admin-btn-pos-toggle');
+    if (!btn) return;
+    if (posOpen) {
+      btn.textContent = 'POS schliessen';
+      btn.classList.remove('bsk-btn--admin-action--safe');
+      btn.classList.add('bsk-btn--admin-action--caution');
+      btn.setAttribute('aria-label', 'POS schliessen \u2014 Best\u00E4tigung erforderlich');
+    } else {
+      btn.textContent = 'POS \u00F6ffnen';
+      btn.classList.remove('bsk-btn--admin-action--caution');
+      btn.classList.add('bsk-btn--admin-action--safe');
+      btn.setAttribute('aria-label', 'POS \u00F6ffnen');
+    }
+  }
+
+  function showPosCloseConfirm() {
+    var el = document.getElementById('pos-close-confirm');
+    if (el) { el.style.display = ''; el.setAttribute('aria-hidden', 'false'); }
+  }
+
+  function hidePosCloseConfirm() {
+    var el = document.getElementById('pos-close-confirm');
+    if (el) { el.style.display = 'none'; el.setAttribute('aria-hidden', 'true'); }
+  }
+
+  // =================================================================
   // Phase 2/3/4 — Magicline error (variant-aware)
   // =================================================================
   // Variant click-target handlers. Phase 3 variants route the PIN button to
@@ -229,6 +289,9 @@
   // Phase 4 — Idle overlay (Layer 200, D-11 / 04-UI-SPEC countdown contract)
   // =================================================================
   var idleInterval = null;
+
+  // --- Phase 9 state -------------------------------------------------------
+  var posOpenState = true;
 
   // --- Phase 5 state ------------------------------------------------------
   var pinModalContext = 'admin';          // 'admin' | 'reset-loop'
@@ -554,6 +617,35 @@
     // Swap "Auto-Update einrichten" / "Update-Zugang ändern" label
     var cfgBtn = document.getElementById('admin-btn-update-config');
     if (cfgBtn) cfgBtn.textContent = d.patConfigured ? 'Update-Zugang \u00E4ndern' : 'Auto-Update einrichten';
+    // Phase 09: POS-Status diagnostics row
+    var diagContainer = document.querySelector('.bsk-admin-diagnostics');
+    var existingPosRow = document.getElementById('diag-pos-status-row');
+    if (diagContainer && !existingPosRow) {
+      var posRow = document.createElement('div');
+      posRow.className = 'bsk-diag-row';
+      posRow.id = 'diag-pos-status-row';
+      var posLabel = document.createElement('span');
+      posLabel.className = 'bsk-diag-label';
+      posLabel.textContent = 'POS-Status';
+      var posValue = document.createElement('span');
+      posValue.className = 'bsk-diag-value';
+      posValue.id = 'diag-pos-status';
+      posRow.appendChild(posLabel);
+      posRow.appendChild(posValue);
+      diagContainer.appendChild(posRow);
+    }
+    var posStatusEl = document.getElementById('diag-pos-status');
+    if (posStatusEl) {
+      if (d.posOpen !== false) {
+        posStatusEl.textContent = 'Ge\u00F6ffnet';
+        posStatusEl.style.color = '#4CAF50';
+      } else {
+        posStatusEl.textContent = 'Geschlossen';
+        posStatusEl.style.color = '#FF6B6B';
+      }
+    }
+    // Phase 09: sync toggle button state with diagnostics
+    updatePosToggleButton(d.posOpen !== false);
   }
 
   function showAdminMenu(diagnostics) {
@@ -570,6 +662,8 @@
     var res = document.getElementById('admin-update-result');
     if (res) res.style.display = 'none';
     if (adminUpdateResultTimer) { clearTimeout(adminUpdateResultTimer); adminUpdateResultTimer = null; }
+    // Phase 09: clean up confirm overlay on admin close (Pitfall 3)
+    hidePosCloseConfirm();
   }
 
   function showUpdateConfig(_payload) {
@@ -814,6 +908,49 @@
       });
     }
 
+    // Phase 09 — POS toggle button (special handling, not in wireAdminButtons map)
+    var posToggleBtn = document.getElementById('admin-btn-pos-toggle');
+    if (posToggleBtn) {
+      posToggleBtn.addEventListener('click', function () {
+        if (posOpenState) {
+          // POS is open — show confirm before closing (D-02)
+          showPosCloseConfirm();
+        } else {
+          // POS is closed — open immediately, no confirm (D-03)
+          if (window.kiosk && window.kiosk.adminMenuAction) {
+            window.kiosk.adminMenuAction('toggle-pos-open').then(function (result) {
+              if (result && result.ok) {
+                posOpenState = result.posOpen;
+                updatePosToggleButton(result.posOpen);
+              }
+            });
+          }
+        }
+      });
+    }
+
+    // Phase 09 — confirm overlay buttons
+    var posConfirmYes = document.getElementById('pos-confirm-yes');
+    if (posConfirmYes) {
+      posConfirmYes.addEventListener('click', function () {
+        if (window.kiosk && window.kiosk.adminMenuAction) {
+          window.kiosk.adminMenuAction('toggle-pos-open').then(function (result) {
+            hidePosCloseConfirm();
+            if (result && result.ok) {
+              posOpenState = result.posOpen;
+              updatePosToggleButton(result.posOpen);
+            }
+          });
+        }
+      });
+    }
+    var posConfirmCancel = document.getElementById('pos-confirm-cancel');
+    if (posConfirmCancel) {
+      posConfirmCancel.addEventListener('click', function () {
+        hidePosCloseConfirm();
+      });
+    }
+
     // PAT config form wiring
     var patInput = document.getElementById('update-pat-input');
     var saveBtn  = document.getElementById('update-config-save');
@@ -994,8 +1131,20 @@
     if (window.kiosk.onShowPinLockout)       window.kiosk.onShowPinLockout(showPinLockout);
     if (window.kiosk.onHidePinLockout)       window.kiosk.onHidePinLockout(hidePinLockout);
     // Phase 6 — Welcome screen
-    if (window.kiosk.onShowWelcome) window.kiosk.onShowWelcome(showWelcome);
+    if (window.kiosk.onShowWelcome) window.kiosk.onShowWelcome(function (payload) {
+      showWelcome(payload);
+      // Phase 09: re-apply pos state on every welcome show (Pitfall 2)
+      applyPosState(posOpenState);
+    });
     if (window.kiosk.onHideWelcome) window.kiosk.onHideWelcome(hideWelcome);
+    // Phase 09 — POS state changed subscriber
+    if (window.kiosk.onPosStateChanged) {
+      window.kiosk.onPosStateChanged(function (payload) {
+        var posOpen = !!(payload && payload.posOpen !== false);
+        applyPosState(posOpen);
+        updatePosToggleButton(posOpen);
+      });
+    }
     // Phase 08 — PIN change overlay IPC
     if (window.kiosk.onShowPinChangeOverlay) {
       window.kiosk.onShowPinChangeOverlay(function () { showPinChangeOverlay(); });
@@ -1027,6 +1176,12 @@
     if (e.key !== 'Escape') return;
     var adminMenu = document.getElementById('admin-menu');
     if (!adminMenu || adminMenu.style.display === 'none') return;
+    // Phase 09: Esc closes pos-close-confirm overlay first (nested guard)
+    var posCloseConfirm = document.getElementById('pos-close-confirm');
+    if (posCloseConfirm && posCloseConfirm.style.display !== 'none') {
+      hidePosCloseConfirm();
+      return;
+    }
     // D-02: check nested overlays — Esc from nested screens handled by their own cancel paths
     var credsOverlay = document.getElementById('credentials-overlay');
     var pinChangeOverlay = document.getElementById('pin-change-overlay');
