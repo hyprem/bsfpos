@@ -935,10 +935,17 @@
       posConfirmYes.addEventListener('click', function () {
         if (window.kiosk && window.kiosk.adminMenuAction) {
           window.kiosk.adminMenuAction('toggle-pos-open').then(function (result) {
-            hidePosCloseConfirm();
             if (result && result.ok) {
+              hidePosCloseConfirm();
               posOpenState = result.posOpen;
               updatePosToggleButton(result.posOpen);
+              // WR-03: refresh diagnostics to re-sync posOpenState with store truth
+              if (window.kiosk && window.kiosk.getAdminDiagnostics) {
+                window.kiosk.getAdminDiagnostics().then(function (d) { if (d) renderDiagnostics(d); });
+              }
+            } else {
+              // IPC failed or returned not-ok — still dismiss confirm overlay
+              hidePosCloseConfirm();
             }
           });
         }
@@ -1080,7 +1087,6 @@
     var welcomeEl = document.getElementById('welcome-screen');
     if (welcomeEl) {
       welcomeEl.addEventListener('pointerdown', handleWelcomeTap);
-      welcomeEl.addEventListener('touchstart',  handleWelcomeTap);
       // NFC-05 (D-02): badge keystrokes arriving while welcome is visible
       // are ignored — do NOT forward to notifyWelcomeTap. Keys alone never
       // dismiss welcome; only taps do. The Phase 4 badge-input arbiter
