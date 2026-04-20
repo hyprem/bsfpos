@@ -426,12 +426,12 @@ All other claims in this document are tagged VERIFIED from direct source-file in
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **authFlow.start() for Magicline reload (FIX-01 active-session branch)**
+1. **authFlow.start() for Magicline reload (FIX-01 active-session branch)** — RESOLVED
    - What we know: `startLoginFlow()` at main.js:488 creates the view if needed and calls `authFlow.start()`. For the reload branch the view already exists; we just need to restart authFlow on the existing webContents.
-   - What's unclear: Does calling `authFlow.start({ ... webContents: wc ... })` reset the state machine cleanly when called on an already-running authFlow (e.g. after a previous successful login)?
-   - Recommendation: Inspect `authFlow.start()` implementation to confirm it resets `currentState = 'BOOTING'` unconditionally. If so, calling it again is safe. If it guards against re-entry, add a `authFlow.reset()` call first.
+   - **RESOLVED:** Confirmed at authFlow.js line 496 — `authFlow.start()` sets `currentState = STATES.BOOTING` unconditionally on every call. Re-calling it on an already-running authFlow is safe; there is no re-entry guard. The reload branch can call `authFlow.start({ ...webContents: wc... })` directly without a separate reset step.
+   - ~~What's unclear: Does calling `authFlow.start({ ... webContents: wc ... })` reset the state machine cleanly when called on an already-running authFlow (e.g. after a previous successful login)?~~
 
 2. **admin:close IPC vs `closeAdminMenu` helper**
    - What we know: The existing `close-admin-menu` IPC handler at main.js:842 does most of what `closeAdminMenu()` needs. The `admin-menu-action` case for `pin-change` also needs to re-show the admin menu after PIN change completes — which is handled by the renderer's `onHidePinChangeOverlay + showAdminMenu` sequence.
