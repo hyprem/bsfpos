@@ -3,35 +3,35 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Field-Operations Polish
 status: executing
-last_updated: "2026-04-20T18:01:42.303Z"
+last_updated: "2026-04-20T19:06:19.646Z"
 last_activity: 2026-04-20
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 8
-  completed_plans: 8
-  percent: 100
+  total_plans: 10
+  completed_plans: 9
+  percent: 90
 ---
 
 # Project State: Bee Strong POS Kiosk
 
-**Last updated:** 2026-04-20 (Phase 08 complete — admin menu polish: X close button, Esc handler, Ctrl+Shift+F12 toggle, credentials title fix, PIN change flow, reload fix FIX-01, 6 human UAT items pending)
+**Last updated:** 2026-04-20 (Phase 09 Plan 01 complete — updateGate admin-closed-window trigger + toggle-pos-open IPC + pos-state-changed broadcast)
 
 ## Project Reference
 
 **Core value:** A gym member can walk up, scan or self-select a product, pay at the card terminal next to the kiosk, and walk away — without staff interaction and without being able to break out of the locked Magicline cash register page. (NFC member identification descoped 2026-04-14, see MILESTONES.md.)
 
-**Current focus:** Phase 09 — pos-open-close-update-gating
+**Current focus:** Phase 09 — pos-open-close-toggle-with-update-window-gating
 
 ## Current Position
 
-Phase: 08 (admin-menu-polish-reload-fix) — COMPLETE (human UAT pending)
-Plan: 2 of 2 complete
+Phase: 09 (pos-open-close-toggle-with-update-window-gating) — EXECUTING
+Plan: 1 of 2
 
 - **Milestone:** v1.1 Field-Operations Polish — STARTED 2026-04-14
-- **Status:** Phase 08 verified, advancing to Phase 09
+- **Status:** Executing Phase 09
 - **Phase:** 09 of 10 (POS open/close & update gating)
-- **Plan:** Not started
+- **Plan:** 1 of 2 complete — Plan 02 next
 - **Last activity:** 2026-04-20
 
 ## Key Decisions (Phase 07)
@@ -74,7 +74,7 @@ Field guide: `docs/runbook/v1.0-KIOSK-VISIT.md`. Authoritative per-requirement s
 
 ## Next Action
 
-Run `/gsd-discuss-phase 09` to start Phase 09 (POS Open/Close Toggle with Update-Window Gating). Phase 08 admin menu polish is complete with 6 human UAT items pending next kiosk visit.
+Execute Plan 02 of Phase 09 (host-side UI: POS toggle button, confirm overlay, closed-state welcome rendering, pos-state-changed subscriber).
 
 ### Quick Tasks Completed
 
