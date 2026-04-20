@@ -126,7 +126,7 @@
       el.setAttribute('tabindex', '0');
       el.setAttribute('aria-label', 'Zum Kassieren tippen');
     } else {
-      if (h1) h1.textContent = 'POS derzeit geschlossen';
+      if (h1) h1.textContent = 'Kasse derzeit geschlossen';
       if (!sub) {
         sub = document.createElement('p');
         sub.className = 'bsk-welcome-subtext';
@@ -137,7 +137,7 @@
       el.style.cursor = 'default';
       el.removeAttribute('role');
       el.removeAttribute('tabindex');
-      el.setAttribute('aria-label', 'POS geschlossen');
+      el.setAttribute('aria-label', 'Kasse geschlossen');
     }
     posOpenState = posOpen;
   }
