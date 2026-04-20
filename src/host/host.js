@@ -301,6 +301,11 @@
     var overlay = document.getElementById('credentials-overlay');
     var firstRunFields = document.getElementById('creds-firstrun-fields');
     if (firstRunFields) firstRunFields.style.display = credsFirstRun ? 'block' : 'none';
+    // Phase 08 — D-06: update card title based on mode (Pitfall 5 fix)
+    var cardTitle = overlay ? overlay.querySelector('.bsk-card-title') : null;
+    if (cardTitle) {
+      cardTitle.textContent = credsFirstRun ? 'Kiosk einrichten' : 'Anmeldedaten \u00E4ndern';
+    }
     // Clear any previous values and errors
     ['creds-user', 'creds-pass', 'creds-pin', 'creds-pin2'].forEach(function (id) {
       var el = document.getElementById(id);
@@ -587,6 +592,116 @@
     if (input) input.value = ''; // defensive: never retain PAT in DOM
   }
 
+  // =================================================================
+  // Phase 08 — PIN change overlay
+  // =================================================================
+
+  function showPinChangeOverlay() {
+    var overlay = document.getElementById('pin-change-overlay');
+    // Clear fields and error
+    ['pin-chg-current', 'pin-chg-new', 'pin-chg-confirm'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    var errEl = document.getElementById('pin-change-error');
+    if (errEl) { errEl.textContent = ''; errEl.style.display = 'none'; }
+    var saveBtn = document.getElementById('pin-change-save');
+    if (saveBtn) saveBtn.disabled = true;
+    if (overlay) {
+      overlay.style.display = 'flex';
+      overlay.setAttribute('aria-hidden', 'false');
+    }
+  }
+
+  function hidePinChangeOverlay() {
+    var overlay = document.getElementById('pin-change-overlay');
+    if (overlay) {
+      overlay.style.display = 'none';
+      overlay.setAttribute('aria-hidden', 'true');
+    }
+    // Clear fields on hide (defense in depth — don't retain PIN in DOM)
+    ['pin-chg-current', 'pin-chg-new', 'pin-chg-confirm'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+  }
+
+  function wirePinChangeForm() {
+    var currentEl = document.getElementById('pin-chg-current');
+    var newEl = document.getElementById('pin-chg-new');
+    var confirmEl = document.getElementById('pin-chg-confirm');
+    var saveBtn = document.getElementById('pin-change-save');
+    var cancelBtn = document.getElementById('pin-change-cancel');
+    var errEl = document.getElementById('pin-change-error');
+
+    function updateSaveEnabled() {
+      if (!saveBtn) return;
+      var c = currentEl ? currentEl.value : '';
+      var n = newEl ? newEl.value : '';
+      var cf = confirmEl ? confirmEl.value : '';
+      saveBtn.disabled = !(c.length >= 4 && n.length >= 4 && cf.length >= 4);
+    }
+
+    if (currentEl) currentEl.addEventListener('input', updateSaveEnabled);
+    if (newEl) newEl.addEventListener('input', updateSaveEnabled);
+    if (confirmEl) confirmEl.addEventListener('input', updateSaveEnabled);
+
+    if (saveBtn) {
+      saveBtn.addEventListener('click', async function () {
+        var current = currentEl ? currentEl.value : '';
+        var newPin = newEl ? newEl.value : '';
+        var confirm = confirmEl ? confirmEl.value : '';
+
+        // Client-side validation
+        if (newPin.length < 4) {
+          if (errEl) { errEl.textContent = 'PIN muss mindestens 4 Ziffern haben'; errEl.style.display = 'block'; }
+          return;
+        }
+        if (newPin !== confirm) {
+          if (errEl) { errEl.textContent = 'PINs stimmen nicht \u00FCberein'; errEl.style.display = 'block'; }
+          return;
+        }
+
+        // Clear error before submit
+        if (errEl) errEl.style.display = 'none';
+        saveBtn.disabled = true;
+
+        try {
+          if (!window.kiosk || !window.kiosk.submitPinChange) return;
+          var r = await window.kiosk.submitPinChange({ currentPin: current, newPin: newPin });
+          if (r && r.ok) {
+            // Success — main.js handles hiding overlay and showing admin menu
+            // Clear fields
+            if (currentEl) currentEl.value = '';
+            if (newEl) newEl.value = '';
+            if (confirmEl) confirmEl.value = '';
+          } else if (r && r.error === 'wrong-pin') {
+            if (errEl) { errEl.textContent = 'Falscher PIN'; errEl.style.display = 'block'; }
+            // Clear all fields on wrong PIN
+            if (currentEl) currentEl.value = '';
+            if (newEl) newEl.value = '';
+            if (confirmEl) confirmEl.value = '';
+            saveBtn.disabled = true;
+          } else {
+            if (errEl) { errEl.textContent = 'Fehler beim Speichern'; errEl.style.display = 'block'; }
+            saveBtn.disabled = false;
+          }
+        } catch (e) {
+          if (errEl) { errEl.textContent = 'Fehler beim Speichern'; errEl.style.display = 'block'; }
+          saveBtn.disabled = false;
+        }
+      });
+    }
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', function () {
+        if (window.kiosk && window.kiosk.cancelPinChange) {
+          window.kiosk.cancelPinChange();
+        }
+      });
+    }
+  }
+
   function showUpdatingCover() {
     var el = document.getElementById('updating-cover');
     if (el) { el.style.display = 'flex'; el.setAttribute('aria-hidden', 'false'); }
@@ -674,6 +789,7 @@
       'admin-btn-logs':            'view-logs',
       'admin-btn-reload':          'reload',
       'admin-btn-credentials':     're-enter-credentials',
+      'admin-btn-pin-change':      'pin-change',
       'admin-btn-update-config':   'configure-auto-update',
       'admin-btn-dev-mode':        'toggle-dev-mode',
       'admin-btn-exit':            'exit-to-windows',
@@ -687,6 +803,16 @@
         }
       });
     });
+
+    // Phase 08 — X close button (D-01)
+    var closeBtn = document.getElementById('admin-btn-close');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function () {
+        if (window.kiosk && window.kiosk.closeAdminMenu) {
+          window.kiosk.closeAdminMenu();
+        }
+      });
+    }
 
     // PAT config form wiring
     var patInput = document.getElementById('update-pat-input');
@@ -749,6 +875,7 @@
   // =================================================================
   function wireStatic() {
     wireAdminButtons();
+    wirePinChangeForm();
     // Submit button
     var submit = document.getElementById('creds-submit');
     if (submit) submit.addEventListener('click', submitCredentials);
@@ -869,6 +996,13 @@
     // Phase 6 — Welcome screen
     if (window.kiosk.onShowWelcome) window.kiosk.onShowWelcome(showWelcome);
     if (window.kiosk.onHideWelcome) window.kiosk.onHideWelcome(hideWelcome);
+    // Phase 08 — PIN change overlay IPC
+    if (window.kiosk.onShowPinChangeOverlay) {
+      window.kiosk.onShowPinChangeOverlay(function () { showPinChangeOverlay(); });
+    }
+    if (window.kiosk.onHidePinChangeOverlay) {
+      window.kiosk.onHidePinChangeOverlay(function () { hidePinChangeOverlay(); });
+    }
     // Dev mode toggle feedback
     if (window.kiosk.onDevModeChanged) window.kiosk.onDevModeChanged(function (payload) {
       var active = payload && payload.active;
@@ -886,6 +1020,25 @@
       if (mlErr) mlErr.style.opacity = active ? '0.4' : '1';
     });
   }
+
+  // Phase 08 — Esc key closes admin menu (D-02)
+  // Only fires from ROOT admin menu — not when nested overlay is visible
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    var adminMenu = document.getElementById('admin-menu');
+    if (!adminMenu || adminMenu.style.display === 'none') return;
+    // D-02: check nested overlays — Esc from nested screens handled by their own cancel paths
+    var credsOverlay = document.getElementById('credentials-overlay');
+    var pinChangeOverlay = document.getElementById('pin-change-overlay');
+    var updateConfig = document.getElementById('update-config');
+    if (credsOverlay && credsOverlay.style.display !== 'none') return;
+    if (pinChangeOverlay && pinChangeOverlay.style.display !== 'none') return;
+    if (updateConfig && updateConfig.style.display !== 'none') return;
+    // Only root admin menu is visible — close it
+    if (window.kiosk && window.kiosk.closeAdminMenu) {
+      window.kiosk.closeAdminMenu();
+    }
+  });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', wireStatic);
