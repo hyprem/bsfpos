@@ -1138,6 +1138,24 @@
       idleOverlay.addEventListener('keydown',     dismissIdleOverlay);
     }
 
+    // Phase 10 D-01/D-06/D-08: N\u00E4chster Kunde button — keeps Magicline
+    // session alive, rearms idle timer. First-wins guard prevents
+    // double-fire with the countdown auto-expiry path. No tap-anywhere or
+    // Esc dismiss — D-01/D-02 explicitly reject those paths.
+    var postSaleNextBtn = document.getElementById('post-sale-next-btn');
+    if (postSaleNextBtn) {
+      postSaleNextBtn.addEventListener('click', function () {
+        if (postSaleResolved) return;  // D-08 first-wins
+        postSaleResolved = true;
+        hidePostSaleOverlay();
+        try {
+          if (window.kiosk && window.kiosk.notifyPostSaleNextCustomer) {
+            window.kiosk.notifyPostSaleNextCustomer();
+          }
+        } catch (e) { /* ignore */ }
+      });
+    }
+
     // Keypad buttons
     var keypadButtons = document.querySelectorAll('.bsk-keypad-btn');
     for (var j = 0; j < keypadButtons.length; j++) {
@@ -1215,6 +1233,9 @@
         updatePosToggleButton(posOpen);
       });
     }
+    // Phase 10 — Post-sale overlay IPC subscribers (D-19)
+    if (window.kiosk.onShowPostSale) window.kiosk.onShowPostSale(showPostSaleOverlay);
+    if (window.kiosk.onHidePostSale) window.kiosk.onHidePostSale(hidePostSaleOverlay);
     // Phase 08 — PIN change overlay IPC
     if (window.kiosk.onShowPinChangeOverlay) {
       window.kiosk.onShowPinChangeOverlay(function () { showPinChangeOverlay(); });
