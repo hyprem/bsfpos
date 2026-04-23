@@ -84,4 +84,15 @@ contextBridge.exposeInMainWorld('kiosk', {
 
   // --- Phase 09 — POS open/close state -----------------------------------
   onPosStateChanged: (cb) => ipcRenderer.on('pos-state-changed', (_e, payload) => cb(payload)),
+
+  // --- Phase 10 — Post-sale overlay (D-19) ---------------------------------
+  // Main → renderer: show / hide the branded "Vielen Dank" overlay.
+  onShowPostSale: (cb) => ipcRenderer.on('post-sale:show', (_e) => cb()),
+  onHidePostSale: (cb) => ipcRenderer.on('post-sale:hide', (_e) => cb()),
+  // Renderer → main (fire-and-forget): button tap vs countdown-expiry
+  // outcomes. D-20: auto-logout triggers sessionReset.hardReset with
+  // reason:'sale-completed', mode:'welcome'. next-customer keeps the
+  // Magicline session alive and rearms the 60s idle timer (D-06).
+  notifyPostSaleNextCustomer: () => { ipcRenderer.send('post-sale:next-customer'); },
+  notifyPostSaleAutoLogout:   () => { ipcRenderer.send('post-sale:auto-logout');   },
 });
