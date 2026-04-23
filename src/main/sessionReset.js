@@ -101,8 +101,14 @@ async function hardReset({ reason, mode } = {}) {
 
   // D-06: exclude welcome-logouts from the loop counter. Crashes, admin-
   // requested resets, and self-heal-triggered resets all stay countable.
+  // Phase 10 D-17: ALSO exclude sale-completed — a member doing 4 quick
+  // sales in a minute must not trip the reset-loop guard. mode check is
+  // omitted because sale-completed always arrives with mode:'welcome'.
   const countable = resetTimestamps.filter(
-    (e) => !(e.reason === 'idle-expired' && e.mode === 'welcome')
+    (e) => !(
+      (e.reason === 'idle-expired' && e.mode === 'welcome') ||
+      e.reason === 'sale-completed'
+    )
   );
   if (countable.length >= RESET_LOOP_THRESHOLD) {
     loopActive = true;
