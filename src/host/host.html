@@ -10,10 +10,11 @@
 <body>
 
   <!--
-    Z-index ladder (per 01-UI-SPEC.md + 05-UI-SPEC.md):
+    Z-index ladder (per 01-UI-SPEC.md + 05-UI-SPEC.md + 10-UI-SPEC.md):
       0   — #magicline-mount — Phase 2 BrowserView attach point
       100 — #splash — Phase 1 branded splash cover
       150 — #welcome-screen — Phase 6 welcome/resting layer (D-02)
+      180 — #post-sale-overlay — Phase 10 branded "Vielen Dank" layer (D-04)
       200 — #idle-overlay — Phase 4 idle "Noch da?" overlay
       300 — #magicline-error (Phase 2/3 variants + Phase 5 bad-release, update-failed)
       300 — #updating-cover — Phase 5 mutually exclusive with #magicline-error
@@ -65,6 +66,27 @@
             id="idle-dismiss-btn"
             class="bsk-btn bsk-btn--primary bsk-btn--idle-dismiss">
       Weiter
+    </button>
+  </div>
+
+  <!-- LAYER 180: Post-sale overlay (Phase 10 D-04) -->
+  <div id="post-sale-overlay"
+       class="bsk-layer bsk-layer--post-sale"
+       style="display:none;"
+       aria-hidden="true"
+       role="dialog"
+       aria-label="Einkauf best&auml;tigt">
+    <img src="assets/logo-dark.png" class="bsk-logo" alt="Bee Strong Fitness" width="160">
+    <h1 class="bsk-heading bsk-post-sale-title">Vielen Dank!</h1>
+    <div class="bsk-idle-countdown" aria-live="polite">
+      <span id="post-sale-countdown-number" class="bsk-idle-number">10</span>
+      <span class="bsk-idle-seconds-label">SEKUNDEN</span>
+    </div>
+    <p class="bsk-idle-subtext">Vielen Dank f&uuml;r Ihren Einkauf!</p>
+    <button type="button"
+            id="post-sale-next-btn"
+            class="bsk-btn bsk-btn--primary bsk-btn--idle-dismiss">
+      N&auml;chster Kunde
     </button>
   </div>
 
