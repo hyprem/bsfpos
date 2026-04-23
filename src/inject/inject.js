@@ -42,6 +42,15 @@
   window.__bskiosk_injected__ = true;
   window.__bskiosk_events = window.__bskiosk_events || [];
 
+  // --- Phase 10 D-11: cart-empty fallback state (one-time) -------------
+  // Armed by the existing 'Jetzt verkaufen' click listener below; cleared
+  // when cart goes non-zero OR when the 120s window expires. A 500ms debounce
+  // absorbs React re-render glitches where the DOM momentarily removes items
+  // before re-adding them.
+  var _paymentConfirmedAt = 0;
+  var _postSaleFallbackTimer = null;
+  var PAYMENT_CONFIRM_WINDOW_MS = 120000;
+
   // --- Phase 4 one-time setup listeners (research pin #4, Pattern 10) ------
   // CRITICAL: all three listeners below are attached BELOW the idempotency
   // anchor (`window.__bskiosk_injected__ = true`) and NOT inside the early-
@@ -98,6 +107,10 @@
         // console.log sentinel that magiclineView.js matches on the
         // console-message listener and relays as `audit-sale-completed`.
         try { console.log('BSK_AUDIT_SALE_COMPLETED'); } catch (e) { /* swallow */ }
+        // Phase 10 D-11: arm cart-empty fallback gate. The observer below
+        // fires BSK_POST_SALE_FALLBACK only if the cart transitions to
+        // zero within PAYMENT_CONFIRM_WINDOW_MS of THIS arming.
+        _paymentConfirmedAt = Date.now();
         // NFC descope (2026-04-14, quick 260414-eu9): previously cleared the
         // customer-search input 3s after sale to wipe the last badge ID.
         // Member identification is no longer done at the kiosk, so there is
@@ -106,6 +119,105 @@
       }
     } catch (err) { /* swallow */ }
   });
+
+  // --- Phase 10 D-10 (REVISED per RESEARCH §1): window.print override ----
+  // The `-print` webContents event does NOT exist in Electron 41 (wontfix
+  // per electron/electron#22796). The approved replacement — pre-authorized
+  // in CONTEXT.md §Known Fragility — is to override window.print at the JS
+  // level inside Magicline's main world. Chrome's print preview NEVER opens
+  // because the override never calls the original.
+  //
+  // Placement: ONE-TIME setup, below __bskiosk_injected__ anchor. Re-injection
+  // on did-navigate-in-page early-returns above, so this only runs on a true
+  // fresh page load (which is what we want — the override persists on window
+  // across hash-route navigations).
+  try {
+    var _originalPrint = window.print;
+    window.print = function () {
+      try { console.log('BSK_PRINT_INTERCEPTED'); } catch (e) { /* swallow */ }
+      // Do NOT call _originalPrint — Chrome's print preview must never open.
+      // _originalPrint is retained in closure for potential future diagnostic
+      // use; NEVER invoke it from production code paths.
+    };
+  } catch (e) { /* swallow — override failure is non-fatal; observer covers */ }
+
+  // --- Phase 10 D-11: cart-empty-after-payment MutationObserver fallback --
+  // Defense-in-depth: if Magicline's print path bypasses window.print (e.g.
+  // via a Web Worker or iframe — RISK-04), observing the cart DOM clears
+  // catches the sale completion independently.
+  //
+  // Selector: uses STABLE_SELECTORS-based attribute match. The exact cart
+  // data-role MUST be discovered via DevTools against live Magicline (see
+  // fragile-selectors.js entry + the Task-3 human checkpoint below). If the
+  // cart root cannot be found, _attachCartEmptyObserver emits
+  // observer-attach-failed and the fallback stays inoperative — the window.print
+  // override alone still triggers the overlay.
+  function _getCartItemCount() {
+    try {
+      // Count DOM nodes inside the cart root. Three strategies tried in
+      // order; first non-null wins. If none match, returns -1 which the
+      // observer treats as "cannot determine" (skip, do not fire sentinel).
+      var countEl = document.querySelector('[data-role="cart-item-count"]');
+      if (countEl && countEl.textContent) {
+        var n = parseInt(countEl.textContent.trim(), 10);
+        if (!isNaN(n)) return n;
+      }
+      var items = document.querySelectorAll('[data-role="cart"] [data-role="cart-item"]');
+      if (items && items.length >= 0) return items.length;
+      return -1;
+    } catch (e) { return -1; }
+  }
+
+  function _attachCartEmptyObserver() {
+    // Selector list must be kept in sync with fragile-selectors.js.
+    var cartRoot = document.querySelector('[data-role="cart"]')
+                || document.querySelector('[data-role="shopping-cart"]');
+    if (!cartRoot) {
+      emit('observer-attach-failed', { purpose: 'cart-empty-fallback' });
+      return;
+    }
+    var obs = new MutationObserver(function () {
+      if (_postSaleFallbackTimer) return; // debounce active
+      var count = _getCartItemCount();
+      if (count === -1) return; // could not determine — skip
+      if (count !== 0) {
+        _paymentConfirmedAt = 0; // non-empty resets gate (multi-purchase + abandoned)
+        return;
+      }
+      if (!_paymentConfirmedAt) return; // no recent "Jetzt verkaufen" arming
+      if (Date.now() - _paymentConfirmedAt > PAYMENT_CONFIRM_WINDOW_MS) {
+        _paymentConfirmedAt = 0;
+        return; // stale arming — treat as abandoned sale
+      }
+      // 500ms debounce — re-check after delay to absorb React re-render glitches
+      _postSaleFallbackTimer = setTimeout(function () {
+        _postSaleFallbackTimer = null;
+        if (_getCartItemCount() === 0 && _paymentConfirmedAt) {
+          _paymentConfirmedAt = 0;
+          try { console.log('BSK_POST_SALE_FALLBACK'); } catch (e) { /* swallow */ }
+        }
+      }, 500);
+    });
+    try {
+      obs.observe(cartRoot, { childList: true, subtree: true, attributes: true });
+    } catch (e) {
+      emit('observer-attach-failed', { purpose: 'cart-empty-fallback', message: String(e && e.message) });
+    }
+  }
+  // Attach as a one-time setup. If cart root is not yet in the DOM at inject
+  // time (e.g. we inject during Magicline's initial React hydration), the
+  // attach fails silently and will be re-attempted by the schedule() rAF
+  // debounced pass below on the next mutation — but only the FIRST successful
+  // attach takes effect (observer re-use would double-fire).
+  var _cartObserverAttached = false;
+  function _ensureCartEmptyObserver() {
+    if (_cartObserverAttached) return;
+    var cartRoot = document.querySelector('[data-role="cart"]')
+                || document.querySelector('[data-role="shopping-cart"]');
+    if (!cartRoot) return; // try again on next mutation
+    _cartObserverAttached = true;
+    _attachCartEmptyObserver();
+  }
 
   // --- Drain-queue event emitter (Pattern 5) -------------------------------
   // Main process polls `(() => { const q = window.__bskiosk_events || [];
@@ -505,6 +617,7 @@
       detectReady();
       detectLogin();
       detectAndSelectRegister();
+      _ensureCartEmptyObserver();
     });
   }
 
