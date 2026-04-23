@@ -41,6 +41,12 @@ let resetLoopPending = false;
 // cold-boot / idle-recovery paths are not affected by the new sentinel.
 let welcomeTapPending = false;
 
+// Phase 10 D-12: dedupe flag that gates both post-sale triggers (print-intercept
+// primary + cart-empty-fallback). Set true when startPostSaleFlow runs; cleared
+// on post-sale:next-customer and on every hard reset (onPreReset callback).
+// Prevents double-show when both triggers fire within the same sale cycle.
+let postSaleShown = false;
+
 const isDev = process.env.NODE_ENV === 'development';
 
 // --- Phase 5 constants ------------------------------------------------
@@ -407,6 +413,96 @@ app.whenReady().then(() => {
     }
   });
 
+  // --- Phase 10 SALE-01: post-sale flow orchestration ----------------------
+  // The complete post-sale flow:
+  //   1. Magicline calls window.print (or cart-empties after payment)
+  //   2. inject.js emits BSK_PRINT_INTERCEPTED (or BSK_POST_SALE_FALLBACK)
+  //   3. magiclineView.js console-message listener relays via
+  //      ipcMain.emit('post-sale:trigger', null, {trigger})
+  //   4. THIS handler gates via postSaleShown dedupe, calls startPostSaleFlow
+  //   5. startPostSaleFlow stops idle timer, sends post-sale:show to host,
+  //      emits post-sale.shown audit
+  //   6. Host shows overlay with 10s countdown (host.js Plan 07)
+  //   7. On button tap (next-customer): clears flag, restarts idle timer
+  //   8. On auto-expiry (auto-logout): hardReset({reason:'sale-completed',
+  //      mode:'welcome'}) which internally triggers onPostReset for updateGate
+  //
+  // post-sale:hide IPC (D-19): sent ONLY from onPreReset above when a reset
+  // fires while postSaleShown is still true. Host-initiated dismiss paths do
+  // NOT send it — they hide locally. See <design_notes> in this plan.
+  //
+  // The helper encapsulates steps 4-5 to keep the trigger handler trivial
+  // and to ensure BOTH primary and fallback trigger paths share the exact
+  // same idle-timer stop + audit + IPC-send sequence.
+
+  // Phase 10 D-05/D-12: helper encapsulates idle-timer stop + IPC send +
+  // flag set + audit. Called from the post-sale:trigger handler after the
+  // dedupe gate passes.
+  function startPostSaleFlow(opts) {
+    var trigger = (opts && opts.trigger) || 'unknown';
+    postSaleShown = true;
+    try { require('./idleTimer').stop(); } catch (_) { /* idleTimer lazy-required — safe to swallow */ }
+    try {
+      if (mainWindow && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
+        mainWindow.webContents.send('post-sale:show');
+      }
+    } catch (e) {
+      log.error('phase10.startPostSaleFlow.send failed: ' + (e && e.message));
+    }
+    try { log.audit('post-sale.shown', { trigger: trigger }); } catch (_) { /* swallow */ }
+  }
+
+  // Phase 10 D-12: post-sale:trigger relay from magiclineView.js console-message.
+  // Payload: { trigger: 'print-intercept' | 'cart-empty-fallback' }.
+  // Dedupe: if postSaleShown is already true (another trigger already fired),
+  // silently no-op and log at info level (not warn — dual-fire is expected
+  // when both print and cart-empty happen in the same sale).
+  try { ipcMain.removeAllListeners('post-sale:trigger'); } catch (_) {}
+  ipcMain.on('post-sale:trigger', function (_ev, payload) {
+    try {
+      if (postSaleShown) {
+        log.info('phase10.post-sale:trigger.ignored reason=already-shown');
+        return;
+      }
+      var trigger = (payload && payload.trigger) || 'unknown';
+      startPostSaleFlow({ trigger: trigger });
+    } catch (err) {
+      log.error('phase10.post-sale:trigger failed: ' + (err && err.message));
+    }
+  });
+
+  // Phase 10 D-06: next-customer button — keep Magicline session alive, rearm
+  // the 60s idle timer. The Magicline view stays visible; the cart stays as-is
+  // (member may want to buy a second item). No sessionReset here — that is
+  // the auto-logout path only. host.js hides the overlay locally on button
+  // tap (Plan 07) — no post-sale:hide needed on this path.
+  try { ipcMain.removeAllListeners('post-sale:next-customer'); } catch (_) {}
+  ipcMain.on('post-sale:next-customer', function () {
+    try {
+      postSaleShown = false;
+      try { require('./idleTimer').start(); } catch (_) {}
+      try { log.audit('post-sale.dismissed', { via: 'next-customer' }); } catch (_) {}
+    } catch (err) {
+      log.error('phase10.post-sale:next-customer failed: ' + (err && err.message));
+    }
+  });
+
+  // Phase 10 D-20: countdown auto-expiry — hard reset to welcome. The reason
+  // 'sale-completed' is excluded from the 3-in-60s loop counter (Plan 01)
+  // and still fires onPostReset for updateGate install composition (D-18).
+  // postSaleShown is implicitly cleared by onPreReset in the hardReset path,
+  // which ALSO sends post-sale:hide to the host (D-19) so the overlay is
+  // hidden before the welcome layer shows.
+  try { ipcMain.removeAllListeners('post-sale:auto-logout'); } catch (_) {}
+  ipcMain.on('post-sale:auto-logout', function () {
+    try {
+      try { log.audit('post-sale.dismissed', { via: 'auto-logout' }); } catch (_) {}
+      require('./sessionReset').hardReset({ reason: 'sale-completed', mode: 'welcome' });
+    } catch (err) {
+      log.error('phase10.post-sale:auto-logout failed: ' + (err && err.message));
+    }
+  });
+
   // --- Phase 2: Magicline child view + injection pipeline ---------------
   // createMagiclineView attaches a WebContentsView child to mainWindow, loads
   // the Magicline cash-register URL under the persist:magicline partition,
@@ -465,6 +561,25 @@ app.whenReady().then(() => {
         // Phase 07 SPLASH-01: clear welcomeTapPending on any hard reset so a
         // stale flag from a mid-flow reset does not gate the next welcome path.
         welcomeTapPending = false;
+        // Phase 10 D-12 + D-19: if the post-sale overlay is currently showing and
+        // a hard reset is about to execute (admin-initiated or idle-triggered),
+        // force-hide it first so the user sees a clean welcome transition rather
+        // than a flash of stale post-sale UI. This is the ONE AND ONLY sender of
+        // the post-sale:hide IPC channel (D-19) — see <design_notes> in this plan.
+        // Host-initiated dismiss paths (button tap, countdown expiry) hide locally
+        // and do NOT trigger this send.
+        if (postSaleShown) {
+          try {
+            if (mainWindow && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
+              mainWindow.webContents.send('post-sale:hide');
+            }
+          } catch (e) {
+            log.error('phase10.onPreReset.post-sale:hide send failed: ' + (e && e.message));
+          }
+        }
+        // Phase 10 D-12: same rationale as welcomeTapPending — clear stale dedupe
+        // flag on any hard reset so the next sale cycle can re-trigger the overlay.
+        postSaleShown = false;
         if (healthWatchdogTimer || authPollTimer) {
           log.info('phase5.healthWatchdog.cleared-before-reset');
           if (healthWatchdogTimer) { clearTimeout(healthWatchdogTimer); healthWatchdogTimer = null; }
