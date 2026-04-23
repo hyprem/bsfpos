@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Field-Operations Polish
 status: executing
-last_updated: "2026-04-23T00:00:00.000Z"
+last_updated: "2026-04-23T08:01:08Z"
 last_activity: 2026-04-23
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 20
-  completed_plans: 10
-  percent: 50
+  completed_plans: 11
+  percent: 55
 ---
 
 # Project State: Bee Strong POS Kiosk
 
-**Last updated:** 2026-04-23 (Phase 10 PLANNED — 10 plans in 3 waves, ready to execute; D-10 revised per RESEARCH §1: `window.print` override in inject.js replaces nonexistent Electron 41 `-print` event, cart-empty MutationObserver kept as defense-in-depth)
+**Last updated:** 2026-04-23 (Phase 10 Plan 01 COMPLETE — sessionReset countable filter extended to exclude `reason==='sale-completed'` (D-17); D-17/D-18 tests added; 32/32 sessionReset tests green)
 
 ## Project Reference
 
@@ -25,14 +25,20 @@ progress:
 
 ## Current Position
 
-Phase: 09 (pos-open-close-toggle-with-update-window-gating) — COMPLETE (human UAT pending)
-Plan: 2 of 2 complete
+Phase: 10 (post-sale-flow-with-print-interception) — IN PROGRESS
+Plan: 1 of 10 complete (10-01 sessionreset-loop-filter)
 
 - **Milestone:** v1.1 Field-Operations Polish — STARTED 2026-04-14
-- **Status:** Ready to execute
+- **Status:** Executing
 - **Phase:** 10 — post-sale-flow-with-print-interception (10 plans planned, 3 waves)
-- **Plan:** 0 of 10 complete
+- **Plan:** 1 of 10 complete
 - **Last activity:** 2026-04-23
+
+## Key Decisions (Phase 10)
+
+- **D-10-01-01:** Phase 10 D-17 executed verbatim — countable filter extended with `|| reason === 'sale-completed'` inside existing `!(...)` negation. `mode` check intentionally omitted for sale-completed (reason alone is canonical; sale-completed always arrives with `mode:'welcome'`).
+- **D-10-01-02:** D-18 requires no code change — existing `succeeded && postResetListener` gate at sessionReset.js lines 249-256 already covers sale-completed welcome cycles (welcome-mode branch sets `succeeded=true` at line 186). Verified by new D-18 test.
+- **D-10-01-03:** D-18 test appends `sessionReset.onPostReset(null)` cleanup call (matching Phase 6 Test 10 convention at line 605) to prevent module-scoped listener contamination across tests.
 
 ## Key Decisions (Phase 07)
 
@@ -56,7 +62,7 @@ Plan: 2 of 2 complete
 | 07 | Locale Hardening & Splash Race | LOCALE-01, SPLASH-01 | Complete (6/6 plans) |
 | 08 | Admin Menu Polish & Reload Fix | ADMIN-01, ADMIN-03, FIX-01 | Complete (2/2 plans, human UAT pending) |
 | 09 | POS Open/Close & Update Gating | ADMIN-02 | Complete (2/2 plans, human UAT pending) |
-| 10 | Post-Sale Flow & Print Interception | SALE-01 | Planned (0/10 plans) |
+| 10 | Post-Sale Flow & Print Interception | SALE-01 | Executing (1/10 plans) |
 
 Coverage: 7/7 v1.1 requirements mapped.
 
@@ -74,7 +80,7 @@ Field guide: `docs/runbook/v1.0-KIOSK-VISIT.md`. Authoritative per-requirement s
 
 ## Next Action
 
-Run `/gsd-execute-phase 10` to execute the 10 plans created 2026-04-23. Waves: W1 (plans 01, 02, 03, 10 — sessionReset filter, preload IPC, inject.js print override + cart observer, NSIS default printer), W2 (04, 05, 06 — magiclineView sentinel relay, main.js IPC handlers + postSaleShown dedupe + post-sale:hide sender, host HTML/CSS), W3 (07, 08, 09 — host.js lifecycle, postSale.test.js, updateGate.test.js). Plans 03 and 10 are `autonomous: false` with blocking human checkpoints (cart selector DevTools discovery + installer VM test). D-10 revised per RESEARCH §1: `window.print` override in inject.js replaces the nonexistent Electron 41 `-print` event; D-11 cart-empty MutationObserver kept as defense-in-depth. Phase 09 POS open/close toggle is complete with 3 human UAT items pending next kiosk visit.
+Continue Phase 10 execution. Plan 10-01 (sessionreset-loop-filter) is COMPLETE — countable filter now excludes `reason==='sale-completed'` (D-17); D-17/D-18 tests added; 32/32 sessionReset tests green. Remaining W1 plans (02, 03, 10) can proceed in parallel: plan 02 preload IPC, plan 03 inject.js print override + cart observer (autonomous:false — blocking DevTools checkpoint), plan 10 NSIS default printer (autonomous:false — installer VM test). W2 (04, 05, 06) is unblocked by plan 01 since `post-sale:auto-logout` handler in plan 05 can now safely call `hardReset({reason:'sale-completed', mode:'welcome'})`. W3 (07, 08, 09) ships host.js + tests. D-10 revised per RESEARCH §1: `window.print` override in inject.js replaces the nonexistent Electron 41 `-print` event; D-11 cart-empty MutationObserver kept as defense-in-depth. Phase 09 POS open/close toggle is complete with 3 human UAT items pending next kiosk visit.
 
 ### Quick Tasks Completed
 
@@ -83,7 +89,7 @@ Run `/gsd-execute-phase 10` to execute the 10 plans created 2026-04-23. Waves: W
 | 260414-eu9 | Descope NFC member-badge identification from v1.0 | 2026-04-14 | cbc9b59 | [260414-eu9-descope-nfc-member-badge-identification-](./quick/260414-eu9-descope-nfc-member-badge-identification-/) |
 | 260414-iiv | Ship 0.1.3 patch — fix release asset filename mismatch + flip update window to 09:00–12:00 | 2026-04-14 | 34cb20a | [260414-iiv-ship-0-1-3-patch-fix-release-asset-filen](./quick/260414-iiv-ship-0-1-3-patch-fix-release-asset-filen/) |
 
-**Last activity:** 2026-04-14 — v1.1 roadmap created (4 phases, 7 requirements mapped)
+**Last activity:** 2026-04-23 — Phase 10 Plan 01 complete (sessionReset countable filter excludes sale-completed; 32/32 tests green)
 
 ---
 *State initialized: 2026-04-08 · v1.0 archived: 2026-04-14 · NFC descoped: 2026-04-14 · v1.1 roadmap: 2026-04-14*
