@@ -682,22 +682,25 @@ This is a topological hint for the planner. Each step builds on the previous.
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED — gated to Plan 03 human checkpoint)
 
 1. **Does Magicline call `window.print()` on every Kartenzahlung-complete?**
    - What we know: CONTEXT.md states this is how Magicline triggers receipt printing
    - What's unclear: whether it goes through a frame, a worker, or the top-level `window`
    - Recommendation: Test the `window.print` override in dev mode with a real Magicline sale; if the sentinel doesn't fire, inspect the call stack via DevTools
+   - **Resolution:** Addressed by Plan 03 Task 3 blocking human checkpoint. Executor must discover selector and confirm BSK_PRINT_INTERCEPTED fires before Wave 2 proceeds.
 
 2. **What is the exact `data-role` value for Magicline's cart container?**
    - What we know: Magicline uses `data-role` attributes; `[data-role="product-search"]` and `[data-role="topbar"]` are confirmed stable
    - What's unclear: cart-specific role(s) — could be `"cart"`, `"shopping-cart"`, `"basket"`, or a custom value
    - Recommendation: Discover during Phase 10 execution via DevTools; add to `fragile-selectors.js`
+   - **Resolution:** Addressed by Plan 03 Task 3 blocking human checkpoint. Executor must discover selector and confirm BSK_PRINT_INTERCEPTED fires before Wave 2 proceeds.
 
 3. **Does the cart-empty transition happen AFTER or DURING the payment confirmation flow?**
    - What we know: The "Jetzt verkaufen" click triggers `BSK_AUDIT_SALE_COMPLETED` (sale start); the actual cart clear may happen asynchronously after card reader confirms
    - What's unclear: timing of cart-clear relative to `window.print()` call — if print fires BEFORE cart empties, the cart-empty observer would be irrelevant as a fallback trigger
    - Recommendation: Observe the sequence during a live sale on hardware
+   - **Resolution:** Addressed by Plan 03 Task 3 blocking human checkpoint. Executor must discover selector and confirm BSK_PRINT_INTERCEPTED fires before Wave 2 proceeds.
 
 ---
 

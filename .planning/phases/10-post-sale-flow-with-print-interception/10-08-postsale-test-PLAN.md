@@ -195,6 +195,11 @@ function makeMainWindow() {
 // to the corresponding code in src/main/main.js. PR review checks drift.
 
 function createPostSaleModule(deps) {
+  // Mirrors src/main/main.js lines XXX-YYY as of Phase 10 (see 10-05-PLAN.md).
+  // Specifically mirrors the Plan 05 startPostSaleFlow helper and the three
+  // ipcMain handlers (post-sale:trigger, post-sale:next-customer,
+  // post-sale:auto-logout). Update this re-implementation if those handlers
+  // change. PR reviewers must diff this block against the main.js source.
   const { ipcMain, idleTimer, sessionReset, log, mainWindow } = deps;
   let postSaleShown = false;
 
@@ -386,6 +391,7 @@ Update test/postSale.test.js accordingly. File does not currently exist — this
     - File contains exact substring `via: 'auto-logout'`
     - Contract test block (createPostSaleModule) preserves the Plan 05 control flow: dedupe guard BEFORE trigger extraction, audit AFTER IPC send, removeAllListeners BEFORE ipcMain.on
     - All 6 behaviors from `<must_haves.truths>` are each covered by at least one test
+    - `grep -q "function startPostSaleFlow" src/main/main.js` exits 0 (drift-detection: asserts Plan 05 production function name still matches the contract replicated in createPostSaleModule)
   </acceptance_criteria>
   <done>
     test/postSale.test.js created. All 8 tests pass. Covers: show + trigger type routing, dedupe, next-customer reset cycle, auto-logout canonical hardReset args, audit durability on hardReset failure, onPreReset clearing allows re-trigger.

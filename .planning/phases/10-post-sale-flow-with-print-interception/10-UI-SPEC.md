@@ -239,7 +239,7 @@ A new branded thank-you layer that appears immediately after a successful sale. 
 
 | Trigger | Source | Outcome |
 |---------|--------|---------|
-| Electron `webContents.on('-print')` fires on Magicline view | `magiclineView.js` | `event.preventDefault()` → main calls `startPostSaleFlow({trigger:'print-event'})` |
+| `BSK_PRINT_INTERCEPTED` console sentinel from `inject.js` (Magicline calls `window.print`, the injected override emits the sentinel instead of rendering Chrome's print dialog) | `magiclineView.js` console-message listener | Main calls `startPostSaleFlow({trigger:'print-intercept'})` |
 | `BSK_POST_SALE_FALLBACK` console sentinel from `inject.js` | `magiclineView.js` console-message listener | Main calls `startPostSaleFlow({trigger:'cart-empty-fallback'})` (debounced 500 ms inside inject.js per D-11) |
 | `startPostSaleFlow()` invocation | main.js helper | Sets `postSaleShown=true` (D-12 dedupe), calls `idleTimer.stop()` (D-05), sends `post-sale:show` IPC to host |
 | Host receives `post-sale:show` | `host.js` `onShowPostSale` | Sets `postSaleResolved=false` (D-08 race flag), resets countdown number to `"10"`, sets `display: flex` and `aria-hidden="false"` on `#post-sale-overlay`, starts `setInterval(1000)` |
@@ -293,10 +293,10 @@ A single module-scoped `postSaleResolved` boolean owned by `host.js`. Both dismi
 
 | Concern | Outcome |
 |---------|---------|
-| Chrome print preview window | NEVER visible to a member. `event.preventDefault()` on `-print` (D-10) suppresses it before render. |
+| Chrome print preview window | NEVER visible to a member. The `inject.js` `window.print` override (D-10 revised per RESEARCH §1 — Electron 41 has no `-print` event) replaces Magicline's call before the Chromium print pipeline runs. |
 | Microsoft Print to PDF default printer | Set by NSIS post-install PowerShell snippet (D-14); fallback is admin-runbook + admin-menu diagnostic row "Standarddrucker" (D-15). |
-| Print-to-PDF "Save As" filename prompt | Must be silenced via per-user registry write OR Windows API silent-print path (research, per `<known fragility>`). MUST be verified before phase ships — a filename prompt visible to a member is the exact failure mode this phase eliminates. |
-| Sale cancelled at payment modal | No `-print` fires; cart-empty fallback does not trigger; cash register stays as-is; existing 60 s idle covers it (out-of-scope per `<domain>` non-goals) |
+| Print-to-PDF "Save As" filename prompt | Moot under the `window.print` override — the browser print dialog never renders, so the Save As prompt is never reached. NSIS printer setup remains a defense-in-depth measure for the cart-empty-fallback path (D-11) where Magicline may still trigger native print via a non-`window.print` code path. |
+| Sale cancelled at payment modal | No `window.print` call fires; cart-empty fallback does not trigger; cash register stays as-is; existing 60 s idle covers it (out-of-scope per `<domain>` non-goals) |
 
 ---
 
@@ -311,7 +311,7 @@ All copy in German (de-DE). All strings are fixed — no branching, no template 
 | Countdown unit label | `SEKUNDEN` |
 | Primary CTA (button) | `Naechster Kunde` |
 | Overlay aria-label | `Einkauf bestaetigt` |
-| Audit log — show | `post-sale.shown trigger=print-event\|cart-empty-fallback` |
+| Audit log — show | `post-sale.shown trigger=print-intercept\|cart-empty-fallback` |
 | Audit log — dismiss | `post-sale.dismissed via=next-customer\|auto-logout` |
 | Audit log — sale (existing, untouched) | `sale.completed` (Phase 5 D-27 canonical event, fires on "Jetzt verkaufen" click in inject.js — preserved as-is, runs before this overlay) |
 
@@ -325,7 +325,7 @@ All copy in German (de-DE). All strings are fixed — no branching, no template 
 | `Einkauf bestaetigt` (aria-label) | `Einkauf best&auml;tigt` | `'Einkauf best\u00E4tigt'` |
 | `SEKUNDEN` | `SEKUNDEN` (no special chars) | `'SEKUNDEN'` |
 
-**Empty state:** Not applicable. The post-sale overlay IS a transient confirmation state — it has no "no data" variant. If `inject.js` fails to detect cart-empty AND `-print` does not fire, the overlay simply never appears; the cash register stays visible and the existing 60 s idle window covers cleanup. That is the documented fallback behavior for sale-cancelled-at-payment-modal (out-of-scope).
+**Empty state:** Not applicable. The post-sale overlay IS a transient confirmation state — it has no "no data" variant. If the `window.print` override misses Magicline's print call AND the cart-empty MutationObserver fails, the overlay simply never appears; the cash register stays visible and the existing 60 s idle window covers cleanup. That is the documented fallback behavior for sale-cancelled-at-payment-modal (out-of-scope).
 
 **Error state:** No new error path introduced by Phase 10. If `sessionReset.hardReset()` fails, the existing reset-loop / drift error variants in `#magicline-error` (z-300) handle recovery. Print-event registration failure is logged but does not surface to the member — fallback observer still fires.
 

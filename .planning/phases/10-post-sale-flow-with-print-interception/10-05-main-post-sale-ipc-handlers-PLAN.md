@@ -16,6 +16,7 @@ must_haves:
     - "post-sale:next-customer resets postSaleShown=false, calls idleTimer.start(), audits post-sale.dismissed via=next-customer"
     - "post-sale:auto-logout calls sessionReset.hardReset({reason:'sale-completed', mode:'welcome'}), audits post-sale.dismissed via=auto-logout"
     - "onPreReset clears postSaleShown alongside existing welcomeTapPending clear"
+    - "post-sale:hide fires from main onPreReset when postSaleShown is true (force-hide overlay before the reset executes)"
   artifacts:
     - path: "src/main/main.js"
       provides: "postSaleShown module-scoped flag, startPostSaleFlow helper, three new ipcMain.on handlers"
@@ -29,6 +30,10 @@ must_haves:
       to: "sessionReset.hardReset({reason:'sale-completed', mode:'welcome'})"
       via: "require('./sessionReset').hardReset"
       pattern: "reason: 'sale-completed'"
+    - from: "src/main/main.js onPreReset callback"
+      to: "mainWindow.webContents.send('post-sale:hide')"
+      via: "force-hide IPC when postSaleShown is true (D-19 sender)"
+      pattern: "post-sale:hide"
 ---
 
 <objective>
@@ -37,14 +42,29 @@ Wire the post-sale orchestration surface in `src/main/main.js`:
 1. Add module-scoped `postSaleShown` dedupe flag (D-12) alongside existing `welcomeTapPending`
 2. Add `startPostSaleFlow({trigger})` helper that encapsulates idle-timer stop + IPC send + dedupe flag set + audit event
 3. Register three new IPC handlers: `post-sale:trigger`, `post-sale:next-customer`, `post-sale:auto-logout`
-4. Extend the existing `onPreReset` callback to clear `postSaleShown` alongside `welcomeTapPending`
+4. Extend the existing `onPreReset` callback to (a) clear `postSaleShown` alongside `welcomeTapPending` AND (b) send `post-sale:hide` to the host renderer when `postSaleShown === true` at the moment of reset, so the overlay is force-hidden before a reset-driven welcome transition.
 
 Purpose: This is the orchestration hub that (a) receives Plan 04's magiclineView console-message relays, (b) drives the host overlay via `post-sale:show` (handled by Plan 07), (c) routes dismiss outcomes to `idleTimer.start()` or `sessionReset.hardReset()`. SALE-01 end-to-end flow pivots on these handlers.
 
 RESEARCH REFERENCE: The audit event signatures `log.audit('post-sale.shown', {trigger})` and `log.audit('post-sale.dismissed', {via})` are canonical per RESEARCH §5. The `trigger` value comes verbatim from Plan 04's magiclineView payload.
 
-Output: 3 new IPC handlers + 1 new helper function + 1 new module-scoped flag + 1-line extension to the existing onPreReset callback. No existing handler is modified beyond that single line.
+Output: 3 new IPC handlers + 1 new helper function + 1 new module-scoped flag + 1 new `post-sale:hide` sender + 1-line extension to the existing onPreReset callback (plus the guarded send). No existing handler is modified beyond that block.
 </objective>
+
+<design_notes>
+## `post-sale:hide` — one-sender design (D-19)
+
+CONTEXT.md D-19 locks in `post-sale:hide` + `onHidePostSale` as part of the IPC contract. This plan is the ONLY sender of that channel. The design intent:
+
+- **Main sends `post-sale:hide` ONLY from `onPreReset`** (this plan), and only when `postSaleShown === true` at the moment a reset is about to execute. Rationale: if an admin-initiated or idle-triggered reset fires while the post-sale overlay is visible, main must proactively force-hide the overlay so the user sees a clean welcome transition rather than a flash of stale post-sale UI on top of the welcome layer.
+- **Host-initiated dismiss paths (button tap → `post-sale:next-customer`, countdown auto-expiry → `post-sale:auto-logout`) do NOT trigger a `post-sale:hide` round-trip.** host.js hides its own overlay locally on button tap (Plan 07 sets `display: none` + `aria-hidden="true"` directly) and on countdown expiry. The `post-sale:hide` IPC is reserved for main-initiated force-hide paths, not for host-initiated dismiss paths.
+- **Plan 07 subscriber (`onHidePostSale(hidePostSaleOverlay)`) is a live channel** under this design — main's onPreReset is the authoritative sender.
+
+Why this is not a symmetric "every dismiss → post-sale:hide" contract:
+1. Double-hide on button tap would be a wasted round-trip (host already hid locally).
+2. The auto-logout path triggers `hardReset({mode:'welcome'})` which runs onPreReset → which now sends `post-sale:hide` if the flag is still set. So auto-logout IS covered — but via the reset path, not via a redundant direct send from the auto-logout handler.
+3. A single sender keeps the authority model crisp: only a reset-in-progress can force-hide a post-sale overlay from main's side.
+</design_notes>
 
 <execution_context>
 @$HOME/.claude/get-shit-done/workflows/execute-plan.md
@@ -110,20 +130,24 @@ sessionReset.hardReset API (src/main/sessionReset.js):
 - `hardReset({reason, mode})` returns Promise<void>
 - `reason:'sale-completed'` is now excluded from loop counter (Plan 01)
 - `mode:'welcome'` performs full-wipe + welcome:show (Phase 06 D-07)
+
+preload post-sale surface (Plan 02, confirmed in src/main/preload.js):
+- `window.kiosk.onHidePostSale(cb)` — subscribes host to `post-sale:hide` IPC from main (D-19)
+- This plan is the ONLY sender of `post-sale:hide` (see <design_notes>)
 </interfaces>
 </context>
 
 <tasks>
 
 <task type="auto">
-  <name>Task 1: Add postSaleShown flag, startPostSaleFlow helper, and extend onPreReset</name>
+  <name>Task 1: Add postSaleShown flag, startPostSaleFlow helper, post-sale:hide sender in onPreReset, and three new IPC handlers</name>
   <read_first>
     - src/main/main.js (current — verify line numbers: welcomeTapPending at 42, onPreReset at 464-473, IPC handlers block around 378-408, module-scoped let declarations around lines 37-58)
     - .planning/phases/10-post-sale-flow-with-print-interception/10-PATTERNS.md §main.js (exact analog code blocks for flag, helper, handlers, onPreReset extension)
-    - .planning/phases/10-post-sale-flow-with-print-interception/10-CONTEXT.md §D-05/D-06/D-07/D-12/D-20 (canonical semantics)
+    - .planning/phases/10-post-sale-flow-with-print-interception/10-CONTEXT.md §D-05/D-06/D-07/D-12/D-19/D-20 (canonical semantics; D-19 locks in post-sale:hide + onHidePostSale)
     - .planning/phases/10-post-sale-flow-with-print-interception/10-RESEARCH.md §5 (canonical audit signatures)
     - src/main/sessionReset.js lines 104-106 (confirm Plan 01's filter extension has landed — this plan depends on it)
-    - src/main/preload.js (confirm Plan 02's four post-sale methods exist — this plan depends on them)
+    - src/main/preload.js (confirm Plan 02's four post-sale methods exist — this plan depends on them; note `onHidePostSale` is the subscriber for the `post-sale:hide` channel this plan sends)
   </read_first>
   <files>src/main/main.js</files>
   <action>
@@ -146,7 +170,7 @@ Insert immediately AFTER:
 let postSaleShown = false;
 ```
 
-**Change B — extend the existing onPreReset callback at lines 464-473 to clear postSaleShown:**
+**Change B — extend the existing onPreReset callback at lines 464-473 to (1) send `post-sale:hide` to the host IF the overlay is currently shown, and (2) clear `postSaleShown`:**
 
 Find this exact block (near line 464-473):
 ```
@@ -164,6 +188,22 @@ sessionResetMod.onPreReset(() => {
 
 Immediately AFTER the `welcomeTapPending = false;` line, insert:
 ```
+  // Phase 10 D-12 + D-19: if the post-sale overlay is currently showing and
+  // a hard reset is about to execute (admin-initiated or idle-triggered),
+  // force-hide it first so the user sees a clean welcome transition rather
+  // than a flash of stale post-sale UI. This is the ONE AND ONLY sender of
+  // the post-sale:hide IPC channel (D-19) — see <design_notes> in this plan.
+  // Host-initiated dismiss paths (button tap, countdown expiry) hide locally
+  // and do NOT trigger this send.
+  if (postSaleShown) {
+    try {
+      if (mainWindow && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
+        mainWindow.webContents.send('post-sale:hide');
+      }
+    } catch (e) {
+      log.error('phase10.onPreReset.post-sale:hide send failed: ' + (e && e.message));
+    }
+  }
   // Phase 10 D-12: same rationale as welcomeTapPending — clear stale dedupe
   // flag on any hard reset so the next sale cycle can re-trigger the overlay.
   postSaleShown = false;
@@ -191,6 +231,10 @@ Insertion point: immediately AFTER the existing `ipcMain.on('register-selected',
   //   7. On button tap (next-customer): clears flag, restarts idle timer
   //   8. On auto-expiry (auto-logout): hardReset({reason:'sale-completed',
   //      mode:'welcome'}) which internally triggers onPostReset for updateGate
+  //
+  // post-sale:hide IPC (D-19): sent ONLY from onPreReset above when a reset
+  // fires while postSaleShown is still true. Host-initiated dismiss paths do
+  // NOT send it — they hide locally. See <design_notes> in this plan.
   //
   // The helper encapsulates steps 4-5 to keep the trigger handler trivial
   // and to ensure BOTH primary and fallback trigger paths share the exact
@@ -235,7 +279,8 @@ Insertion point: immediately AFTER the existing `ipcMain.on('register-selected',
   // Phase 10 D-06: next-customer button — keep Magicline session alive, rearm
   // the 60s idle timer. The Magicline view stays visible; the cart stays as-is
   // (member may want to buy a second item). No sessionReset here — that is
-  // the auto-logout path only.
+  // the auto-logout path only. host.js hides the overlay locally on button
+  // tap (Plan 07) — no post-sale:hide needed on this path.
   try { ipcMain.removeAllListeners('post-sale:next-customer'); } catch (_) {}
   ipcMain.on('post-sale:next-customer', function () {
     try {
@@ -250,7 +295,9 @@ Insertion point: immediately AFTER the existing `ipcMain.on('register-selected',
   // Phase 10 D-20: countdown auto-expiry — hard reset to welcome. The reason
   // 'sale-completed' is excluded from the 3-in-60s loop counter (Plan 01)
   // and still fires onPostReset for updateGate install composition (D-18).
-  // postSaleShown is implicitly cleared by onPreReset in the hardReset path.
+  // postSaleShown is implicitly cleared by onPreReset in the hardReset path,
+  // which ALSO sends post-sale:hide to the host (D-19) so the overlay is
+  // hidden before the welcome layer shows.
   try { ipcMain.removeAllListeners('post-sale:auto-logout'); } catch (_) {}
   ipcMain.on('post-sale:auto-logout', function () {
     try {
@@ -269,12 +316,13 @@ Insertion point: immediately AFTER the existing `ipcMain.on('register-selected',
 - Audit events emit EXACTLY the strings `post-sale.shown` and `post-sale.dismissed` (lowercase, hyphen-separated, dot for verb) — this matches the canonical Phase 5 D-27 taxonomy (sale.completed, admin.action, idle.reset, etc.) documented in RESEARCH §5.
 - `trigger` values are EXACTLY `'print-intercept'` or `'cart-empty-fallback'` — must match the strings emitted by Plan 04's magiclineView branches.
 - `via` values are EXACTLY `'next-customer'` or `'auto-logout'` — no other variants.
+- The `post-sale:hide` send from onPreReset is guarded by `postSaleShown` and by `webContents.isDestroyed()` to prevent sending to a torn-down renderer during reset teardown. The send is best-effort (wrapped in try/catch with error-log fallback).
 - Do NOT modify the existing `audit-sale-completed` handler at lines 378-383 — that fires on sale START (Jetzt verkaufen click) and is orthogonal to Phase 10's post-sale overlay which fires AFTER payment confirmation.
 - Do NOT modify the existing `register-selected` handler.
 - Do NOT touch any other IPC handler.
   </action>
   <verify>
-    <automated>grep -q "let postSaleShown = false" src/main/main.js &amp;&amp; grep -q "function startPostSaleFlow" src/main/main.js &amp;&amp; grep -q "ipcMain.on('post-sale:trigger'" src/main/main.js &amp;&amp; grep -q "ipcMain.on('post-sale:next-customer'" src/main/main.js &amp;&amp; grep -q "ipcMain.on('post-sale:auto-logout'" src/main/main.js &amp;&amp; grep -q "reason: 'sale-completed', mode: 'welcome'" src/main/main.js &amp;&amp; grep -q "log.audit('post-sale.shown'" src/main/main.js &amp;&amp; grep -q "log.audit('post-sale.dismissed'" src/main/main.js &amp;&amp; node --check src/main/main.js</automated>
+    <automated>grep -q "let postSaleShown = false" src/main/main.js &amp;&amp; grep -q "function startPostSaleFlow" src/main/main.js &amp;&amp; grep -q "ipcMain.on('post-sale:trigger'" src/main/main.js &amp;&amp; grep -q "ipcMain.on('post-sale:next-customer'" src/main/main.js &amp;&amp; grep -q "ipcMain.on('post-sale:auto-logout'" src/main/main.js &amp;&amp; grep -q "reason: 'sale-completed', mode: 'welcome'" src/main/main.js &amp;&amp; grep -q "log.audit('post-sale.shown'" src/main/main.js &amp;&amp; grep -q "log.audit('post-sale.dismissed'" src/main/main.js &amp;&amp; grep -q "post-sale:hide" src/main/main.js &amp;&amp; node --check src/main/main.js</automated>
   </verify>
   <acceptance_criteria>
     - File contains exact substring `let postSaleShown = false`
@@ -288,6 +336,9 @@ Insertion point: immediately AFTER the existing `ipcMain.on('register-selected',
     - File contains exact substring `log.audit('post-sale.shown', { trigger: trigger })`
     - File contains exact substring `log.audit('post-sale.dismissed', { via: 'next-customer' })`
     - File contains exact substring `log.audit('post-sale.dismissed', { via: 'auto-logout' })`
+    - `grep -c "post-sale:hide" src/main/main.js` returns >= 1 (the onPreReset sender — D-19 channel has a live sender)
+    - `grep -c "mainWindow.webContents.send('post-sale:hide')" src/main/main.js` returns exactly 1
+    - The `post-sale:hide` send is wrapped in an `if (postSaleShown) { ... }` guard inside the onPreReset callback (verifiable by inspection — no matching `grep` expression required, but reviewer confirms)
     - `grep -c "postSaleShown = false" src/main/main.js` returns >= 3 (declaration + onPreReset clear + next-customer clear)
     - `grep -c "postSaleShown = true" src/main/main.js` returns exactly 1 (inside startPostSaleFlow)
     - `grep -c "ipcMain.removeAllListeners('post-sale:" src/main/main.js` returns exactly 3
@@ -297,7 +348,7 @@ Insertion point: immediately AFTER the existing `ipcMain.on('register-selected',
     - Existing `register-selected` handler is unchanged
   </acceptance_criteria>
   <done>
-    postSaleShown flag declared + cleared in onPreReset + cleared in next-customer handler + set inside startPostSaleFlow. Three new IPC handlers registered with removeAllListeners guards. startPostSaleFlow helper defined. All three audit events emitted with canonical field values. File syntactically valid.
+    postSaleShown flag declared + cleared in onPreReset + cleared in next-customer handler + set inside startPostSaleFlow. Three new IPC handlers registered with removeAllListeners guards. startPostSaleFlow helper defined. All three audit events emitted with canonical field values. `post-sale:hide` channel (D-19) has a live sender in onPreReset guarded by postSaleShown. File syntactically valid.
   </done>
 </task>
 
@@ -311,6 +362,7 @@ Insertion point: immediately AFTER the existing `ipcMain.on('register-selected',
 | renderer → ipcMain.on('post-sale:next-customer') | Host can fire this at any time via window.kiosk.notifyPostSaleNextCustomer(). |
 | renderer → ipcMain.on('post-sale:auto-logout') | Host can fire this at any time via window.kiosk.notifyPostSaleAutoLogout() — triggers a full session reset. |
 | magiclineView relay → ipcMain.on('post-sale:trigger') | Internal main-process bus; attacker-controlled only insofar as Magicline console is attacker-controllable. |
+| main → renderer('post-sale:hide') | Main-process force-hide of the post-sale overlay. Only sent from onPreReset when postSaleShown is true. No renderer-side validation needed (one-way notification). |
 
 ## STRIDE Threat Register
 
@@ -323,30 +375,36 @@ Insertion point: immediately AFTER the existing `ipcMain.on('register-selected',
 | T-10-05-05 | Information disclosure | log.audit('post-sale.shown', {trigger}) + log.audit('post-sale.dismissed', {via}) leak sale timing | accept | Sale timing is already audited via existing `sale.completed` event. Adding `post-sale.shown`/`post-sale.dismissed` is additive observability, not a new disclosure vector. No PII, no credentials, no cart contents leaked. |
 | T-10-05-06 | DoS | Missing removeAllListeners could double-register handler if whenReady re-enters (hot reload) | mitigate | Each of the three new `ipcMain.on` registrations is preceded by `ipcMain.removeAllListeners('post-sale:...')` — matches Phase 5 convention. Acceptance criteria verify count. |
 | T-10-05-07 | Denial of Service | Flood of `post-sale:trigger` from Magicline console storms the audit log | mitigate | postSaleShown dedupe short-circuits subsequent triggers. Flood produces at most one `phase10.post-sale:trigger.ignored` log line per flood event plus the throttle is implicit via the flag. |
+| T-10-05-08 | Tampering | `post-sale:hide` sent to a destroyed webContents throws | mitigate | Send is wrapped in try/catch AND guarded by `!mainWindow.webContents.isDestroyed()` check. Matches existing Phase 07 `post-sale:show` send pattern inside startPostSaleFlow. |
 
 **Threat level:** LOW. Plan operates inside the trust-boundary of a kiosk with no untrusted renderer code. Primary residual risk is audit log pollution, accepted.
 </threat_model>
 
 <verification>
-- All 9 greps in the Task 1 verify block match
+- All 10 greps in the Task 1 verify block match
 - `node --check src/main/main.js` exits 0
 - `node --test test/sessionReset.test.js` still passes (Plan 01 regression check)
 - Three new IPC handlers each have a preceding `removeAllListeners`
 - postSaleShown is declared once, cleared in 2 distinct places (onPreReset + next-customer), set in 1 place (startPostSaleFlow)
+- `post-sale:hide` has exactly one sender in main.js (onPreReset, guarded by postSaleShown)
 </verification>
 
 <success_criteria>
 - Post-sale orchestration helper and three IPC handlers in main.js
 - postSaleShown dedupe flag fully wired (declared, set, cleared in two paths)
+- `post-sale:hide` channel (D-19) has a live sender in onPreReset; dead-channel risk closed
 - Audit events emitted with canonical taxonomy per RESEARCH §5
-- No existing handler modified beyond the single-line onPreReset extension
+- No existing handler modified beyond the single-block onPreReset extension
 - Lazy require pattern preserved for idleTimer and sessionReset
 </success_criteria>
 
 <output>
 After completion, create `.planning/phases/10-post-sale-flow-with-print-interception/10-05-SUMMARY.md` documenting:
-- Exact before/after of the three changes (flag declaration, onPreReset extension, helper + handlers block)
+- Exact before/after of the three changes (flag declaration, onPreReset extension with post-sale:hide send + flag clear, helper + handlers block)
 - Line count delta
 - Confirmation no existing handler modified
-- Confirmation all IPC channel names match Plan 02's preload surface (post-sale:show, post-sale:next-customer, post-sale:auto-logout) and Plan 04's magiclineView relay (post-sale:trigger)
+- Confirmation all IPC channel names match Plan 02's preload surface (post-sale:show, post-sale:hide, post-sale:next-customer, post-sale:auto-logout) and Plan 04's magiclineView relay (post-sale:trigger)
+- Note that `post-sale:hide` is sent only from onPreReset and only when postSaleShown is true (design_notes rationale)
 </output>
+</content>
+</invoke>

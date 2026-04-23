@@ -52,6 +52,10 @@ Output: Additive changes to `inject.js` (override + observer + `_paymentConfirme
 This plan has a human checkpoint because the cart container `data-role` must be discovered via DevTools against a live Magicline session (RISK-02 in RESEARCH.md — cannot be researched offline).
 </objective>
 
+<scheduling_note>
+Wave 2 plans (04, 05, 06) cannot begin until Plan 03's Task 3 human checkpoint resolves. Schedule Plan 03 execution when kiosk hardware is accessible for a DevTools session — the cart container `data-role` selector and the `BSK_PRINT_INTERCEPTED` sentinel confirmation both require a live Magicline page in dev mode, not just an offline code review.
+</scheduling_note>
+
 <execution_context>
 @$HOME/.claude/get-shit-done/workflows/execute-plan.md
 @$HOME/.claude/get-shit-done/templates/summary.md
