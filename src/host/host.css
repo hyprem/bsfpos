@@ -676,3 +676,31 @@ body:not([data-dev="true"]) { cursor: none; }
 .bsk-admin-close:active {
   background: #3A3A3A;
 }
+
+/* ============================================================ */
+/* Phase 10 — Post-sale overlay (Layer 180, D-03/D-04)          */
+/* ============================================================ */
+/* Mirrors .bsk-layer--idle exactly: opaque dark background,    */
+/* full-viewport flex column stack, captures all touches.       */
+/* Sits between welcome (z-150) and idle (z-200) — no other     */
+/* layer occupies z-180 (host.html z-index ladder comment).     */
+
+.bsk-layer--post-sale {
+  z-index: 180;
+  background: #1A1A1A;
+  pointer-events: auto;
+}
+
+/* Headline — branded yellow display, matches .bsk-welcome-title size/weight
+   for cross-overlay parity. NOT reusing .bsk-idle-title because that role
+   is "are you still there?" alert (24px white), not a celebration headline. */
+.bsk-post-sale-title {
+  font-size: 48px;
+  font-weight: 700;
+  color: #F5C518;
+  text-align: center;
+  margin: 16px 0 16px 0;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  max-width: 80vw;
+}
