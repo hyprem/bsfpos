@@ -83,5 +83,15 @@ var STABLE_SELECTORS = [
   // the cash-register-page self-check (they legitimately don't exist there).
   { category: 'stable', selector: '[data-role="username"]',     purpose: 'Login: username field',  page: 'login' },
   { category: 'stable', selector: '[data-role="password"]',     purpose: 'Login: password field',  page: 'login' },
-  { category: 'stable', selector: '[data-role="login-button"]', purpose: 'Login: submit button',   page: 'login' }
+  { category: 'stable', selector: '[data-role="login-button"]', purpose: 'Login: submit button',   page: 'login' },
+  // Phase 10 D-11: cart container for cart-empty MutationObserver fallback.
+  // PLACEHOLDER — actual data-role value discovered via DevTools during
+  // Phase 10 execution (RISK-02 in 10-RESEARCH.md). If Magicline uses a
+  // fragile MUI css-xxxxx hash for the cart container instead, move this
+  // entry to FRAGILE_SELECTORS. cash-register page only; no page:'login'
+  // gate because inject.js already skips the check on the login page via
+  // onCashRegister detection. The inject.js observer also tries
+  // [data-role="shopping-cart"] as a fallback — keep both here in sync.
+  { category: 'stable', selector: '[data-role="cart"]',          purpose: 'Cart container (post-sale observer, D-11 primary)' },
+  { category: 'stable', selector: '[data-role="shopping-cart"]', purpose: 'Cart container (post-sale observer, D-11 fallback)' }
 ];
