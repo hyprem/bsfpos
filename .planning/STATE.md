@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Field-Operations Polish
 status: executing
-last_updated: "2026-04-23T08:05:27Z"
+last_updated: "2026-04-23T08:45:00Z"
 last_activity: 2026-04-23
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 20
-  completed_plans: 13
-  percent: 65
+  completed_plans: 14
+  percent: 70
 ---
 
 # Project State: Bee Strong POS Kiosk
 
-**Last updated:** 2026-04-23 (Phase 10 Plan 05 COMPLETE — main.js post-sale orchestration hub wired: postSaleShown dedupe flag, startPostSaleFlow helper, three ipcMain handlers (post-sale:trigger/next-customer/auto-logout), and onPreReset extension as D-19 lone sender of post-sale:hide)
+**Last updated:** 2026-04-23 (Phase 10 Plan 06 COMPLETE — #post-sale-overlay z-180 host layer DIV + .bsk-layer--post-sale + .bsk-post-sale-title CSS landed in host.html/host.css; zero existing rule modified; Plan 07 overlay lifecycle now has the DOM hooks to bind against)
 
 ## Project Reference
 
@@ -26,16 +26,20 @@ progress:
 ## Current Position
 
 Phase: 10 (post-sale-flow-with-print-interception) — IN PROGRESS
-Plan: 3 of 10 complete (10-01 sessionreset-loop-filter, 10-02 preload-post-sale-ipc, 10-05 main-post-sale-ipc-handlers)
+Plan: 4 of 10 complete (10-01 sessionreset-loop-filter, 10-02 preload-post-sale-ipc, 10-05 main-post-sale-ipc-handlers, 10-06 host-html-css-post-sale-layer)
 
 - **Milestone:** v1.1 Field-Operations Polish — STARTED 2026-04-14
 - **Status:** Executing
 - **Phase:** 10 — post-sale-flow-with-print-interception (10 plans planned, 3 waves)
-- **Plan:** 3 of 10 complete
+- **Plan:** 4 of 10 complete
 - **Last activity:** 2026-04-23
 
 ## Key Decisions (Phase 10)
 
+- **D-10-06-01:** UI-SPEC §Component Inventory 1 HTML block copied verbatim into host.html — insertion point chosen as the `#magicline-error` line (places post-sale-overlay immediately before magicline-error in source order, preserving z-index-ascending grouping for 180 → 300). Z-index ladder comment preamble updated to reference 01-UI-SPEC + 05-UI-SPEC + 10-UI-SPEC.
+- **D-10-06-02:** "Nächster Kunde" button uses THREE reused classes (`.bsk-btn .bsk-btn--primary .bsk-btn--idle-dismiss`) with zero new Phase-10 button modifier. D-04 grants discretion; construction-level parity with `.bsk-btn--idle-dismiss` is preferred over a new alias that could drift.
+- **D-10-06-03:** `.bsk-post-sale-title` uses margin `16px 0 16px 0` (mirrors `.bsk-idle-title` vertical rhythm) rather than `.bsk-welcome-title`'s `32px 0 0 0`. Needed for symmetric vertical spacing inside the flex column stack (logo → title → countdown → subtext → button).
+- **D-10-06-04:** New CSS blocks appended at true EOF with zero modifications to existing rules — `grep -c ".bsk-layer--idle " src/host/host.css` returns 3 (unchanged), `grep -c ".bsk-idle-number" src/host/host.css` returns 1 (unchanged). Full additive append is 28 lines including banner comment.
 - **D-10-01-01:** Phase 10 D-17 executed verbatim — countable filter extended with `|| reason === 'sale-completed'` inside existing `!(...)` negation. `mode` check intentionally omitted for sale-completed (reason alone is canonical; sale-completed always arrives with `mode:'welcome'`).
 - **D-10-01-02:** D-18 requires no code change — existing `succeeded && postResetListener` gate at sessionReset.js lines 249-256 already covers sale-completed welcome cycles (welcome-mode branch sets `succeeded=true` at line 186). Verified by new D-18 test.
 - **D-10-01-03:** D-18 test appends `sessionReset.onPostReset(null)` cleanup call (matching Phase 6 Test 10 convention at line 605) to prevent module-scoped listener contamination across tests.
@@ -86,7 +90,7 @@ Field guide: `docs/runbook/v1.0-KIOSK-VISIT.md`. Authoritative per-requirement s
 
 ## Next Action
 
-Continue Phase 10 execution. Plans 10-01 (sessionreset-loop-filter), 10-02 (preload-post-sale-ipc), and 10-05 (main-post-sale-ipc-handlers) are COMPLETE. Plans 10-03 and 10-10 remain parked at their hardware-verification checkpoints; the code they install (preload IPC surface from 10-02, sessionReset filter from 10-01, three-handler orchestration block from 10-05) is already on disk and the inbound/outbound IPC channel contract is end-to-end live on the main side. Remaining work: plan 04 magiclineView sentinel relay (now has a live `post-sale:trigger` receiver), plan 06 host-html-css post-sale layer (W2 parallel with 04), plan 07 host.js overlay lifecycle (now has live main-side senders for both `post-sale:show` from startPostSaleFlow and `post-sale:hide` from onPreReset, plus live main-side handlers for both notify* IPCs), plan 08 main-host-auto-reload, plan 09 updateGate-composition test (auto-logout path calls `hardReset({reason:'sale-completed', mode:'welcome'})` which fires onPostReset per Plan 01 D-18 verification). D-10 revised per RESEARCH §1: `window.print` override in inject.js replaces the nonexistent Electron 41 `-print` event; D-11 cart-empty MutationObserver kept as defense-in-depth. Phase 09 POS open/close toggle is complete with 3 human UAT items pending next kiosk visit.
+Continue Phase 10 execution. Plans 10-01 (sessionreset-loop-filter), 10-02 (preload-post-sale-ipc), 10-05 (main-post-sale-ipc-handlers), and 10-06 (host-html-css post-sale layer) are COMPLETE. Plans 10-03 and 10-10 remain parked at their hardware-verification checkpoints; the code they install (preload IPC surface from 10-02, sessionReset filter from 10-01, three-handler orchestration block from 10-05, host-side visual surface from 10-06) is already on disk. Remaining work: plan 04 magiclineView sentinel relay (now has a live `post-sale:trigger` receiver), plan 07 host.js overlay lifecycle (now has both live main-side senders AND addressable DOM nodes `#post-sale-overlay` / `#post-sale-countdown-number` / `#post-sale-next-btn`), plan 08 postSale state-machine test, plan 09 updateGate-composition test (auto-logout path calls `hardReset({reason:'sale-completed', mode:'welcome'})` which fires onPostReset per Plan 01 D-18 verification). D-10 revised per RESEARCH §1: `window.print` override in inject.js replaces the nonexistent Electron 41 `-print` event; D-11 cart-empty MutationObserver kept as defense-in-depth. Phase 09 POS open/close toggle is complete with 3 human UAT items pending next kiosk visit.
 
 ### Quick Tasks Completed
 
@@ -95,7 +99,7 @@ Continue Phase 10 execution. Plans 10-01 (sessionreset-loop-filter), 10-02 (prel
 | 260414-eu9 | Descope NFC member-badge identification from v1.0 | 2026-04-14 | cbc9b59 | [260414-eu9-descope-nfc-member-badge-identification-](./quick/260414-eu9-descope-nfc-member-badge-identification-/) |
 | 260414-iiv | Ship 0.1.3 patch — fix release asset filename mismatch + flip update window to 09:00–12:00 | 2026-04-14 | 34cb20a | [260414-iiv-ship-0-1-3-patch-fix-release-asset-filen](./quick/260414-iiv-ship-0-1-3-patch-fix-release-asset-filen/) |
 
-**Last activity:** 2026-04-23 — Phase 10 Plan 05 complete (main.js post-sale orchestration hub: postSaleShown dedupe flag + startPostSaleFlow helper + three ipcMain handlers + onPreReset post-sale:hide sender)
+**Last activity:** 2026-04-23 — Phase 10 Plan 06 complete (host HTML/CSS post-sale layer: #post-sale-overlay z-180 DIV + .bsk-layer--post-sale / .bsk-post-sale-title CSS — zero existing rule modified; Plan 07 unblocked with addressable DOM nodes)
 
 ---
 *State initialized: 2026-04-08 · v1.0 archived: 2026-04-14 · NFC descoped: 2026-04-14 · v1.1 roadmap: 2026-04-14*
