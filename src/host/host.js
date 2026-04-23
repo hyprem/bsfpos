@@ -290,6 +290,13 @@
   // =================================================================
   var idleInterval = null;
 
+  // Phase 10 D-08/D-09: first-trigger-wins race guard (host-side). Both
+  // dismiss paths (button tap, countdown expiry) check-and-set this flag;
+  // the second-to-fire is a silent no-op. Reset on every showPostSaleOverlay()
+  // call. postSaleInterval holds the 1s countdown setInterval id.
+  var postSaleResolved = false;
+  var postSaleInterval = null;
+
   // --- Phase 9 state -------------------------------------------------------
   var posOpenState = true;
 
@@ -352,6 +359,63 @@
         window.kiosk.notifyIdleDismissed();
       }
     } catch (e) { /* ignore */ }
+  }
+
+  // =================================================================
+  // Phase 10 — Post-sale overlay (Layer 180, UI-SPEC D-03/D-04/D-08)
+  // =================================================================
+  // Mirrors the idle overlay state machine: setInterval(1000), textContent
+  // decrement, display toggle, aria-hidden toggle. Differences: (a) the
+  // first-wins postSaleResolved guard prevents double-fire of the button
+  // and auto-expiry paths, (b) auto-expiry sends notifyPostSaleAutoLogout
+  // (main triggers hardReset) rather than notifyIdleExpired (main triggers
+  // idle-mode reset with different semantics).
+
+  function showPostSaleOverlay() {
+    var overlay = document.getElementById('post-sale-overlay');
+    var numEl = document.getElementById('post-sale-countdown-number');
+    if (!overlay || !numEl) return;
+    // Reset race flag on every fresh show — D-08/D-09.
+    postSaleResolved = false;
+    // Guard against stale interval from a previous show (double-show race).
+    if (postSaleInterval) {
+      clearInterval(postSaleInterval);
+      postSaleInterval = null;
+    }
+    var countdown = 10;
+    numEl.textContent = '10';
+    overlay.style.display = 'flex';
+    overlay.setAttribute('aria-hidden', 'false');
+    postSaleInterval = setInterval(function () {
+      countdown -= 1;
+      numEl.textContent = String(countdown);
+      if (countdown <= 0) {
+        clearInterval(postSaleInterval);
+        postSaleInterval = null;
+        // D-08 first-wins guard: if button already fired, silent no-op.
+        if (postSaleResolved) return;
+        postSaleResolved = true;
+        overlay.style.display = 'none';
+        overlay.setAttribute('aria-hidden', 'true');
+        try {
+          if (window.kiosk && window.kiosk.notifyPostSaleAutoLogout) {
+            window.kiosk.notifyPostSaleAutoLogout();
+          }
+        } catch (e) { /* ignore */ }
+      }
+    }, 1000);
+  }
+
+  function hidePostSaleOverlay() {
+    if (postSaleInterval) {
+      clearInterval(postSaleInterval);
+      postSaleInterval = null;
+    }
+    var overlay = document.getElementById('post-sale-overlay');
+    if (overlay) {
+      overlay.style.display = 'none';
+      overlay.setAttribute('aria-hidden', 'true');
+    }
   }
 
   // =================================================================
