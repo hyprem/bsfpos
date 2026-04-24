@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Field-Operations Polish
 status: executing
-last_updated: "2026-04-23T08:44:00Z"
-last_activity: 2026-04-23
+last_updated: "2026-04-24T06:36:04Z"
+last_activity: 2026-04-24
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 20
-  completed_plans: 15
-  percent: 75
+  completed_plans: 17
+  percent: 85
 ---
 
 # Project State: Bee Strong POS Kiosk
 
-**Last updated:** 2026-04-23 (Phase 10 Plan 07 COMPLETE — host.js overlay lifecycle landed: postSaleResolved + postSaleInterval state, showPostSaleOverlay + hidePostSaleOverlay functions with D-08 first-wins race guard, #post-sale-next-btn click handler, and onShowPostSale/onHidePostSale IPC subscribers. 85 additive lines across four insertion points, zero existing code modified. sessionReset 32/32 regression tests still green)
+**Last updated:** 2026-04-24 (Phase 10 Plan 04 COMPLETE — magiclineView.js sentinel relay landed: two new console-message branches relay BSK_PRINT_INTERCEPTED and BSK_POST_SALE_FALLBACK to `ipcMain.emit('post-sale:trigger', null, {trigger: 'print-intercept' | 'cart-empty-fallback'})`. 23 additive lines, zero deletions, CRLF preserved, plain `if` (no substring collision between sentinels). NO -print / before-print webContents listener added per RESEARCH §1. Inject -> console -> magiclineView -> ipcMain -> main.js relay chain for post-sale overlay now fully wired on disk. 40/40 regression tests still green)
 
 ## Project Reference
 
@@ -26,16 +26,21 @@ progress:
 ## Current Position
 
 Phase: 10 (post-sale-flow-with-print-interception) — IN PROGRESS
-Plan: 5 of 10 complete (10-01 sessionreset-loop-filter, 10-02 preload-post-sale-ipc, 10-05 main-post-sale-ipc-handlers, 10-06 host-html-css-post-sale-layer, 10-07 host-js-overlay-lifecycle)
+Plan: 7 of 10 complete (10-01 sessionreset-loop-filter, 10-02 preload-post-sale-ipc, 10-04 magiclineview-sentinel-relay, 10-05 main-post-sale-ipc-handlers, 10-06 host-html-css-post-sale-layer, 10-07 host-js-overlay-lifecycle, 10-08 postsale-test)
 
 - **Milestone:** v1.1 Field-Operations Polish — STARTED 2026-04-14
 - **Status:** Executing
 - **Phase:** 10 — post-sale-flow-with-print-interception (10 plans planned, 3 waves)
-- **Plan:** 5 of 10 complete
-- **Last activity:** 2026-04-23
+- **Plan:** 7 of 10 complete
+- **Last activity:** 2026-04-24
 
 ## Key Decisions (Phase 10)
 
+- **D-10-04-01:** magiclineView.js both new console-message branches (BSK_PRINT_INTERCEPTED, BSK_POST_SALE_FALLBACK) use plain `if` (not `else if`) — neither is a substring of the other or of any existing sentinel. Contrast with BSK_REGISTER_SELECTED_DEGRADED ordering guard which MUST precede plain BSK_REGISTER_SELECTED via else-if to prevent double-fire.
+- **D-10-04-02:** No `webContents.on('-print', ...)` or `webContents.on('before-print', ...)` listener installed — the -print event does not exist in Electron 41's public API (electron/electron#22796 wontfix). Per RESEARCH §1, the canonical primary-trigger path is the JS-level window.print override (Plan 03) emitting the BSK_PRINT_INTERCEPTED sentinel consumed by the Plan 04 relay.
+- **D-10-04-03:** Inline `const { ipcMain } = require('electron')` inside each new branch (NOT hoisted to module scope). Matches the existing BSK_AUDIT_SALE_COMPLETED + BSK_REGISTER_SELECTED* byte-for-byte require/emit/swallow pattern — every sentinel branch is self-contained for failure isolation.
+- **D-10-04-04:** Trigger payload strings verbatim: `'print-intercept'` (print-override path) and `'cart-empty-fallback'` (MutationObserver defense-in-depth path). These exact values feed main.js Plan 05's `startPostSaleFlow({trigger})` call and the `log.audit('post-sale.shown', {trigger})` audit line.
+- **D-10-04-05:** Channel name is the INTERNAL main-process relay `post-sale:trigger` — NOT the main→renderer `post-sale:show`. Plan 05's single `ipcMain.on('post-sale:trigger')` listener owns dedupe (via `postSaleShown`) and fans out exactly one `post-sale:show` to the host per sale cycle.
 - **D-10-06-01:** UI-SPEC §Component Inventory 1 HTML block copied verbatim into host.html — insertion point chosen as the `#magicline-error` line (places post-sale-overlay immediately before magicline-error in source order, preserving z-index-ascending grouping for 180 → 300). Z-index ladder comment preamble updated to reference 01-UI-SPEC + 05-UI-SPEC + 10-UI-SPEC.
 - **D-10-06-02:** "Nächster Kunde" button uses THREE reused classes (`.bsk-btn .bsk-btn--primary .bsk-btn--idle-dismiss`) with zero new Phase-10 button modifier. D-04 grants discretion; construction-level parity with `.bsk-btn--idle-dismiss` is preferred over a new alias that could drift.
 - **D-10-06-03:** `.bsk-post-sale-title` uses margin `16px 0 16px 0` (mirrors `.bsk-idle-title` vertical rhythm) rather than `.bsk-welcome-title`'s `32px 0 0 0`. Needed for symmetric vertical spacing inside the flex column stack (logo → title → countdown → subtext → button).
@@ -77,7 +82,7 @@ Plan: 5 of 10 complete (10-01 sessionreset-loop-filter, 10-02 preload-post-sale-
 | 07 | Locale Hardening & Splash Race | LOCALE-01, SPLASH-01 | Complete (6/6 plans) |
 | 08 | Admin Menu Polish & Reload Fix | ADMIN-01, ADMIN-03, FIX-01 | Complete (2/2 plans, human UAT pending) |
 | 09 | POS Open/Close & Update Gating | ADMIN-02 | Complete (2/2 plans, human UAT pending) |
-| 10 | Post-Sale Flow & Print Interception | SALE-01 | Executing (5/10 plans) |
+| 10 | Post-Sale Flow & Print Interception | SALE-01 | Executing (7/10 plans) |
 
 Coverage: 7/7 v1.1 requirements mapped.
 
@@ -95,7 +100,7 @@ Field guide: `docs/runbook/v1.0-KIOSK-VISIT.md`. Authoritative per-requirement s
 
 ## Next Action
 
-Continue Phase 10 execution. Plans 10-01 (sessionreset-loop-filter), 10-02 (preload-post-sale-ipc), 10-05 (main-post-sale-ipc-handlers), 10-06 (host-html-css post-sale layer), and 10-07 (host-js-overlay-lifecycle) are COMPLETE. Plans 10-03 and 10-10 remain parked at their hardware-verification checkpoints; the code they install (preload IPC surface from 10-02, sessionReset filter from 10-01, three-handler orchestration block from 10-05, host-side visual surface from 10-06, host-side overlay lifecycle from 10-07) is already on disk. Remaining work: plan 04 magiclineView sentinel relay (completes the show-trigger chain once inject.js Plan 03 lands), plan 08 postSale state-machine test (can now mirror host.js implementation precisely for show/tick/dismiss path assertions), plan 09 updateGate-composition test (auto-logout path calls `hardReset({reason:'sale-completed', mode:'welcome'})` which fires onPostReset per Plan 01 D-18 verification). D-10 revised per RESEARCH §1: `window.print` override in inject.js replaces the nonexistent Electron 41 `-print` event; D-11 cart-empty MutationObserver kept as defense-in-depth. Phase 09 POS open/close toggle is complete with 3 human UAT items pending next kiosk visit.
+Continue Phase 10 execution. Plans 10-01 (sessionreset-loop-filter), 10-02 (preload-post-sale-ipc), 10-04 (magiclineview-sentinel-relay), 10-05 (main-post-sale-ipc-handlers), 10-06 (host-html-css post-sale layer), 10-07 (host-js-overlay-lifecycle), and 10-08 (postSale state-machine tests) are COMPLETE — the inject -> console -> magiclineView -> ipcMain -> main.js -> host relay chain for the post-sale overlay is now fully wired on disk. Plans 10-03 and 10-10 remain parked at their hardware-verification checkpoints only; their code (inject.js window.print override + cart-empty observer from 10-03 feat commits 9b7b906/e2d2ead; NSIS customInstall default-printer block + runbook from 10-10 commits 5833cd9/0f6cab9) is already committed. Remaining work: plan 09 updateGate-composition test (auto-logout path calls `hardReset({reason:'sale-completed', mode:'welcome'})` which fires onPostReset per Plan 01 D-18 verification). D-10 revised per RESEARCH §1: `window.print` override in inject.js replaces the nonexistent Electron 41 `-print` event; D-11 cart-empty MutationObserver kept as defense-in-depth — Plan 04 today completed the console-message relay for both sentinels. Phase 09 POS open/close toggle is complete with 3 human UAT items pending next kiosk visit.
 
 ### Quick Tasks Completed
 
@@ -104,7 +109,7 @@ Continue Phase 10 execution. Plans 10-01 (sessionreset-loop-filter), 10-02 (prel
 | 260414-eu9 | Descope NFC member-badge identification from v1.0 | 2026-04-14 | cbc9b59 | [260414-eu9-descope-nfc-member-badge-identification-](./quick/260414-eu9-descope-nfc-member-badge-identification-/) |
 | 260414-iiv | Ship 0.1.3 patch — fix release asset filename mismatch + flip update window to 09:00–12:00 | 2026-04-14 | 34cb20a | [260414-iiv-ship-0-1-3-patch-fix-release-asset-filen](./quick/260414-iiv-ship-0-1-3-patch-fix-release-asset-filen/) |
 
-**Last activity:** 2026-04-23 — Phase 10 Plan 07 complete (host.js overlay lifecycle: postSaleResolved+postSaleInterval state, showPostSaleOverlay+hidePostSaleOverlay with D-08 first-wins race guard, #post-sale-next-btn click handler, onShowPostSale/onHidePostSale IPC subscribers — 85 additive lines, zero existing code modified; sessionReset regression 32/32 green)
+**Last activity:** 2026-04-24 — Phase 10 Plan 04 complete (magiclineView.js two new console-message sentinel branches: BSK_PRINT_INTERCEPTED -> ipcMain.emit('post-sale:trigger', null, {trigger:'print-intercept'}) and BSK_POST_SALE_FALLBACK -> ipcMain.emit('post-sale:trigger', null, {trigger:'cart-empty-fallback'}); 23 additive lines inserted after the BSK_REGISTER_SELECTED else-if block and before PHASE07_SENTINEL_PREFIX; plain `if` for both (no substring collision); no -print / before-print webContents listener installed per RESEARCH §1; existing branches and render-process-gone handler preserved byte-for-byte; 40/40 postSale+sessionReset regression tests green)
 
 ---
 *State initialized: 2026-04-08 · v1.0 archived: 2026-04-14 · NFC descoped: 2026-04-14 · v1.1 roadmap: 2026-04-14*
