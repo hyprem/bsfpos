@@ -132,13 +132,25 @@
   // fresh page load (which is what we want — the override persists on window
   // across hash-route navigations).
   try {
+    // WR-02 fix: lock the override with Object.defineProperty so that any
+    // subsequent `window.print = nativePrint` assignment by Magicline (or a
+    // script it loads) silently fails (non-strict) or throws (strict) rather
+    // than silently replacing our interceptor. `writable: false` + `configurable: false`
+    // also blocks re-definition via defineProperty. This only defends against
+    // assignment-based overwrites — a determined caller using their own
+    // defineProperty would be rejected by `configurable: false` as well.
+    // _originalPrint retained below purely for potential future diagnostic
+    // use; NEVER invoke it from production code paths.
     var _originalPrint = window.print;
-    window.print = function () {
+    var _bskPrintOverride = function () {
       try { console.log('BSK_PRINT_INTERCEPTED'); } catch (e) { /* swallow */ }
       // Do NOT call _originalPrint — Chrome's print preview must never open.
-      // _originalPrint is retained in closure for potential future diagnostic
-      // use; NEVER invoke it from production code paths.
     };
+    Object.defineProperty(window, 'print', {
+      value: _bskPrintOverride,
+      writable: false,
+      configurable: false,
+    });
   } catch (e) { /* swallow — override failure is non-fatal; observer covers */ }
 
   // --- Phase 10 D-11: cart-empty-after-payment MutationObserver fallback --
