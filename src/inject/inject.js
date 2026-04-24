@@ -181,7 +181,18 @@
       var count = _getCartItemCount();
       if (count === -1) return; // could not determine — skip
       if (count !== 0) {
-        _paymentConfirmedAt = 0; // non-empty resets gate (multi-purchase + abandoned)
+        // WR-01 fix: defer the gate clear to the same 500ms debounce window
+        // used for empty observations. React MUI re-renders can briefly emit
+        // an interim non-empty state between the "Jetzt verkaufen" click and
+        // the empty state; an immediate `_paymentConfirmedAt = 0` here would
+        // silently disarm the fallback before the true empty render lands.
+        // Only zero the gate after a sustained non-empty period.
+        if (_paymentConfirmedAt && !_postSaleFallbackTimer) {
+          _postSaleFallbackTimer = setTimeout(function () {
+            _postSaleFallbackTimer = null;
+            if (_getCartItemCount() !== 0) _paymentConfirmedAt = 0;
+          }, 500);
+        }
         return;
       }
       if (!_paymentConfirmedAt) return; // no recent "Jetzt verkaufen" arming
