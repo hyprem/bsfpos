@@ -93,7 +93,7 @@ Dependencies flow: 07 → 08 → 09 → 10 (10 depends on 09's updateGate trigge
   4. The new `'sale-completed'` reason is excluded from the 3-in-60 s reset-loop counter, and the existing `onPostReset` hook still fires so `updateGate` can install pending updates after a sale-driven welcome cycle (first-trigger-wins against the other trigger sources still holds).
   5. While `#post-sale-overlay` is visible, the 60 s idle timer is paused; "Nächster Kunde" rearms it with a fresh window.
   6. `test/postSale.test.js` covers the countdown, auto-dismiss, and "Nächster Kunde" paths; `test/sessionReset.test.js` covers the new `'sale-completed'` reason + loop-counter exclusion.
-**Plans:** 7/10 plans complete
+**Plans:** 8/10 plans complete
 - [x] 10-01-sessionreset-loop-filter-PLAN.md — Extend sessionReset countable filter to exclude sale-completed (D-17) + add D-17/D-18 tests
 - [x] 10-02-preload-post-sale-ipc-PLAN.md — Expose four post-sale IPC methods on window.kiosk (D-19)
 - [ ] 10-03-inject-print-override-fallback-PLAN.md — inject.js window.print override (BSK_PRINT_INTERCEPTED) + cart-empty MutationObserver fallback (BSK_POST_SALE_FALLBACK) + placeholder cart selector [HUMAN CHECKPOINT]
@@ -102,7 +102,7 @@ Dependencies flow: 07 → 08 → 09 → 10 (10 depends on 09's updateGate trigge
 - [x] 10-06-host-html-css-post-sale-layer-PLAN.md — #post-sale-overlay z-180 layer + .bsk-layer--post-sale / .bsk-post-sale-title CSS + updated z-index ladder comment
 - [x] 10-07-host-js-overlay-lifecycle-PLAN.md — showPostSaleOverlay/hidePostSaleOverlay + postSaleResolved first-wins guard + button handler + IPC subscribers
 - [x] 10-08-postsale-test-PLAN.md — test/postSale.test.js state machine tests (dedupe, next-customer, auto-logout, trigger routing)
-- [ ] 10-09-updategate-composition-test-PLAN.md — test/updateGate.test.js D-18 composition test (sale-completed → onPostReset → install)
+- [x] 10-09-updategate-composition-test-PLAN.md — test/updateGate.test.js D-18 composition test (sale-completed → onPostReset → install)
 - [ ] 10-10-nsis-default-printer-runbook-PLAN.md — NSIS customInstall PowerShell for default printer (D-14) + docs/runbook/default-printer-setup.md (D-15) [HUMAN CHECKPOINT]
 **UI hint**: yes
 
@@ -113,7 +113,7 @@ Dependencies flow: 07 → 08 → 09 → 10 (10 depends on 09's updateGate trigge
 | 07. Locale Hardening & Splash Race | 6/6 | Complete    | 2026-04-14 |
 | 08. Admin Menu Polish & Reload Fix | 2/2 | Complete   | 2026-04-20 |
 | 09. POS Open/Close & Update Gating | 2/2 | Complete   | 2026-04-20 |
-| 10. Post-Sale Flow & Print Interception | 7/10 | Executing | - |
+| 10. Post-Sale Flow & Print Interception | 8/10 | Executing | - |
 
 ## Coverage
 

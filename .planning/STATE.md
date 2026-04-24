@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Field-Operations Polish
 status: executing
-last_updated: "2026-04-24T06:36:04Z"
+last_updated: "2026-04-24T06:42:41Z"
 last_activity: 2026-04-24
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 20
-  completed_plans: 17
-  percent: 85
+  completed_plans: 18
+  percent: 90
 ---
 
 # Project State: Bee Strong POS Kiosk
 
-**Last updated:** 2026-04-24 (Phase 10 Plan 04 COMPLETE — magiclineView.js sentinel relay landed: two new console-message branches relay BSK_PRINT_INTERCEPTED and BSK_POST_SALE_FALLBACK to `ipcMain.emit('post-sale:trigger', null, {trigger: 'print-intercept' | 'cart-empty-fallback'})`. 23 additive lines, zero deletions, CRLF preserved, plain `if` (no substring collision between sentinels). NO -print / before-print webContents listener added per RESEARCH §1. Inject -> console -> magiclineView -> ipcMain -> main.js relay chain for post-sale overlay now fully wired on disk. 40/40 regression tests still green)
+**Last updated:** 2026-04-24 (Phase 10 Plan 09 COMPLETE — test/updateGate.test.js D-18 composition test landed: one new test('D-18: sale-completed hardReset → onPostReset → updateGate install composes correctly', ...) appended at EOF, 42 additive lines, 0 deletions. Reuses existing makeLog + makeSessionReset factories — no new mock factories, no new require(). Asserts: (a) installed===1 after sr._fire(), (b) trigger field = 'post-reset' NOT 'sale-completed' (updateGate is reason-agnostic), (c) second sr._fire() is no-op (Phase 05 D-15/D-16 first-trigger-wins preserved for sale-completed). src/main/updateGate.js UNCHANGED per plan critical constraint. 13/13 updateGate tests pass, 53/53 full Phase 10 surface (updateGate + sessionReset + postSale) green. Phase 10 plans complete: 8 of 10. Remaining: 10-03 + 10-10 both parked at hardware-verification checkpoints, code already committed.)
 
 ## Project Reference
 
@@ -26,16 +26,19 @@ progress:
 ## Current Position
 
 Phase: 10 (post-sale-flow-with-print-interception) — IN PROGRESS
-Plan: 7 of 10 complete (10-01 sessionreset-loop-filter, 10-02 preload-post-sale-ipc, 10-04 magiclineview-sentinel-relay, 10-05 main-post-sale-ipc-handlers, 10-06 host-html-css-post-sale-layer, 10-07 host-js-overlay-lifecycle, 10-08 postsale-test)
+Plan: 8 of 10 complete (10-01 sessionreset-loop-filter, 10-02 preload-post-sale-ipc, 10-04 magiclineview-sentinel-relay, 10-05 main-post-sale-ipc-handlers, 10-06 host-html-css-post-sale-layer, 10-07 host-js-overlay-lifecycle, 10-08 postsale-test, 10-09 updategate-composition-test)
 
 - **Milestone:** v1.1 Field-Operations Polish — STARTED 2026-04-14
 - **Status:** Executing
 - **Phase:** 10 — post-sale-flow-with-print-interception (10 plans planned, 3 waves)
-- **Plan:** 7 of 10 complete
+- **Plan:** 8 of 10 complete
 - **Last activity:** 2026-04-24
 
 ## Key Decisions (Phase 10)
 
+- **D-10-09-01:** Plan 09 test is structurally identical to the existing `post-reset trigger fires installFn exactly once` test — updateGate does NOT observe the reason string, so a sale-completed-specific assertion at the updateGate level is impossible. The value is documentation: readers see sale-completed explicitly covered and cannot silently remove the composition. Plan 01's D-18 test covers the sessionReset-side (onPostReset fires for sale-completed); Plan 09 covers the updateGate-side (install path fires once on onPostReset + respects first-trigger-wins). Together = end-to-end SALE-01 success criterion 4 coverage with zero updateGate.js changes.
+- **D-10-09-02:** Audit trigger field asserted as `'post-reset'` (NOT `'sale-completed'`) — updateGate has zero awareness of why onPostReset fired. Introducing a new trigger value would require changing updateGate.js, which D-18 explicitly forbids.
+- **D-10-09-03:** Second `sr._fire()` asserted no-op to preserve Phase 05 D-15/D-16 first-trigger-wins latch for sale-completed paths. Protects against a future change that unlatches the first-install flag on reason-based branching.
 - **D-10-04-01:** magiclineView.js both new console-message branches (BSK_PRINT_INTERCEPTED, BSK_POST_SALE_FALLBACK) use plain `if` (not `else if`) — neither is a substring of the other or of any existing sentinel. Contrast with BSK_REGISTER_SELECTED_DEGRADED ordering guard which MUST precede plain BSK_REGISTER_SELECTED via else-if to prevent double-fire.
 - **D-10-04-02:** No `webContents.on('-print', ...)` or `webContents.on('before-print', ...)` listener installed — the -print event does not exist in Electron 41's public API (electron/electron#22796 wontfix). Per RESEARCH §1, the canonical primary-trigger path is the JS-level window.print override (Plan 03) emitting the BSK_PRINT_INTERCEPTED sentinel consumed by the Plan 04 relay.
 - **D-10-04-03:** Inline `const { ipcMain } = require('electron')` inside each new branch (NOT hoisted to module scope). Matches the existing BSK_AUDIT_SALE_COMPLETED + BSK_REGISTER_SELECTED* byte-for-byte require/emit/swallow pattern — every sentinel branch is self-contained for failure isolation.
@@ -82,7 +85,7 @@ Plan: 7 of 10 complete (10-01 sessionreset-loop-filter, 10-02 preload-post-sale-
 | 07 | Locale Hardening & Splash Race | LOCALE-01, SPLASH-01 | Complete (6/6 plans) |
 | 08 | Admin Menu Polish & Reload Fix | ADMIN-01, ADMIN-03, FIX-01 | Complete (2/2 plans, human UAT pending) |
 | 09 | POS Open/Close & Update Gating | ADMIN-02 | Complete (2/2 plans, human UAT pending) |
-| 10 | Post-Sale Flow & Print Interception | SALE-01 | Executing (7/10 plans) |
+| 10 | Post-Sale Flow & Print Interception | SALE-01 | Executing (8/10 plans) |
 
 Coverage: 7/7 v1.1 requirements mapped.
 
@@ -100,7 +103,7 @@ Field guide: `docs/runbook/v1.0-KIOSK-VISIT.md`. Authoritative per-requirement s
 
 ## Next Action
 
-Continue Phase 10 execution. Plans 10-01 (sessionreset-loop-filter), 10-02 (preload-post-sale-ipc), 10-04 (magiclineview-sentinel-relay), 10-05 (main-post-sale-ipc-handlers), 10-06 (host-html-css post-sale layer), 10-07 (host-js-overlay-lifecycle), and 10-08 (postSale state-machine tests) are COMPLETE — the inject -> console -> magiclineView -> ipcMain -> main.js -> host relay chain for the post-sale overlay is now fully wired on disk. Plans 10-03 and 10-10 remain parked at their hardware-verification checkpoints only; their code (inject.js window.print override + cart-empty observer from 10-03 feat commits 9b7b906/e2d2ead; NSIS customInstall default-printer block + runbook from 10-10 commits 5833cd9/0f6cab9) is already committed. Remaining work: plan 09 updateGate-composition test (auto-logout path calls `hardReset({reason:'sale-completed', mode:'welcome'})` which fires onPostReset per Plan 01 D-18 verification). D-10 revised per RESEARCH §1: `window.print` override in inject.js replaces the nonexistent Electron 41 `-print` event; D-11 cart-empty MutationObserver kept as defense-in-depth — Plan 04 today completed the console-message relay for both sentinels. Phase 09 POS open/close toggle is complete with 3 human UAT items pending next kiosk visit.
+Phase 10 software work is fully landed. Plans 10-01 through 10-09 (except the two hardware-gated plans 10-03 and 10-10) are COMPLETE. Remaining Phase 10 work is purely on-kiosk human verification at the hardware checkpoints for plans 10-03 (inject.js window.print override + cart-empty observer; code committed in 9b7b906 + e2d2ead) and 10-10 (NSIS customInstall default-printer block + runbook; code committed in 5833cd9 + 0f6cab9). The D-18 end-to-end composition guard for SALE-01 success criterion 4 is now locked in with Plan 01's sessionReset-side test (onPostReset fires for sale-completed) + Plan 09's updateGate-side test (install path fires once on onPostReset + respects first-trigger-wins). Phase 09 POS open/close toggle remains complete with 3 human UAT items pending next kiosk visit. After the two Phase 10 hardware checkpoints pass, Phase 10 is shippable and v1.1 closes.
 
 ### Quick Tasks Completed
 
@@ -109,7 +112,7 @@ Continue Phase 10 execution. Plans 10-01 (sessionreset-loop-filter), 10-02 (prel
 | 260414-eu9 | Descope NFC member-badge identification from v1.0 | 2026-04-14 | cbc9b59 | [260414-eu9-descope-nfc-member-badge-identification-](./quick/260414-eu9-descope-nfc-member-badge-identification-/) |
 | 260414-iiv | Ship 0.1.3 patch — fix release asset filename mismatch + flip update window to 09:00–12:00 | 2026-04-14 | 34cb20a | [260414-iiv-ship-0-1-3-patch-fix-release-asset-filen](./quick/260414-iiv-ship-0-1-3-patch-fix-release-asset-filen/) |
 
-**Last activity:** 2026-04-24 — Phase 10 Plan 04 complete (magiclineView.js two new console-message sentinel branches: BSK_PRINT_INTERCEPTED -> ipcMain.emit('post-sale:trigger', null, {trigger:'print-intercept'}) and BSK_POST_SALE_FALLBACK -> ipcMain.emit('post-sale:trigger', null, {trigger:'cart-empty-fallback'}); 23 additive lines inserted after the BSK_REGISTER_SELECTED else-if block and before PHASE07_SENTINEL_PREFIX; plain `if` for both (no substring collision); no -print / before-print webContents listener installed per RESEARCH §1; existing branches and render-process-gone handler preserved byte-for-byte; 40/40 postSale+sessionReset regression tests green)
+**Last activity:** 2026-04-24 — Phase 10 Plan 09 complete (test/updateGate.test.js extended with one new D-18 composition test: `D-18: sale-completed hardReset → onPostReset → updateGate install composes correctly`. 42 additive lines at EOF, 0 deletions. Reuses existing makeLog + makeSessionReset factories; no new imports, no new factories. Asserts installed===1 after sr._fire(), trigger field = 'post-reset' (NOT 'sale-completed' — updateGate is reason-agnostic), and second sr._fire() is no-op preserving Phase 05 D-15/D-16 first-trigger-wins for sale-completed. src/main/updateGate.js UNCHANGED. 13/13 updateGate.test.js pass; 53/53 full Phase 10 surface (updateGate + sessionReset + postSale) green; zero regressions. Phase 10 plans complete: 8/10 (10-03 and 10-10 parked at hardware-verification checkpoints — code already committed).
 
 ---
 *State initialized: 2026-04-08 · v1.0 archived: 2026-04-14 · NFC descoped: 2026-04-14 · v1.1 roadmap: 2026-04-14*
