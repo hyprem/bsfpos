@@ -33,7 +33,7 @@ For v1.0 archive, see `.planning/milestones/v1.0-REQUIREMENTS.md`.
 
 ### Post-Sale Flow
 
-- [ ] **SALE-01**: A branded "Vielen Dank" overlay (`#post-sale-overlay`, z-index 180) appears immediately after a successful Magicline sale, triggered by Electron print-event interception (with cart-empty-after-payment as fallback). Microsoft Print to PDF is pre-configured as the default printer for the `bsfkiosk` user; no Chrome print preview is ever shown. The overlay shows a 10-second countdown with a "Nächster Kunde" button; on auto-dismiss, `sessionReset.hardReset({reason:'sale-completed', mode:'welcome'})` returns the kiosk to the welcome layer with a fresh session. The new `'sale-completed'` reason is excluded from the 3-in-60s reset-loop counter and fires the existing `onPostReset` hook so `updateGate` can install pending updates after a sale-driven welcome cycle. While the overlay is visible, the 60 s idle timer is paused; "Nächster Kunde" rearms it with a fresh window. Receipt PDF archiving is OUT OF SCOPE for v1.1 (deferred to v1.2+). — *Source: `2026-04-14-post-sale-vielen-dank-overlay-with-print-interception.md`* — *Phase 10, pending*
+- [x] **SALE-01**: A branded "Vielen Dank" overlay (`#post-sale-overlay`, z-index 180) appears immediately after a successful Magicline sale, triggered by Electron print-event interception (with cart-empty-after-payment as fallback). Microsoft Print to PDF is pre-configured as the default printer for the `bsfkiosk` user; no Chrome print preview is ever shown. The overlay shows a 10-second countdown with a "Nächster Kunde" button; on auto-dismiss, `sessionReset.hardReset({reason:'sale-completed', mode:'welcome'})` returns the kiosk to the welcome layer with a fresh session. The new `'sale-completed'` reason is excluded from the 3-in-60s reset-loop counter and fires the existing `onPostReset` hook so `updateGate` can install pending updates after a sale-driven welcome cycle. While the overlay is visible, the 60 s idle timer is paused; "Nächster Kunde" rearms it with a fresh window. Receipt PDF archiving is OUT OF SCOPE for v1.1 (deferred to v1.2+). — *Source: `2026-04-14-post-sale-vielen-dank-overlay-with-print-interception.md`* — *Phase 10, complete (2 hardware UAT pending)*
 
 ### Out of Scope (v1.1)
 
@@ -56,7 +56,7 @@ REQ-IDs mapped to phases by the `gsd-roadmapper` agent on 2026-04-14. Phase numb
 | ADMIN-03  | Phase 08 | Complete |
 | FIX-01    | Phase 08 | Complete |
 | ADMIN-02  | Phase 09 | Complete |
-| SALE-01   | Phase 10 | Pending |
+| SALE-01   | Phase 10 | Complete (2 hardware UAT pending) |
 
 **Coverage:** 7/7 requirements mapped. No orphans.
 

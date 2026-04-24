@@ -30,7 +30,7 @@ Dependencies flow: 07 → 08 → 09 → 10 (10 depends on 09's updateGate trigge
 - [x] **Phase 07: Locale Hardening & Splash Auto-Selection Race** — Force Magicline to de-DE and gate splash on register-selected, not cash-register-ready. (completed 2026-04-14)
 - [x] **Phase 08: Admin Menu Polish & Reload Fix** — Close button, re-entry credentials mode, and welcome-state-aware Kasse nachladen. (completed 2026-04-20)
 - [x] **Phase 09: POS Open/Close Toggle with Update-Window Gating** — Admin-controlled POS state gates auto-update installation to a daytime window. (completed 2026-04-20)
-- [ ] **Phase 10: Post-Sale Flow with Print Interception** — Branded "Vielen Dank" overlay, Electron print interception, and auto-logout to welcome after sale.
+- [x] **Phase 10: Post-Sale Flow with Print Interception** — Branded "Vielen Dank" overlay, Electron print interception, and auto-logout to welcome after sale. (completed 2026-04-24, 2 hardware checkpoints pending)
 
 ## Phase Details
 
@@ -113,7 +113,7 @@ Dependencies flow: 07 → 08 → 09 → 10 (10 depends on 09's updateGate trigge
 | 07. Locale Hardening & Splash Race | 6/6 | Complete    | 2026-04-14 |
 | 08. Admin Menu Polish & Reload Fix | 2/2 | Complete   | 2026-04-20 |
 | 09. POS Open/Close & Update Gating | 2/2 | Complete   | 2026-04-20 |
-| 10. Post-Sale Flow & Print Interception | 8/10 | Executing | - |
+| 10. Post-Sale Flow & Print Interception | 8/10 | Complete (2 hardware UAT pending) | 2026-04-24 |
 
 ## Coverage
 

@@ -12,6 +12,8 @@ A gym member can walk up, scan or self-select a product, pay at the card termina
 
 **v1.0 MVP shipped 2026-04-14.** 6 phases, 36 plans, 42/42 requirements closed (all code-complete and automated-test-green). Audit posture: `tech_debt` — no critical blockers, 50 row-level physical verification checks consolidated into the next-kiosk-visit batch (`.planning/phases/01-locked-down-shell-os-hardening/01-VERIFICATION.md`); deferral is row-level only, not requirement-level. Field guide: `docs/runbook/v1.0-KIOSK-VISIT.md`. Detailed accomplishments: see `.planning/MILESTONES.md`. Full archive: `.planning/milestones/v1.0-ROADMAP.md` + `v1.0-REQUIREMENTS.md`.
 
+**v1.1 Field-Operations Polish code-complete 2026-04-24.** 4 phases (07, 08, 09, 10), 20 plans (18 SUMMARYs on disk + 2 parked at hardware checkpoints with code committed). 298/298 tests green. Phase 10 code-review clean (WR-01/WR-02 auto-fixed). Milestone ships after the next kiosk visit closes 7 HUMAN-UAT rows (2× Phase 08, 3× Phase 09, 2× Phase 10) plus the v1.0 carry-over batch. See `.planning/STATE.md` for the current remaining-work breakdown.
+
 ## Current Milestone: v1.1 Field-Operations Polish
 
 **Goal:** Mature the v1.0 kiosk into a hands-off, unattended deployment by closing the small UX gaps and operational bugs surfaced during real-hardware testing on 2026-04-14.
@@ -126,4 +128,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-14 — v1.1 milestone started (Field-Operations Polish)*
+*Last updated: 2026-04-24 — v1.1 code-complete, awaiting hardware UAT*

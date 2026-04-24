@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Field-Operations Polish
-status: executing
-last_updated: "2026-04-24T06:42:41Z"
+status: milestone_review
+last_updated: "2026-04-24T09:15:00Z"
 last_activity: 2026-04-24
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 20
   completed_plans: 18
   percent: 90
@@ -15,23 +15,23 @@ progress:
 
 # Project State: Bee Strong POS Kiosk
 
-**Last updated:** 2026-04-24 (Phase 10 Plan 09 COMPLETE — test/updateGate.test.js D-18 composition test landed: one new test('D-18: sale-completed hardReset → onPostReset → updateGate install composes correctly', ...) appended at EOF, 42 additive lines, 0 deletions. Reuses existing makeLog + makeSessionReset factories — no new mock factories, no new require(). Asserts: (a) installed===1 after sr._fire(), (b) trigger field = 'post-reset' NOT 'sale-completed' (updateGate is reason-agnostic), (c) second sr._fire() is no-op (Phase 05 D-15/D-16 first-trigger-wins preserved for sale-completed). src/main/updateGate.js UNCHANGED per plan critical constraint. 13/13 updateGate tests pass, 53/53 full Phase 10 surface (updateGate + sessionReset + postSale) green. Phase 10 plans complete: 8 of 10. Remaining: 10-03 + 10-10 both parked at hardware-verification checkpoints, code already committed.)
+**Last updated:** 2026-04-24 (Phase 10 COMPLETE — all 6 roadmap success criteria verified in code, 298/298 tests green, code review clean (0 critical / 2 warnings fixed, 5 info skipped as style). Plans 10-04 (magiclineview-sentinel-relay) and 10-09 (updategate-composition-test) landed this run. 2 hardware checkpoints remain as HUMAN-UAT rows carried into v1.1 milestone close: 10-03 (window.print override vs live Magicline DOM + cart selector discovery) and 10-10 (NSIS installer run on target Win 11 user). v1.1 all 4 phases code-complete; milestone closes once hardware UAT passes at the next kiosk visit.)
 
 ## Project Reference
 
 **Core value:** A gym member can walk up, scan or self-select a product, pay at the card terminal next to the kiosk, and walk away — without staff interaction and without being able to break out of the locked Magicline cash register page. (NFC member identification descoped 2026-04-14, see MILESTONES.md.)
 
-**Current focus:** Phase 10 — post-sale-flow-with-print-interception
+**Current focus:** v1.1 milestone wrap-up — all 4 phases code-complete, 5 HUMAN-UAT rows pending next kiosk visit.
 
 ## Current Position
 
-Phase: 10 (post-sale-flow-with-print-interception) — IN PROGRESS
-Plan: 8 of 10 complete (10-01 sessionreset-loop-filter, 10-02 preload-post-sale-ipc, 10-04 magiclineview-sentinel-relay, 10-05 main-post-sale-ipc-handlers, 10-06 host-html-css-post-sale-layer, 10-07 host-js-overlay-lifecycle, 10-08 postsale-test, 10-09 updategate-composition-test)
+Phase: 10 (post-sale-flow-with-print-interception) — COMPLETE (2 hardware UAT pending)
+Plan: 8 of 10 plan SUMMARYs on disk (10-01, 10-02, 10-04, 10-05, 10-06, 10-07, 10-08, 10-09). Plans 10-03 and 10-10 code committed but parked at hardware-verification checkpoints — tracked in 10-HUMAN-UAT.md.
 
-- **Milestone:** v1.1 Field-Operations Polish — STARTED 2026-04-14
-- **Status:** Executing
-- **Phase:** 10 — post-sale-flow-with-print-interception (10 plans planned, 3 waves)
-- **Plan:** 8 of 10 complete
+- **Milestone:** v1.1 Field-Operations Polish — STARTED 2026-04-14, code-complete 2026-04-24
+- **Status:** Milestone review (all 4 phases complete in code)
+- **Phase:** 10 — post-sale-flow-with-print-interception (code-complete; 2 hardware UAT rows)
+- **Plan:** 8 of 10 plan SUMMARYs; 2 parked at hardware checkpoints
 - **Last activity:** 2026-04-24
 
 ## Key Decisions (Phase 10)
@@ -85,7 +85,7 @@ Plan: 8 of 10 complete (10-01 sessionreset-loop-filter, 10-02 preload-post-sale-
 | 07 | Locale Hardening & Splash Race | LOCALE-01, SPLASH-01 | Complete (6/6 plans) |
 | 08 | Admin Menu Polish & Reload Fix | ADMIN-01, ADMIN-03, FIX-01 | Complete (2/2 plans, human UAT pending) |
 | 09 | POS Open/Close & Update Gating | ADMIN-02 | Complete (2/2 plans, human UAT pending) |
-| 10 | Post-Sale Flow & Print Interception | SALE-01 | Executing (8/10 plans) |
+| 10 | Post-Sale Flow & Print Interception | SALE-01 | Complete (8/10 plans, 2 hardware UAT pending) |
 
 Coverage: 7/7 v1.1 requirements mapped.
 
@@ -103,7 +103,17 @@ Field guide: `docs/runbook/v1.0-KIOSK-VISIT.md`. Authoritative per-requirement s
 
 ## Next Action
 
-Phase 10 software work is fully landed. Plans 10-01 through 10-09 (except the two hardware-gated plans 10-03 and 10-10) are COMPLETE. Remaining Phase 10 work is purely on-kiosk human verification at the hardware checkpoints for plans 10-03 (inject.js window.print override + cart-empty observer; code committed in 9b7b906 + e2d2ead) and 10-10 (NSIS customInstall default-printer block + runbook; code committed in 5833cd9 + 0f6cab9). The D-18 end-to-end composition guard for SALE-01 success criterion 4 is now locked in with Plan 01's sessionReset-side test (onPostReset fires for sale-completed) + Plan 09's updateGate-side test (install path fires once on onPostReset + respects first-trigger-wins). Phase 09 POS open/close toggle remains complete with 3 human UAT items pending next kiosk visit. After the two Phase 10 hardware checkpoints pass, Phase 10 is shippable and v1.1 closes.
+v1.1 is code-complete. All 4 phases (07, 08, 09, 10) have been executed, verified, code-reviewed, and auto-fixed. 298/298 tests green. Phase 10 code-review warnings WR-01 (cart-empty observer debounce) and WR-02 (`Object.defineProperty` lock on `window.print`) were applied as commits `1ae4ba3` + `ac1eda5`.
+
+Remaining before v1.1 ships:
+
+1. **Next kiosk visit HUMAN-UAT batch** — 5 total rows across phases 08/09/10:
+   - Phase 08: 2 rows (admin menu close button, Kasse nachladen from welcome)
+   - Phase 09: 3 rows (POS toggle, welcome closed-state render, `admin-closed-window` updateGate trigger live)
+   - Phase 10: 2 rows (window.print override + cart selector discovery on live Magicline; NSIS default-printer installer run on bsfkiosk Win 11 user)
+   - Plus v1.0 carry-over (44 rows per `docs/runbook/v1.0-KIOSK-VISIT.md`)
+2. **After UAT passes:** run `/gsd-complete-milestone` to archive v1.1 → `.planning/milestones/v1.1-*`.
+3. **Optional before visit:** apply Phase 10 info items (IN-01 through IN-05) via `/gsd-code-review-fix 10 --all` — style/comment nits, not blocking.
 
 ### Quick Tasks Completed
 
