@@ -303,3 +303,45 @@ test('onUpdateDownloaded: installFn throw is logged not propagated', () => {
   assert.ok(errCall, 'error should be logged');
   gate._resetForTests();
 });
+
+// --- Phase 10 D-18: sale-completed → onPostReset → updateGate composition -----
+// SALE-01 success criterion 4 requires the onPostReset hook to fire for
+// sale-completed cycles so pending updates install after a sale-driven
+// welcome cycle. updateGate.js is NOT modified for Phase 10 — this test
+// proves the existing onPostReset single-slot listener composes correctly.
+//
+// The test is structurally identical to the 'post-reset trigger fires
+// installFn exactly once' test — updateGate does not care WHY onPostReset
+// fired, only that it fired. The value of this test is documentation:
+// readers see sale-completed explicitly covered in the test suite.
+
+test('D-18: sale-completed hardReset → onPostReset → updateGate install composes correctly', () => {
+  gate._resetForTests();
+  const log = makeLog();
+  const sr = makeSessionReset();
+  let installed = 0;
+  gate.onUpdateDownloaded({
+    installFn: () => installed++,
+    log,
+    sessionResetModule: sr,
+    getHour: () => 12, // outside maintenance window — post-reset trigger path wins
+  });
+  // Simulate: a sale-completed hardReset completes → sessionReset fires its
+  // single-slot postResetListener → updateGate's callback (registered via
+  // gate.onUpdateDownloaded → sr.onPostReset) fires → installFn invoked once.
+  sr._fire();
+  assert.strictEqual(installed, 1, 'updateGate must install after sale-completed onPostReset');
+  const installAudit = log.calls.find(c => c.event === 'update.install');
+  assert.ok(installAudit, 'update.install audit must be emitted');
+  // D-18: trigger field value is 'post-reset' — NOT 'sale-completed'. updateGate
+  // does not differentiate between onPostReset causes; sale-completed simply
+  // uses the same hook as idle-expired.
+  assert.strictEqual(installAudit.fields.trigger, 'post-reset');
+
+  // First-trigger-wins: a second post-reset fire (e.g. two sales in a row)
+  // does NOT re-install. Phase 05 D-15/D-16 semantics preserved for sale-completed.
+  sr._fire();
+  assert.strictEqual(installed, 1, 'second post-reset (from a second sale-completed) must be no-op');
+
+  gate._resetForTests();
+});
