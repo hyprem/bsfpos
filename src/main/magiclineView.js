@@ -330,6 +330,29 @@ function createMagiclineView(mainWindow, store) {
         } catch (_) { /* swallow */ }
       }
 
+      // Phase 10 D-10 (revised per RESEARCH §1): window.print override primary
+      // trigger. inject.js overrides window.print to emit this sentinel instead
+      // of opening Chrome's print preview. The -print webContents event does
+      // NOT exist in Electron 41's public API (electron/electron#22796 wontfix);
+      // the JS-level override is the approved replacement.
+      if (message && message.indexOf('BSK_PRINT_INTERCEPTED') !== -1) {
+        try {
+          const { ipcMain } = require('electron');
+          ipcMain.emit('post-sale:trigger', null, { trigger: 'print-intercept' });
+        } catch (_) { /* swallow */ }
+      }
+
+      // Phase 10 D-11: cart-empty-after-payment MutationObserver fallback.
+      // Fires when inject.js observer detects cart non-zero->zero within 120s
+      // of a 'Jetzt verkaufen' click (debounced 500ms inside inject.js).
+      // Defense-in-depth if Magicline's print call bypasses window.print.
+      if (message && message.indexOf('BSK_POST_SALE_FALLBACK') !== -1) {
+        try {
+          const { ipcMain } = require('electron');
+          ipcMain.emit('post-sale:trigger', null, { trigger: 'cart-empty-fallback' });
+        } catch (_) { /* swallow */ }
+      }
+
       if (message && message.indexOf(PHASE07_SENTINEL_PREFIX) !== -1) {
         const parsed = parseAutoSelectSentinel(message);
         if (parsed) {
