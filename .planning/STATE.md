@@ -86,8 +86,13 @@ Plan: 8 of 10 plan SUMMARYs on disk (10-01, 10-02, 10-04, 10-05, 10-06, 10-07, 1
 | 08 | Admin Menu Polish & Reload Fix | ADMIN-01, ADMIN-03, FIX-01 | Complete (2/2 plans, human UAT pending) |
 | 09 | POS Open/Close & Update Gating | ADMIN-02 | Complete (2/2 plans, human UAT pending) |
 | 10 | Post-Sale Flow & Print Interception | SALE-01 | Complete (8/10 plans, 2 hardware UAT pending) |
+| 11 | POS Close — Immediate Welcome Reset | ADMIN-02 (extends; D-06 reversed) | Not planned (added 2026-04-26 via UAT feedback) |
 
-Coverage: 7/7 v1.1 requirements mapped.
+Coverage: 7/7 v1.1 requirements mapped. Phase 11 is a UAT-driven D-06 reversal — no new requirement.
+
+## Roadmap Evolution
+
+- 2026-04-26: Phase 11 added — POS Close — Immediate Welcome Reset. UAT on dev machine surfaced that closing POS while admin menu is open over the cash register lands user back on the register on dismiss. Phase 09 D-06 ("no mid-checkout interruption") reversed: closing POS now triggers immediate sessionReset to closed-welcome layer.
 
 ## Outstanding Field Work (v1.0 carry-over)
 

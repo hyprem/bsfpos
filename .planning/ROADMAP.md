@@ -31,6 +31,7 @@ Dependencies flow: 07 → 08 → 09 → 10 (10 depends on 09's updateGate trigge
 - [x] **Phase 08: Admin Menu Polish & Reload Fix** — Close button, re-entry credentials mode, and welcome-state-aware Kasse nachladen. (completed 2026-04-20)
 - [x] **Phase 09: POS Open/Close Toggle with Update-Window Gating** — Admin-controlled POS state gates auto-update installation to a daytime window. (completed 2026-04-20)
 - [x] **Phase 10: Post-Sale Flow with Print Interception** — Branded "Vielen Dank" overlay, Electron print interception, and auto-logout to welcome after sale. (completed 2026-04-24, 2 hardware checkpoints pending)
+- [ ] **Phase 11: POS Close — Immediate Welcome Reset** — Reverse Phase 09 D-06 so closing POS triggers an immediate background sessionReset to the closed-welcome layer, surfacing the closed state without waiting for idle.
 
 ## Phase Details
 
@@ -106,6 +107,21 @@ Dependencies flow: 07 → 08 → 09 → 10 (10 depends on 09's updateGate trigge
 - [ ] 10-10-nsis-default-printer-runbook-PLAN.md — NSIS customInstall PowerShell for default printer (D-14) + docs/runbook/default-printer-setup.md (D-15) [HUMAN CHECKPOINT]
 **UI hint**: yes
 
+### Phase 11: POS Close — Immediate Welcome Reset
+**Goal:** Closing the POS from the admin menu immediately triggers a background sessionReset to the closed-welcome layer, so the closed state surfaces as soon as the admin menu dismisses — without waiting for the 60 s idle timeout. Reverses Phase 09 D-06.
+**Depends on:** Phase 09 (POS toggle + closed-welcome rendering), Phase 10 (sessionReset reason filter pattern from `sale-completed`)
+**Requirements:** ADMIN-02 (extends; D-06 reversed)
+**Success Criteria** (what must be TRUE):
+  1. Tapping "POS schließen" + confirm sets `posOpen=false`, then immediately calls `sessionReset.hardReset({reason:'pos-closed', mode:'welcome'})` so the kiosk transitions to the closed-welcome layer regardless of the layer that was foregrounded when admin opened the menu (cash register, welcome, error, etc.).
+  2. The reset runs while the admin menu is open; on admin-menu close (X / Esc / Ctrl+Shift+F12), the prior-layer restoration target is the new closed-welcome layer (not the cash register that was visible before).
+  3. The new `'pos-closed'` reason is excluded from the 3-in-60 s reset-loop counter (mirrors Phase 10 `sale-completed` filter), and `onPostReset` still fires so `updateGate` can install pending updates after a pos-closed reset (first-trigger-wins still holds).
+  4. Tapping "POS öffnen" does NOT trigger a session reset — the existing `pos-state-changed` IPC path already updates the welcome layer in place (no asymmetry change for the open direction).
+  5. Audit log line `pos.state-changed open=false reason=admin` is emitted (existing), and the immediate reset emits `session.reset reason=pos-closed mode=welcome` (existing sessionReset audit pattern).
+  6. `test/sessionReset.test.js` extends to cover: `pos-closed` excluded from loop counter, `onPostReset` fires for `pos-closed` (mirrors sale-completed D-17/D-18 tests). `test/main.test.js` (or equivalent) covers: `toggle-pos-open` to closed → hardReset called with correct payload; `toggle-pos-open` to open → no hardReset.
+  7. Phase 09 D-06 is updated in `.planning/phases/09-*/09-CONTEXT.md` with a SUPERSEDED-BY-PHASE-11 annotation, plus a one-line rationale (UAT 2026-04-26: admin tapping through to register to reach menu lands user back on register after dismiss; immediate reset matches admin mental model).
+**Plans:** 0/0 plans (not planned yet)
+**UI hint**: no — main + sessionReset only; no new visual surfaces.
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -114,6 +130,7 @@ Dependencies flow: 07 → 08 → 09 → 10 (10 depends on 09's updateGate trigge
 | 08. Admin Menu Polish & Reload Fix | 2/2 | Complete   | 2026-04-20 |
 | 09. POS Open/Close & Update Gating | 2/2 | Complete   | 2026-04-20 |
 | 10. Post-Sale Flow & Print Interception | 8/10 | Complete (2 hardware UAT pending) | 2026-04-24 |
+| 11. POS Close — Immediate Welcome Reset | 0/0 | Not planned   | — |
 
 ## Coverage
 
@@ -122,10 +139,10 @@ Dependencies flow: 07 → 08 → 09 → 10 (10 depends on 09's updateGate trigge
 - ADMIN-01 → Phase 08
 - ADMIN-03 → Phase 08
 - FIX-01   → Phase 08
-- ADMIN-02 → Phase 09
+- ADMIN-02 → Phase 09 (extended by Phase 11; D-06 reversed)
 - SALE-01  → Phase 10
 
-**Coverage:** 7/7 v1.1 requirements mapped. No orphans. Every phase has at least one requirement.
+**Coverage:** 7/7 v1.1 requirements mapped. No orphans. Every phase has at least one requirement. Phase 11 is a UAT-driven D-06 reversal and does not introduce a new requirement.
 
 ## Next Milestone
 
