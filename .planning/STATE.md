@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Field-Operations Polish
 status: executing
-last_updated: "2026-04-26T13:59:48.375Z"
+last_updated: "2026-04-26T14:33:49Z"
 last_activity: 2026-04-26
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 23
-  completed_plans: 18
-  percent: 78
+  completed_plans: 19
+  percent: 83
 ---
 
 # Project State: Bee Strong POS Kiosk
@@ -25,13 +25,13 @@ progress:
 
 ## Current Position
 
-Phase: 10 (post-sale-flow-with-print-interception) — COMPLETE (2 hardware UAT pending)
-Plan: 8 of 10 plan SUMMARYs on disk (10-01, 10-02, 10-04, 10-05, 10-06, 10-07, 10-08, 10-09). Plans 10-03 and 10-10 code committed but parked at hardware-verification checkpoints — tracked in 10-HUMAN-UAT.md.
+Phase: 11 (pos-close-immediate-welcome-reset) — Executing (1/3 plans complete)
+Plan: 11-01 SUMMARY on disk. Phase 10: 8 of 10 plan SUMMARYs (10-03 and 10-10 parked at hardware-verification checkpoints — tracked in 10-HUMAN-UAT.md).
 
-- **Milestone:** v1.1 Field-Operations Polish — STARTED 2026-04-14, code-complete 2026-04-24
-- **Status:** Ready to execute
-- **Phase:** 10 — post-sale-flow-with-print-interception (code-complete; 2 hardware UAT rows)
-- **Plan:** 8 of 10 plan SUMMARYs; 2 parked at hardware checkpoints
+- **Milestone:** v1.1 Field-Operations Polish — STARTED 2026-04-14, code-complete 2026-04-24, Phase 11 added 2026-04-26
+- **Status:** Executing Phase 11
+- **Phase:** 11 — pos-close-immediate-welcome-reset (1/3 plans complete)
+- **Plan:** 11-01 complete; 11-02, 11-03 pending
 - **Last activity:** 2026-04-26
 
 ## Key Decisions (Phase 10)
@@ -86,7 +86,7 @@ Plan: 8 of 10 plan SUMMARYs on disk (10-01, 10-02, 10-04, 10-05, 10-06, 10-07, 1
 | 08 | Admin Menu Polish & Reload Fix | ADMIN-01, ADMIN-03, FIX-01 | Complete (2/2 plans, human UAT pending) |
 | 09 | POS Open/Close & Update Gating | ADMIN-02 | Complete (2/2 plans, human UAT pending) |
 | 10 | Post-Sale Flow & Print Interception | SALE-01 | Complete (8/10 plans, 2 hardware UAT pending) |
-| 11 | POS Close — Immediate Welcome Reset | ADMIN-02 (extends; D-06 reversed) | Not planned (added 2026-04-26 via UAT feedback) |
+| 11 | POS Close — Immediate Welcome Reset | ADMIN-02 (extends; D-06 reversed) | Executing (1/3 plans complete) |
 
 Coverage: 7/7 v1.1 requirements mapped. Phase 11 is a UAT-driven D-06 reversal — no new requirement.
 
@@ -127,7 +127,13 @@ Remaining before v1.1 ships:
 | 260414-eu9 | Descope NFC member-badge identification from v1.0 | 2026-04-14 | cbc9b59 | [260414-eu9-descope-nfc-member-badge-identification-](./quick/260414-eu9-descope-nfc-member-badge-identification-/) |
 | 260414-iiv | Ship 0.1.3 patch — fix release asset filename mismatch + flip update window to 09:00–12:00 | 2026-04-14 | 34cb20a | [260414-iiv-ship-0-1-3-patch-fix-release-asset-filen](./quick/260414-iiv-ship-0-1-3-patch-fix-release-asset-filen/) |
 
-**Last activity:** 2026-04-24 — Phase 10 Plan 09 complete (test/updateGate.test.js extended with one new D-18 composition test: `D-18: sale-completed hardReset → onPostReset → updateGate install composes correctly`. 42 additive lines at EOF, 0 deletions. Reuses existing makeLog + makeSessionReset factories; no new imports, no new factories. Asserts installed===1 after sr._fire(), trigger field = 'post-reset' (NOT 'sale-completed' — updateGate is reason-agnostic), and second sr._fire() is no-op preserving Phase 05 D-15/D-16 first-trigger-wins for sale-completed. src/main/updateGate.js UNCHANGED. 13/13 updateGate.test.js pass; 53/53 full Phase 10 surface (updateGate + sessionReset + postSale) green; zero regressions. Phase 10 plans complete: 8/10 (10-03 and 10-10 parked at hardware-verification checkpoints — code already committed).
+**Last activity:** 2026-04-26 — Phase 11 Plan 11-01 complete (sessionReset countable filter extended with third OR clause `e.reason === 'pos-closed'` byte-mirroring Phase 10 D-17/D-18; +5 lines in src/main/sessionReset.js, +36 lines / 2 new test cases (D-05 exclusion + D-06 onPostReset) in test/sessionReset.test.js. Phase 10 D-17/D-18 sale-completed tests preserved byte-for-byte. 34/34 sessionReset.test.js pass (32 baseline + 2 new D-05/D-06). Commits: feat 6c89281 + test bfe565b. Phase 11 progress: 1/3 plans (11-02 toggle-pos-open hardReset wiring + 11-03 Phase-09 D-06 supersede note still pending).
+
+## Key Decisions (Phase 11)
+
+- **D-11-01-01:** Phase 11 D-05 implemented verbatim — countable filter extended with third OR clause `|| e.reason === 'pos-closed'` after Phase 10's `'sale-completed'` clause. mode check intentionally omitted (pos-closed always arrives with mode:'welcome'). OR clause order: idle-expired+welcome → sale-completed → pos-closed (chronological by phase).
+- **D-11-01-02:** Phase 11 D-06 requires no code change — existing `succeeded && postResetListener` gate at sessionReset.js (post-Phase-10 lines 256-262) already covers welcome-mode pos-closed cycles. New D-06 test documents the contract for regression protection.
+- **D-11-01-03:** Test placement — appended at EOF under new `Phase 11: pos-closed loop-counter exclusion (D-05) + onPostReset (D-06)` banner, AFTER unchanged Phase 10 D-17/D-18 block. Matches phase chronology in source order. Cleanup `sessionReset.onPostReset(null)` after D-06 test mirrors Phase 6 Test 10 + Phase 10 D-18 conventions to prevent module-scoped listener contamination.
 
 ---
 *State initialized: 2026-04-08 · v1.0 archived: 2026-04-14 · NFC descoped: 2026-04-14 · v1.1 roadmap: 2026-04-14*
