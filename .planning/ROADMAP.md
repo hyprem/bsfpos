@@ -117,9 +117,12 @@ Dependencies flow: 07 → 08 → 09 → 10 (10 depends on 09's updateGate trigge
   3. The new `'pos-closed'` reason is excluded from the 3-in-60 s reset-loop counter (mirrors Phase 10 `sale-completed` filter), and `onPostReset` still fires so `updateGate` can install pending updates after a pos-closed reset (first-trigger-wins still holds).
   4. Tapping "POS öffnen" does NOT trigger a session reset — the existing `pos-state-changed` IPC path already updates the welcome layer in place (no asymmetry change for the open direction).
   5. Audit log line `pos.state-changed open=false reason=admin` is emitted (existing), and the immediate reset emits `session.reset reason=pos-closed mode=welcome` (existing sessionReset audit pattern).
-  6. `test/sessionReset.test.js` extends to cover: `pos-closed` excluded from loop counter, `onPostReset` fires for `pos-closed` (mirrors sale-completed D-17/D-18 tests). `test/main.test.js` (or equivalent) covers: `toggle-pos-open` to closed → hardReset called with correct payload; `toggle-pos-open` to open → no hardReset.
+  6. `test/sessionReset.test.js` extends to cover: `pos-closed` excluded from loop counter, `onPostReset` fires for `pos-closed` (mirrors sale-completed D-17/D-18 tests). Per 11-CONTEXT D-08, the toggle-pos-open handler glue itself is NOT directly unit-tested — its meaningful behavior (filter exclusion + onPostReset firing) is covered transitively by the sessionReset tests above, mirroring how Phase 10 covers post-sale main.js glue. UAT verifies the visible behavior end-to-end.
   7. Phase 09 D-06 is updated in `.planning/phases/09-*/09-CONTEXT.md` with a SUPERSEDED-BY-PHASE-11 annotation, plus a one-line rationale (UAT 2026-04-26: admin tapping through to register to reach menu lands user back on register after dismiss; immediate reset matches admin mental model).
-**Plans:** 0/0 plans (not planned yet)
+**Plans:** 3 plans
+- [ ] 11-01-sessionreset-pos-closed-filter-PLAN.md — sessionReset countable filter exclusion + D-05/D-06 tests for pos-closed (mirrors Phase 10 D-17/D-18)
+- [ ] 11-02-toggle-pos-open-hardreset-PLAN.md — main.js toggle-pos-open immediate-reset on close (D-01..D-04, D-09)
+- [ ] 11-03-phase09-d06-supersede-note-PLAN.md — Append SUPERSEDED-BY-PHASE-11 note to 09-CONTEXT.md D-06 (D-10)
 **UI hint**: no — main + sessionReset only; no new visual surfaces.
 
 ## Progress
@@ -130,7 +133,7 @@ Dependencies flow: 07 → 08 → 09 → 10 (10 depends on 09's updateGate trigge
 | 08. Admin Menu Polish & Reload Fix | 2/2 | Complete   | 2026-04-20 |
 | 09. POS Open/Close & Update Gating | 2/2 | Complete   | 2026-04-20 |
 | 10. Post-Sale Flow & Print Interception | 8/10 | Complete (2 hardware UAT pending) | 2026-04-24 |
-| 11. POS Close — Immediate Welcome Reset | 0/0 | Not planned   | — |
+| 11. POS Close — Immediate Welcome Reset | 0/3 | Not started   | — |
 
 ## Coverage
 
