@@ -104,10 +104,14 @@ async function hardReset({ reason, mode } = {}) {
   // Phase 10 D-17: ALSO exclude sale-completed — a member doing 4 quick
   // sales in a minute must not trip the reset-loop guard. mode check is
   // omitted because sale-completed always arrives with mode:'welcome'.
+  // Phase 11 D-05: ALSO exclude pos-closed — admin closing/opening POS
+  // repeatedly during diagnostics must not trip the loop guard. mode check
+  // is omitted because pos-closed always arrives with mode:'welcome'.
   const countable = resetTimestamps.filter(
     (e) => !(
       (e.reason === 'idle-expired' && e.mode === 'welcome') ||
-      e.reason === 'sale-completed'
+      e.reason === 'sale-completed' ||
+      e.reason === 'pos-closed'
     )
   );
   if (countable.length >= RESET_LOOP_THRESHOLD) {
