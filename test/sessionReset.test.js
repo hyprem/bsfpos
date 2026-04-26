@@ -664,3 +664,39 @@ test('D-18: sale-completed reset still fires onPostReset (updateGate composition
   // Clear post listener to avoid contamination across tests via module-scoped state.
   sessionReset.onPostReset(null);
 });
+
+// ---------------------------------------------------------------------------
+// Phase 11: pos-closed loop-counter exclusion (D-05) + onPostReset (D-06)
+// ---------------------------------------------------------------------------
+
+test('D-05: 3x hardReset({reason:"pos-closed"}) within 60s does NOT trip loop guard', async () => {
+  resetAll();
+  const mw = makeFakeMainWindow();
+  // store.get needed for welcome-mode IPC (pos-state-changed broadcast)
+  sessionReset.init({ mainWindow: mw, store: { get: () => true } });
+  await sessionReset.hardReset({ reason: 'pos-closed', mode: 'welcome' });
+  await sessionReset.hardReset({ reason: 'pos-closed', mode: 'welcome' });
+  await sessionReset.hardReset({ reason: 'pos-closed', mode: 'welcome' });
+  const st = sessionReset._getStateForTests();
+  assert.strictEqual(st.loopActive, false, 'pos-closed resets must not trip loop guard');
+  // All 3 must have emitted audit events (not suppressed)
+  const auditLines = fakeLog._lines.audit.filter(e => e.event === 'idle.reset');
+  assert.strictEqual(auditLines.length, 3, 'all 3 resets must emit idle.reset audit');
+  // Assert the reason field is tagged correctly
+  for (const entry of auditLines) {
+    assert.strictEqual(entry.fields.reason, 'pos-closed');
+    assert.strictEqual(entry.fields.mode, 'welcome');
+  }
+});
+
+test('D-06: pos-closed reset still fires onPostReset (updateGate composition)', async () => {
+  resetAll();
+  const mw = makeFakeMainWindow();
+  sessionReset.init({ mainWindow: mw, store: { get: () => true } });
+  let postResetCount = 0;
+  sessionReset.onPostReset(() => { postResetCount++; });
+  await sessionReset.hardReset({ reason: 'pos-closed', mode: 'welcome' });
+  assert.strictEqual(postResetCount, 1, 'onPostReset must fire for pos-closed welcome cycle');
+  // Clear post listener to avoid contamination across tests via module-scoped state.
+  sessionReset.onPostReset(null);
+});
