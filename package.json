@@ -1,6 +1,6 @@
 {
   "name": "bee-strong-pos",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Self-service POS kiosk for Bee Strong Fitness — Electron shell around Magicline cash register",
   "author": "Bee Strong Fitness",
   "license": "UNLICENSED",
