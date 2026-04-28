@@ -3,35 +3,35 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Field-Operations Polish
 status: executing
-last_updated: "2026-04-28T10:49:26Z"
+last_updated: "2026-04-28T10:54:06Z"
 last_activity: 2026-04-28
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 23
-  completed_plans: 20
-  percent: 87
+  completed_plans: 21
+  percent: 91
 ---
 
 # Project State: Bee Strong POS Kiosk
 
-**Last updated:** 2026-04-24 (Phase 10 COMPLETE — all 6 roadmap success criteria verified in code, 298/298 tests green, code review clean (0 critical / 2 warnings fixed, 5 info skipped as style). Plans 10-04 (magiclineview-sentinel-relay) and 10-09 (updategate-composition-test) landed this run. 2 hardware checkpoints remain as HUMAN-UAT rows carried into v1.1 milestone close: 10-03 (window.print override vs live Magicline DOM + cart selector discovery) and 10-10 (NSIS installer run on target Win 11 user). v1.1 all 4 phases code-complete; milestone closes once hardware UAT passes at the next kiosk visit.)
+**Last updated:** 2026-04-28 (Phase 11 COMPLETE — all 7 roadmap success criteria satisfied. Plan 11-03 landed: append-only SUPERSEDED-BY-PHASE-11 note added to Phase 09 D-06 in 09-CONTEXT.md (commit 4dac5b0; +2 lines, original D-06 byte-for-byte preserved). Phase 11 progress: 3/3 plans complete. v1.1 milestone now: all 5 phases code-complete; closes once hardware UAT passes at the next kiosk visit. Earlier 2026-04-24 baseline: Phase 10 — 6 roadmap success criteria verified in code, 298/298 tests green, code review clean (0 critical / 2 warnings fixed, 5 info skipped as style). 2 hardware checkpoints remain as HUMAN-UAT rows: 10-03 (window.print override + cart selector discovery) and 10-10 (NSIS installer run on target Win 11 user).)
 
 ## Project Reference
 
 **Core value:** A gym member can walk up, scan or self-select a product, pay at the card terminal next to the kiosk, and walk away — without staff interaction and without being able to break out of the locked Magicline cash register page. (NFC member identification descoped 2026-04-14, see MILESTONES.md.)
 
-**Current focus:** v1.1 milestone wrap-up — all 4 phases code-complete, 5 HUMAN-UAT rows pending next kiosk visit.
+**Current focus:** v1.1 milestone wrap-up — all 5 phases code-complete, 5 HUMAN-UAT rows pending next kiosk visit.
 
 ## Current Position
 
-Phase: 11 (pos-close-immediate-welcome-reset) — Executing (2/3 plans complete)
-Plan: 11-01 + 11-02 SUMMARYs on disk. Phase 10: 8 of 10 plan SUMMARYs (10-03 and 10-10 parked at hardware-verification checkpoints — tracked in 10-HUMAN-UAT.md).
+Phase: 11 (pos-close-immediate-welcome-reset) — Complete (3/3 plans)
+Plan: 11-01 + 11-02 + 11-03 SUMMARYs on disk. Phase 10: 8 of 10 plan SUMMARYs (10-03 and 10-10 parked at hardware-verification checkpoints — tracked in 10-HUMAN-UAT.md).
 
-- **Milestone:** v1.1 Field-Operations Polish — STARTED 2026-04-14, code-complete 2026-04-24, Phase 11 added 2026-04-26
-- **Status:** Executing Phase 11
-- **Phase:** 11 — pos-close-immediate-welcome-reset (2/3 plans complete)
-- **Plan:** 11-01 + 11-02 complete; 11-03 pending
+- **Milestone:** v1.1 Field-Operations Polish — STARTED 2026-04-14, code-complete 2026-04-24, Phase 11 added 2026-04-26, Phase 11 complete 2026-04-28
+- **Status:** Awaiting next kiosk visit HUMAN-UAT batch (5 v1.1 rows + 44 v1.0 carry-over rows). Run `/gsd-complete-milestone` after UAT passes.
+- **Phase:** 11 — pos-close-immediate-welcome-reset (3/3 plans complete)
+- **Plan:** 11-01 + 11-02 + 11-03 all complete
 - **Last activity:** 2026-04-28
 
 ## Key Decisions (Phase 10)
@@ -86,13 +86,14 @@ Plan: 11-01 + 11-02 SUMMARYs on disk. Phase 10: 8 of 10 plan SUMMARYs (10-03 and
 | 08 | Admin Menu Polish & Reload Fix | ADMIN-01, ADMIN-03, FIX-01 | Complete (2/2 plans, human UAT pending) |
 | 09 | POS Open/Close & Update Gating | ADMIN-02 | Complete (2/2 plans, human UAT pending) |
 | 10 | Post-Sale Flow & Print Interception | SALE-01 | Complete (8/10 plans, 2 hardware UAT pending) |
-| 11 | POS Close — Immediate Welcome Reset | ADMIN-02 (extends; D-06 reversed) | Executing (2/3 plans complete) |
+| 11 | POS Close — Immediate Welcome Reset | ADMIN-02 (extends; D-06 reversed) | Complete (3/3 plans, code-complete 2026-04-28) |
 
 Coverage: 7/7 v1.1 requirements mapped. Phase 11 is a UAT-driven D-06 reversal — no new requirement.
 
 ## Roadmap Evolution
 
 - 2026-04-26: Phase 11 added — POS Close — Immediate Welcome Reset. UAT on dev machine surfaced that closing POS while admin menu is open over the cash register lands user back on the register on dismiss. Phase 09 D-06 ("no mid-checkout interruption") reversed: closing POS now triggers immediate sessionReset to closed-welcome layer.
+- 2026-04-28: Phase 11 complete (3/3 plans). 11-01 sessionReset filter exclusion + tests landed. 11-02 main.js toggle-pos-open hardReset glue landed. 11-03 docs-only append-SUPERSEDED-BY-PHASE-11 note to 09-CONTEXT.md D-06 landed (commit 4dac5b0; +2 lines, original D-06 byte-for-byte preserved). v1.1 milestone now all 5 phases code-complete; awaits next-kiosk-visit HUMAN-UAT batch.
 
 ## Outstanding Field Work (v1.0 carry-over)
 
@@ -108,7 +109,7 @@ Field guide: `docs/runbook/v1.0-KIOSK-VISIT.md`. Authoritative per-requirement s
 
 ## Next Action
 
-v1.1 is code-complete. All 4 phases (07, 08, 09, 10) have been executed, verified, code-reviewed, and auto-fixed. 298/298 tests green. Phase 10 code-review warnings WR-01 (cart-empty observer debounce) and WR-02 (`Object.defineProperty` lock on `window.print`) were applied as commits `1ae4ba3` + `ac1eda5`.
+v1.1 is code-complete. All 5 phases (07, 08, 09, 10, 11) have been executed, verified, code-reviewed, and auto-fixed. 298/298 tests green pre-Phase-11; Phase 11 added 2 new sessionReset cases (D-05/D-06) on top, all pass. Phase 10 code-review warnings WR-01 (cart-empty observer debounce) and WR-02 (`Object.defineProperty` lock on `window.print`) were applied as commits `1ae4ba3` + `ac1eda5`. Phase 11 closed 2026-04-28 (3/3 plans: commits 6c89281 + bfe565b + ef51d2c + 38ea4db + 4dac5b0).
 
 Remaining before v1.1 ships:
 
@@ -127,7 +128,7 @@ Remaining before v1.1 ships:
 | 260414-eu9 | Descope NFC member-badge identification from v1.0 | 2026-04-14 | cbc9b59 | [260414-eu9-descope-nfc-member-badge-identification-](./quick/260414-eu9-descope-nfc-member-badge-identification-/) |
 | 260414-iiv | Ship 0.1.3 patch — fix release asset filename mismatch + flip update window to 09:00–12:00 | 2026-04-14 | 34cb20a | [260414-iiv-ship-0-1-3-patch-fix-release-asset-filen](./quick/260414-iiv-ship-0-1-3-patch-fix-release-asset-filen/) |
 
-**Last activity:** 2026-04-28 — Phase 11 Plan 11-02 complete (case 'toggle-pos-open' in src/main/main.js extended to immediately call sessionReset.hardReset({reason:'pos-closed', mode:'welcome'}) when next===false; +21 lines added inside the case body — 9 lines of new logic + 12 lines of decision-traceability comments. D-01 ordering preserved (store.set → audit → IPC → hardReset). D-02 open-direction guard `if (next === false)`. D-03 destructured `const { hardReset } = require('./sessionReset')` placed inside the if-block (NOT hoisted to module scope; line-29 sessionResetMod import preserved untouched). D-04 failure path: try/catch around require + hardReset, audit `pos.state-changed.reset-failed` emits e.message (or String(e) fallback), no posOpen rollback, handler still returns ok:true. Per D-08, NO main.test.js test added — Plan 11-01's D-05/D-06 sessionReset.test.js cases cover the meaningful behavior. 34/34 sessionReset.test.js still pass; node --check src/main/main.js exits 0. Commit: feat ef51d2c. Phase 11 progress: 2/3 plans (11-03 Phase-09 D-06 supersede note still pending).
+**Last activity:** 2026-04-28 — Phase 11 Plan 11-03 complete (Phase 11 docs-only closer). Append-only SUPERSEDED-BY-PHASE-11 blockquote added to .planning/phases/09-pos-open-close-toggle-with-update-window-gating/09-CONTEXT.md immediately under the existing D-06 bullet at line 32. Original D-06 sentence ("...No mid-checkout interruption.") preserved byte-for-byte; the note is a two-space-indented markdown blockquote that nests visually under the D-06 list item. Append text mirrors 11-CONTEXT.md D-10 verbatim, including the canonical hardReset payload `sessionReset.hardReset({reason:'pos-closed', mode:'welcome'})` and the 2026-04-26 UAT rationale ("closing the POS = closing the kiosk"). +2 lines (one blockquote line + one trailing blank for paragraph separation); zero modifications to D-01..D-05, D-07..D-15, or any other section. No other Phase 09 artifact touched (verified: 09-DECISION-LOG.md does not exist in this repo's Phase 09 dir and was not created). All four plan-automated-verify greps pass: `SUPERSEDED by Phase 11`, `No mid-checkout interruption`, `11-CONTEXT.md`, plus D-05/D-06/D-07 occurrence counts unchanged. Commit: docs 4dac5b0. Phase 11 progress: 3/3 plans complete — Phase 11 closed. v1.1 milestone all 5 phases code-complete; HUMAN-UAT pending.
 
 ## Key Decisions (Phase 11)
 
@@ -138,6 +139,7 @@ Remaining before v1.1 ships:
 - **D-11-02-02:** D-03 require shape — `const { hardReset } = require('./sessionReset')` destructured INSIDE the `if (next === false)` block, NOT hoisted to module scope. Diverges from BOTH the line-29 module-scope `const sessionResetMod = require('./sessionReset')` shape AND the lines-500/519 call-site member-access shape. Rationale: the dependency declaration sits immediately above the call site for readability; the require itself is semantically free since the module is already eagerly loaded at line 29.
 - **D-11-02-03:** D-04 failure handling — on hardReset throw, posOpen is NOT rolled back (admin's intent preserved), `log.audit('pos.state-changed.reset-failed', { error: (e && e.message) || String(e) })` emits the failure with defensive message extraction, and the handler still returns `{ ok: true, posOpen: next }` to the renderer. The String(e) fallback handles non-Error throws. The closed-welcome layer will render at the next natural reset trigger (idle-expired or sale-completed).
 - **D-11-02-04:** Per D-08, no main.test.js test was added for the toggle-pos-open glue. The meaningful behavior (filter exclusion + onPostReset firing for pos-closed) is regression-locked by Plan 11-01's D-05/D-06 tests in test/sessionReset.test.js. This mirrors Phase 10's choice to test post-sale state-machine behavior at the sessionReset/postSale level rather than at the main.js IPC-glue level.
+- **D-11-03-01:** Phase 11 D-10 executed verbatim — append-only SUPERSEDED-BY-PHASE-11 blockquote added to 09-CONTEXT.md immediately after the D-06 bullet. Original D-06 sentence preserved byte-for-byte (zero modified lines, +2 inserted lines). Two-space indent on the blockquote marker (`  >`) nests the note under the D-06 list item visually in markdown rendering. Bare-name cross-reference `11-CONTEXT.md` matches docs-tree navigation convention. Pattern-establishing: future phase reversals should annotate prior decisions in-place via append-only blockquotes rather than rewriting history, preserving audit trail integrity.
 
 ---
 *State initialized: 2026-04-08 · v1.0 archived: 2026-04-14 · NFC descoped: 2026-04-14 · v1.1 roadmap: 2026-04-14*
