@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Field-Operations Polish
 status: executing
-last_updated: "2026-04-26T14:33:49Z"
-last_activity: 2026-04-26
+last_updated: "2026-04-28T10:49:26Z"
+last_activity: 2026-04-28
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 23
-  completed_plans: 19
-  percent: 83
+  completed_plans: 20
+  percent: 87
 ---
 
 # Project State: Bee Strong POS Kiosk
@@ -25,14 +25,14 @@ progress:
 
 ## Current Position
 
-Phase: 11 (pos-close-immediate-welcome-reset) — Executing (1/3 plans complete)
-Plan: 11-01 SUMMARY on disk. Phase 10: 8 of 10 plan SUMMARYs (10-03 and 10-10 parked at hardware-verification checkpoints — tracked in 10-HUMAN-UAT.md).
+Phase: 11 (pos-close-immediate-welcome-reset) — Executing (2/3 plans complete)
+Plan: 11-01 + 11-02 SUMMARYs on disk. Phase 10: 8 of 10 plan SUMMARYs (10-03 and 10-10 parked at hardware-verification checkpoints — tracked in 10-HUMAN-UAT.md).
 
 - **Milestone:** v1.1 Field-Operations Polish — STARTED 2026-04-14, code-complete 2026-04-24, Phase 11 added 2026-04-26
 - **Status:** Executing Phase 11
-- **Phase:** 11 — pos-close-immediate-welcome-reset (1/3 plans complete)
-- **Plan:** 11-01 complete; 11-02, 11-03 pending
-- **Last activity:** 2026-04-26
+- **Phase:** 11 — pos-close-immediate-welcome-reset (2/3 plans complete)
+- **Plan:** 11-01 + 11-02 complete; 11-03 pending
+- **Last activity:** 2026-04-28
 
 ## Key Decisions (Phase 10)
 
@@ -86,7 +86,7 @@ Plan: 11-01 SUMMARY on disk. Phase 10: 8 of 10 plan SUMMARYs (10-03 and 10-10 pa
 | 08 | Admin Menu Polish & Reload Fix | ADMIN-01, ADMIN-03, FIX-01 | Complete (2/2 plans, human UAT pending) |
 | 09 | POS Open/Close & Update Gating | ADMIN-02 | Complete (2/2 plans, human UAT pending) |
 | 10 | Post-Sale Flow & Print Interception | SALE-01 | Complete (8/10 plans, 2 hardware UAT pending) |
-| 11 | POS Close — Immediate Welcome Reset | ADMIN-02 (extends; D-06 reversed) | Executing (1/3 plans complete) |
+| 11 | POS Close — Immediate Welcome Reset | ADMIN-02 (extends; D-06 reversed) | Executing (2/3 plans complete) |
 
 Coverage: 7/7 v1.1 requirements mapped. Phase 11 is a UAT-driven D-06 reversal — no new requirement.
 
@@ -127,13 +127,17 @@ Remaining before v1.1 ships:
 | 260414-eu9 | Descope NFC member-badge identification from v1.0 | 2026-04-14 | cbc9b59 | [260414-eu9-descope-nfc-member-badge-identification-](./quick/260414-eu9-descope-nfc-member-badge-identification-/) |
 | 260414-iiv | Ship 0.1.3 patch — fix release asset filename mismatch + flip update window to 09:00–12:00 | 2026-04-14 | 34cb20a | [260414-iiv-ship-0-1-3-patch-fix-release-asset-filen](./quick/260414-iiv-ship-0-1-3-patch-fix-release-asset-filen/) |
 
-**Last activity:** 2026-04-26 — Phase 11 Plan 11-01 complete (sessionReset countable filter extended with third OR clause `e.reason === 'pos-closed'` byte-mirroring Phase 10 D-17/D-18; +5 lines in src/main/sessionReset.js, +36 lines / 2 new test cases (D-05 exclusion + D-06 onPostReset) in test/sessionReset.test.js. Phase 10 D-17/D-18 sale-completed tests preserved byte-for-byte. 34/34 sessionReset.test.js pass (32 baseline + 2 new D-05/D-06). Commits: feat 6c89281 + test bfe565b. Phase 11 progress: 1/3 plans (11-02 toggle-pos-open hardReset wiring + 11-03 Phase-09 D-06 supersede note still pending).
+**Last activity:** 2026-04-28 — Phase 11 Plan 11-02 complete (case 'toggle-pos-open' in src/main/main.js extended to immediately call sessionReset.hardReset({reason:'pos-closed', mode:'welcome'}) when next===false; +21 lines added inside the case body — 9 lines of new logic + 12 lines of decision-traceability comments. D-01 ordering preserved (store.set → audit → IPC → hardReset). D-02 open-direction guard `if (next === false)`. D-03 destructured `const { hardReset } = require('./sessionReset')` placed inside the if-block (NOT hoisted to module scope; line-29 sessionResetMod import preserved untouched). D-04 failure path: try/catch around require + hardReset, audit `pos.state-changed.reset-failed` emits e.message (or String(e) fallback), no posOpen rollback, handler still returns ok:true. Per D-08, NO main.test.js test added — Plan 11-01's D-05/D-06 sessionReset.test.js cases cover the meaningful behavior. 34/34 sessionReset.test.js still pass; node --check src/main/main.js exits 0. Commit: feat ef51d2c. Phase 11 progress: 2/3 plans (11-03 Phase-09 D-06 supersede note still pending).
 
 ## Key Decisions (Phase 11)
 
 - **D-11-01-01:** Phase 11 D-05 implemented verbatim — countable filter extended with third OR clause `|| e.reason === 'pos-closed'` after Phase 10's `'sale-completed'` clause. mode check intentionally omitted (pos-closed always arrives with mode:'welcome'). OR clause order: idle-expired+welcome → sale-completed → pos-closed (chronological by phase).
 - **D-11-01-02:** Phase 11 D-06 requires no code change — existing `succeeded && postResetListener` gate at sessionReset.js (post-Phase-10 lines 256-262) already covers welcome-mode pos-closed cycles. New D-06 test documents the contract for regression protection.
 - **D-11-01-03:** Test placement — appended at EOF under new `Phase 11: pos-closed loop-counter exclusion (D-05) + onPostReset (D-06)` banner, AFTER unchanged Phase 10 D-17/D-18 block. Matches phase chronology in source order. Cleanup `sessionReset.onPostReset(null)` after D-06 test mirrors Phase 6 Test 10 + Phase 10 D-18 conventions to prevent module-scoped listener contamination.
+- **D-11-02-01:** Phase 11 D-01 ordering implemented exactly — `store.set('posOpen', next)` → `log.audit('pos.state-changed', ...)` → `mainWindow.webContents.send('pos-state-changed', ...)` → `await hardReset(...)`. The IPC must precede hardReset to avoid a one-frame "open" flash on the welcome layer (the host needs the closed-state IPC delivered before welcome:show fires from hardReset internals).
+- **D-11-02-02:** D-03 require shape — `const { hardReset } = require('./sessionReset')` destructured INSIDE the `if (next === false)` block, NOT hoisted to module scope. Diverges from BOTH the line-29 module-scope `const sessionResetMod = require('./sessionReset')` shape AND the lines-500/519 call-site member-access shape. Rationale: the dependency declaration sits immediately above the call site for readability; the require itself is semantically free since the module is already eagerly loaded at line 29.
+- **D-11-02-03:** D-04 failure handling — on hardReset throw, posOpen is NOT rolled back (admin's intent preserved), `log.audit('pos.state-changed.reset-failed', { error: (e && e.message) || String(e) })` emits the failure with defensive message extraction, and the handler still returns `{ ok: true, posOpen: next }` to the renderer. The String(e) fallback handles non-Error throws. The closed-welcome layer will render at the next natural reset trigger (idle-expired or sale-completed).
+- **D-11-02-04:** Per D-08, no main.test.js test was added for the toggle-pos-open glue. The meaningful behavior (filter exclusion + onPostReset firing for pos-closed) is regression-locked by Plan 11-01's D-05/D-06 tests in test/sessionReset.test.js. This mirrors Phase 10's choice to test post-sale state-machine behavior at the sessionReset/postSale level rather than at the main.js IPC-glue level.
 
 ---
 *State initialized: 2026-04-08 · v1.0 archived: 2026-04-14 · NFC descoped: 2026-04-14 · v1.1 roadmap: 2026-04-14*
