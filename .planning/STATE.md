@@ -86,7 +86,7 @@ Plan: 11-01 + 11-02 + 11-03 SUMMARYs on disk. Phase 10: 8 of 10 plan SUMMARYs (1
 | 08 | Admin Menu Polish & Reload Fix | ADMIN-01, ADMIN-03, FIX-01 | Complete (2/2 plans, human UAT pending) |
 | 09 | POS Open/Close & Update Gating | ADMIN-02 | Complete (2/2 plans, human UAT pending) |
 | 10 | Post-Sale Flow & Print Interception | SALE-01 | Complete (8/10 plans, 2 hardware UAT pending) |
-| 11 | POS Close — Immediate Welcome Reset | ADMIN-02 (extends; D-06 reversed) | Complete (3/3 plans, code-complete 2026-04-28) |
+| 11 | POS Close — Immediate Welcome Reset | ADMIN-02 (extends; D-06 reversed) | Complete (3/3 plans, 5 human UAT pending) |
 
 Coverage: 7/7 v1.1 requirements mapped. Phase 11 is a UAT-driven D-06 reversal — no new requirement.
 
@@ -113,10 +113,11 @@ v1.1 is code-complete. All 5 phases (07, 08, 09, 10, 11) have been executed, ver
 
 Remaining before v1.1 ships:
 
-1. **Next kiosk visit HUMAN-UAT batch** — 5 total rows across phases 08/09/10:
+1. **Next kiosk visit HUMAN-UAT batch** — 10 total rows across phases 08/09/10/11:
    - Phase 08: 2 rows (admin menu close button, Kasse nachladen from welcome)
    - Phase 09: 3 rows (POS toggle, welcome closed-state render, `admin-closed-window` updateGate trigger live)
    - Phase 10: 2 rows (window.print override + cart selector discovery on live Magicline; NSIS default-printer installer run on bsfkiosk Win 11 user)
+   - Phase 11: 5 rows (POS close → immediate closed-welcome paint, no one-frame open flash, open-direction asymmetry, rapid 3× close cycle without loop overlay, updateGate post-reset install after pos-closed) — see `11-HUMAN-UAT.md`
    - Plus v1.0 carry-over (44 rows per `docs/runbook/v1.0-KIOSK-VISIT.md`)
 2. **After UAT passes:** run `/gsd-complete-milestone` to archive v1.1 → `.planning/milestones/v1.1-*`.
 3. **Optional before visit:** apply Phase 10 info items (IN-01 through IN-05) via `/gsd-code-review-fix 10 --all` — style/comment nits, not blocking.

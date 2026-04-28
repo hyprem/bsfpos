@@ -12,7 +12,7 @@ A gym member can walk up, scan or self-select a product, pay at the card termina
 
 **v1.0 MVP shipped 2026-04-14.** 6 phases, 36 plans, 42/42 requirements closed (all code-complete and automated-test-green). Audit posture: `tech_debt` — no critical blockers, 50 row-level physical verification checks consolidated into the next-kiosk-visit batch (`.planning/phases/01-locked-down-shell-os-hardening/01-VERIFICATION.md`); deferral is row-level only, not requirement-level. Field guide: `docs/runbook/v1.0-KIOSK-VISIT.md`. Detailed accomplishments: see `.planning/MILESTONES.md`. Full archive: `.planning/milestones/v1.0-ROADMAP.md` + `v1.0-REQUIREMENTS.md`.
 
-**v1.1 Field-Operations Polish code-complete 2026-04-24.** 4 phases (07, 08, 09, 10), 20 plans (18 SUMMARYs on disk + 2 parked at hardware checkpoints with code committed). 298/298 tests green. Phase 10 code-review clean (WR-01/WR-02 auto-fixed). Milestone ships after the next kiosk visit closes 7 HUMAN-UAT rows (2× Phase 08, 3× Phase 09, 2× Phase 10) plus the v1.0 carry-over batch. See `.planning/STATE.md` for the current remaining-work breakdown.
+**v1.1 Field-Operations Polish code-complete 2026-04-28.** 5 phases (07, 08, 09, 10, 11), 23 plans (21 SUMMARYs on disk + 2 parked at hardware checkpoints with code committed). 300/300 tests green. Phase 10 code-review clean (WR-01/WR-02 auto-fixed); Phase 11 code-review clean (0 critical, 0 warning, 3 info-only). Phase 11 (added 2026-04-26 from on-device UAT) reverses Phase 09 D-06 so closing POS now triggers an immediate sessionReset to the closed-welcome layer. Milestone ships after the next kiosk visit closes 10 HUMAN-UAT rows (2× Phase 08, 3× Phase 09, 2× Phase 10, 5× Phase 11) plus the v1.0 carry-over batch. See `.planning/STATE.md` for the current remaining-work breakdown.
 
 ## Current Milestone: v1.1 Field-Operations Polish
 
@@ -128,4 +128,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-24 — v1.1 code-complete, awaiting hardware UAT*
+*Last updated: 2026-04-28 — v1.1 code-complete (5 phases), awaiting hardware UAT*
