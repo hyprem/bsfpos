@@ -31,6 +31,8 @@ Admin-controlled POS open/close state that gates auto-update installation. New `
 - **D-05:** Closed welcome screen reuses the existing branded dark background + Bee Strong logo + card layout. Replace the "Zum Kassieren tippen" CTA text with "POS derzeit geschlossen" heading and "Bitte Studio-Personal verstandigen" subtext. No tap handler fires (welcome:tap IPC suppressed). No extra status info (no clock, no attribution text).
 - **D-06:** The closed state takes effect after the current session ends. If a member session is active when admin closes POS, the active Magicline session continues undisturbed. When idle timeout fires and the welcome layer returns, it shows the closed message. No mid-checkout interruption.
 
+  > **SUPERSEDED by Phase 11 (2026-04-26):** D-06 reversed — closing POS now immediately triggers `sessionReset.hardReset({reason:'pos-closed', mode:'welcome'})` regardless of the layer foregrounded when admin opens the menu. Rationale: UAT on 2026-04-26 surfaced that admins tapping the welcome layer to reach the menu (so they could close POS) land on the cash register after dismiss, contradicting the admin's mental model of "closing the POS = closing the kiosk." See `11-CONTEXT.md`.
+
 ### updateGate Wiring
 
 - **D-07:** DI getter pattern: add a `getPosOpen` function (reads `posOpen` from electron-store) to the `onUpdateDownloaded` opts object, same dependency-injection pattern as the existing `getHour` test hook. updateGate checks `getPosOpen()` alongside `isMaintenanceWindow()` in the existing polling interval. Clean, testable, no new event system or mutable state in updateGate.
