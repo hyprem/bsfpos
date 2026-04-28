@@ -999,6 +999,27 @@ app.whenReady().then(() => {
               try {
                 mainWindow.webContents.send('pos-state-changed', { posOpen: next });
               } catch (_) {}
+              // Phase 11 D-01..D-04: on close (next===false), immediately hardReset to
+              // closed-welcome so the layer surfaces as soon as admin dismisses the menu.
+              // Order matters: pos-state-changed IPC MUST be sent BEFORE hardReset so the
+              // welcome layer DOM is in closed-state markup when welcome:show fires
+              // (otherwise a one-frame "open" flash). Open direction (next===true) does
+              // NOT reset — existing pos-state-changed update is sufficient (D-02).
+              // D-03: destructured require lives INSIDE this block for scope-locality /
+              // readability. The module is already eagerly loaded at module scope (line 29
+              // `const sessionResetMod = require('./sessionReset')`), so this require is a
+              // no-op import re-export — semantically free, organizationally clean.
+              if (next === false) {
+                try {
+                  const { hardReset } = require('./sessionReset');
+                  await hardReset({ reason: 'pos-closed', mode: 'welcome' });
+                } catch (e) {
+                  // D-04: do NOT roll back posOpen. The store already shows false and
+                  // stays that way; admin's intent is preserved. The closed-welcome
+                  // layer will render at the next natural reset (idle/sale-completed).
+                  log.audit('pos.state-changed.reset-failed', { error: (e && e.message) || String(e) });
+                }
+              }
               return { ok: true, posOpen: next };
             }
             case 'exit-to-windows': {
